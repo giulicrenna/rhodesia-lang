@@ -1,5 +1,5 @@
 # rhodesia-lang
-![alt text]https://drive.google.com/file/d/1LgGwZgtyL9ruSi-uNLTycme-fsnN32RM/view?usp=share_link)
+![alt text](https://github.com/giulicrenna/rhodesia-lang/blob/main/images/RHODESIA.png)
 Rhodesia multipurpose language - based on python
 
 ## Changelog 30/10/2022
