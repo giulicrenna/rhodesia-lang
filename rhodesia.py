@@ -1,64 +1,33 @@
-# CONSTANT TYPES
-NUMBERS = '0123456789'
+import src.global_var as gb
+from src.errors import *
+from src.ast import *
+from src.positioning import *
 
-# POSITION
-
-class Position():
-    def __init__(self, index, row, column, file_name, file_text) -> None:
-        self.index = index
-        self.row = row
-        self.column = column
-        self.file_name = file_name
-        self.file_text = file_text
-    def next_char(self, curr_char):
-        self.index += 1
-        self.column += 1
-        
-        if curr_char == '\n':
-            self.row += 1
-            self.column = 0
-
-        return self
-    
-    def copy(self):
-        return Position(self.index, self.row, self.column, self.file_name, self.file_text)
-
-# ERROR CLASS
-class Error():
-    def __init__(self, pos_start, pos_end, error_type, details) -> None:
-        self.poss = pos_start
-        self.pose = pos_end
-        self.type = error_type
-        self.det = details
-    def error_string(self) -> str:
-        error_ = f'{self.type} --> {self.det}'
-        error_ += f'\nFile: {self.poss.file_name}, line {self.poss.row+1}'
-        return error_
-
-class IllegalCharacter(Error):
-    def __init__(self, pos_start, pos_end, details) -> None:
-        super().__init__(pos_start, pos_end, 'Illegal Character Type', details)
-
-# TOKENS TYPES
-_TT_INT = 'INT'
-_TT_FLOAT = 'FLOAT'
-_TT_SUBSTRACT = 'SUBSTRACT'
-_TT_ADD = 'ADD'
-_TT_MULT = 'MULT'
-_TT_DIV = 'DIV'
-_TT_LPARENTHESIS = 'LPAREN'
-_TT_RPARENTHESIS = 'RPAREN'
-
+"""
+Token class generate tokens
+"""
 class Token():
-    def __init__(self, type_, value=None) -> None:
+    def __init__(self, type_, value=None, pos_start = None, pos_end = None) -> None:
         self.type_ = type_
         self.value = value
+        #self.pos_start = pos_start
+        #self.pos_end = pos_end
+
+        if pos_start:
+            self.pos_start = pos_start.copy()
+            self.pos_end = pos_start.copy()
+            self.pos_end.next_char()
+        if pos_end:
+            self.pos_end = pos_end.copy()
+        
     def __repr__(self) -> str:
         if self.value: return f'{self.type_}@{self.value}'
-        return f'{self.type_}@None'
+        return f'{self.type_}'
 
-# RHODESIA LEXER ANALYSIS
-
+""" 
+RHODESIA LEXER ANALYSIS
+This is the main class where all the grammar will be analysed
+"""
 class Lexer():
     def __init__(self, file_name, command) -> None:
         self.file_name = file_name
@@ -69,10 +38,12 @@ class Lexer():
     def next_character(self) -> None:
         self.posn.next_char(self.current_character)
         self.current_character = self.command[self.posn.index] if self.posn.index < len(self.command) else None
-    def create_number(self) -> str:
+    def create_number(self):
         number_str = ''
         dot_count = 0
-        while self.current_character != None and self.current_character in NUMBERS + '.':
+        pos_start = self.posn.copy()
+        
+        while self.current_character != None and self.current_character in gb.NUMBERS + '.':
             if self.current_character == '.':
                 if dot_count == 1: break
                 dot_count += 1
@@ -81,34 +52,34 @@ class Lexer():
                 number_str += self.current_character 
             self.next_character()
         if dot_count == 0:
-            return Token(_TT_INT, int(number_str))
+            return Token(gb._TT_INT, int(number_str), pos_start, self.posn)
         else:
-            return Token(_TT_FLOAT, float(number_str))
+            return Token(gb._TT_FLOAT, float(number_str), pos_start, self.posn)
     def create_token(self):
         tokens = []
 
         while self.current_character != None:  
             if self.current_character in ' \t':
                 self.next_character()
-            elif self.current_character in NUMBERS:
+            elif self.current_character in gb.NUMBERS:
                 tokens.append(self.create_number())
             elif self.current_character == '+':
-                tokens.append(Token(_TT_ADD))
+                tokens.append(Token(gb._TT_ADD, pos_start=self.posn))
                 self.next_character()
             elif self.current_character == '-':
-                tokens.append(Token(_TT_SUBSTRACT))
+                tokens.append(Token(gb._TT_SUBSTRACT, pos_start=self.posn))
                 self.next_character()
             elif self.current_character == '*':
-                tokens.append(Token(_TT_MULT))
+                tokens.append(Token(gb._TT_MULT, pos_start=self.posn))
                 self.next_character()
             elif self.current_character == '/':
-                tokens.append(Token(_TT_DIV))
+                tokens.append(Token(gb._TT_DIV, pos_start=self.posn))
                 self.next_character()
             elif self.current_character == ')':
-                tokens.append(Token(_TT_RPARENTHESIS))
+                tokens.append(Token(gb._TT_RPARENTHESIS, pos_start=self.posn))
                 self.next_character()
             elif self.current_character == '(':
-                tokens.append(Token(_TT_LPARENTHESIS))
+                tokens.append(Token(gb._TT_LPARENTHESIS, pos_start=self.posn))
                 self.next_character()
             else:
                 pos_start = self.posn.copy()
@@ -120,9 +91,14 @@ class Lexer():
         
 
 def start(file_name, comm):
+    # Generates tokens
     lexing_engine = Lexer(file_name, comm)
     tokens, error_ = lexing_engine.create_token()
+    if error_: return None, error_
+    # Generates Abstract syntactic tree
+    parser = Parser(tokens)
+    ast = parser.parse()
 
-    return tokens, error_
+    return ast.node, ast.error
 
 
