@@ -1,15 +1,32 @@
 # Performance Examples
 
-This folder contains examples demonstrating performance measurement and benchmarking in Rhodesia.
+This folder contains examples demonstrating Rhodesia's performance characteristics and optimization techniques.
 
 ## Examples
 
 ### performance.rho
-Performance benchmarking using high-precision timing:
-- `get_tick()` function for microsecond-level timing
-- Loop performance measurement across different sizes
-- Multiple run averaging for reliable benchmarks
-- Basic timing demonstrations
-- Precision analysis of the timing system
+Demonstrates performance testing including:
+- Benchmarking operations
+- Timing measurements
+- Performance comparison
+- Optimization techniques
 
-Run with: `rhodesia examples/performance/performance.rho`
+## Key Concepts Covered
+
+- Performance measurement
+- Algorithm optimization
+- Memory efficiency
+- Computational complexity
+- Benchmarking methodologies
+
+## Usage
+
+```bash
+# Run performance example
+./rhodesia examples/performance/performance.rho
+```
+
+## Related Examples
+
+- [Data Structures Examples](../data_structures/README.md) - Vector and matrix operations
+- [Machine Learning Examples](../machine_learning/README.md) - ML algorithms

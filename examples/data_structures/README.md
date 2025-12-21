@@ -1,31 +1,50 @@
 # Data Structures Examples
 
-This folder contains examples demonstrating vector and matrix operations in Rhodesia.
+This folder contains examples demonstrating Rhodesia's vector and matrix operations.
 
 ## Examples
 
 ### vector_demo.rho
-Comprehensive vector operations including:
+Demonstrates vector operations including:
 - Vector creation and initialization
-- Basic arithmetic (addition, subtraction, scalar multiplication/division)
-- Vector products (dot product)
-- Statistical functions (norm, sum, mean, size)
-- Element-wise mathematical functions (sqrt, exp, log, abs)
-- Vector creation utilities (zeros, ones, range)
-- Element access and indexing
-- Iteration over vectors
-- Custom functions (normalization, angle calculation)
-
-Run with: `rhodesia examples/data_structures/vector_demo.rho`
+- Vector arithmetic operations
+- Vector functions (sum, mean, norm, etc.)
+- Vector indexing and slicing
 
 ### matrix_demo.rho
-Matrix operations and manipulations including:
+Demonstrates matrix operations including:
 - Matrix creation and initialization
-- Basic arithmetic (addition, subtraction, multiplication)
-- Matrix transpose and inverse
-- Norms, dimensions, and statistics
-- Special matrices (identity, zeros, ones)
-- Matrix-vector multiplication
-- Element access and indexing
+- Matrix arithmetic operations
+- Matrix functions (determinant, inverse, etc.)
+- Matrix indexing and slicing
 
-Run with: `rhodesia examples/data_structures/matrix_demo.rho`
+### vec_methods_test.rho
+Tests various vector methods and operations.
+
+### mat_methods_test.rho
+Tests various matrix methods and operations.
+
+## Key Concepts Covered
+
+- Vector and matrix literals
+- Element-wise operations
+- Linear algebra operations
+- Statistical functions
+- Indexing and slicing
+- Memory-efficient operations
+
+## Usage
+
+```bash
+# Run vector demo
+./rhodesia examples/data_structures/vector_demo.rho
+
+# Run matrix demo
+./rhodesia examples/data_structures/matrix_demo.rho
+```
+
+## Related Examples
+
+- [Basic Examples](../basic/README.md) - Fundamental language features
+- [Control Flow Examples](../control_flow/README.md) - Control structures
+- [Slicing Examples](../slicing/README.md) - Advanced array slicing

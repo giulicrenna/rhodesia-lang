@@ -1,0 +1,64 @@
+# GitHub Pages Configuration for Rhodesia Documentation
+
+title: Rhodesia Language Documentation
+description: Official documentation for the Rhodesia programming language
+theme: jekyll-theme-cayman
+
+# Site settings
+baseurl: "/rhodesia-lang" # Change this to your repository name
+url: "https://giulicrenna.github.io" # Change this to your GitHub Pages URL
+
+# Navigation
+navigation:
+  - title: Home
+    url: /index.html
+  - title: Getting Started
+    url: /getting-started.html
+  - title: Language
+    url: /language/syntax.html
+  - title: Standard Library
+    url: /standard-library/functions.html
+  - title: Examples
+    url: /examples/basics.html
+  - title: API
+    url: /api/architecture.html
+  - title: Troubleshooting
+    url: /troubleshooting/errors.html
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    block:
+      line_numbers: true
+
+# Plugins
+plugins:
+  - jekyll-relative-links
+
+# Collections
+collections:
+  language:
+    output: true
+    permalink: /language/:name
+  standard-library:
+    output: true
+    permalink: /standard-library/:name
+  examples:
+    output: true
+    permalink: /examples/:name
+  api:
+    output: true
+    permalink: /api/:name
+  troubleshooting:
+    output: true
+    permalink: /troubleshooting/:name
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"

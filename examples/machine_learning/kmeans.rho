@@ -1,0 +1,299 @@
+// ============================================================================
+// kmeans.rho - K-means Clustering Example
+// Demonstrates K-means clustering algorithm with Rhodesia
+// ============================================================================
+
+println("=== K-means Clustering with Rhodesia ===")
+println("")
+
+// ============================================================================
+// 1. DATA GENERATION - Create synthetic 2D data points
+// ============================================================================
+println("1. Data Generation")
+println("-----------------")
+
+// Generate 3 clusters of 2D points
+// Cluster 1: Around (2, 2)
+mat: cluster1 = [
+    [2.1, 1.9],
+    [2.3, 2.2],
+    [1.8, 2.1],
+    [2.0, 2.0],
+    [2.2, 1.8]
+]
+
+// Cluster 2: Around (8, 8)
+mat: cluster2 = [
+    [8.1, 8.2],
+    [7.9, 7.8],
+    [8.3, 8.1],
+    [7.8, 8.0],
+    [8.2, 7.9]
+]
+
+// Cluster 3: Around (5, 12)
+mat: cluster3 = [
+    [5.1, 12.2],
+    [4.9, 11.8],
+    [5.2, 12.1],
+    [5.0, 11.9],
+    [4.8, 12.0]
+]
+
+// Combine all points into one dataset
+mat: X = [
+    [2.1, 1.9],
+    [2.3, 2.2],
+    [1.8, 2.1],
+    [2.0, 2.0],
+    [2.2, 1.8],
+    [8.1, 8.2],
+    [7.9, 7.8],
+    [8.3, 8.1],
+    [7.8, 8.0],
+    [8.2, 7.9],
+    [5.1, 12.2],
+    [4.9, 11.8],
+    [5.2, 12.1],
+    [5.0, 11.9],
+    [4.8, 12.0]
+]
+
+int: n_samples = math.rows(X)
+int: n_features = math.cols(X)
+
+println("Generated dataset with", n_samples, "samples and", n_features, "features")
+println("")
+
+// ============================================================================
+// 2. K-MEANS ALGORITHM
+// ============================================================================
+println("2. K-means Clustering")
+println("---------------------")
+
+// Parameters
+int: k = 3          // Number of clusters
+int: max_iter = 100 // Maximum iterations
+float64: tol = 0.001 // Tolerance for convergence
+
+// Function to calculate Euclidean distance between two points
+fun euclidean_distance(vec: a, vec: b) -> float64 {
+    vec: diff = a - b
+    return math.norm(diff)
+}
+
+// Function to initialize centroids using matrix slicing
+fun initialize_centroids(mat: data, int: k) -> mat {
+    // Create centroids matrix by selecting first k rows
+    mat: centroids = math.zeros(k, math.cols(data))
+
+    // Copy first k rows from data to centroids
+    for i in range(k) {
+        centroids[i] = data[i]
+    }
+
+    return centroids
+}
+
+// Function to assign each point to nearest centroid
+fun assign_clusters(mat: data, mat: centroids) -> vec {
+    int: n = math.rows(data)
+    int: k = math.rows(centroids)
+    vec: clusters = math.zeros(n)
+
+    for i in range(n) {
+        float64: min_dist = 999999.0
+        int: best_cluster = 0
+
+        for j in range(k) {
+            float64: dist = euclidean_distance(data[i], centroids[j])
+
+            if dist < min_dist {
+                min_dist = dist
+                best_cluster = j
+            }
+        }
+
+        clusters[i] = best_cluster
+    }
+
+    return clusters
+}
+
+// Function to update centroids as mean of assigned points
+fun update_centroids(mat: data, vec: clusters, int: k) -> mat {
+    mat: new_centroids = math.zeros(k, math.cols(data))
+    vec: counts = math.zeros(k)
+
+    // Accumulate sums for each cluster using row operations
+    for i in range(math.rows(data)) {
+        int: cluster = clusters[i]
+
+        // Update counts
+        if cluster == 0 {
+            counts[0] = counts[0] + 1.0
+            new_centroids[0] = new_centroids[0] + data[i]
+        } else if cluster == 1 {
+            counts[1] = counts[1] + 1.0
+            new_centroids[1] = new_centroids[1] + data[i]
+        } else if cluster == 2 {
+            counts[2] = counts[2] + 1.0
+            new_centroids[2] = new_centroids[2] + data[i]
+        }
+    }
+
+    // Calculate mean for each cluster
+    for i in range(k) {
+        if counts[i] > 0 {
+            new_centroids[i] = new_centroids[i] / counts[i]
+        }
+    }
+
+    return new_centroids
+}
+
+// Function to check convergence
+fun has_converged(mat: old_centroids, mat: new_centroids, float64: tol) -> int {
+    float64: total_change = 0.0
+
+    for i in range(math.rows(old_centroids)) {
+        float64: dist = euclidean_distance(old_centroids[i], new_centroids[i])
+        total_change = total_change + dist
+    }
+
+    if total_change < tol {
+        return 1
+    } else {
+        return 0
+    }
+}
+
+// Main K-means algorithm
+fun kmeans(mat: data, int: k, int: max_iter, float64: tol) -> (mat, vec) {
+    // Initialize centroids
+    mat: centroids = initialize_centroids(data, k)
+    vec: clusters = math.zeros(math.rows(data))
+
+    println("Initial centroids:")
+    for i in range(k) {
+        print("  Cluster ")
+        print(i)
+        print(": ")
+        println(centroids[i])
+    }
+    println("")
+
+    // Main loop
+    int: iter = 0
+    int: converged = 0
+
+    while iter < max_iter {
+        // Store old centroids for convergence check
+        mat: old_centroids = centroids
+
+        // Assign clusters
+        clusters = assign_clusters(data, centroids)
+
+        // Update centroids
+        centroids = update_centroids(data, clusters, k)
+
+        // Check convergence
+        converged = has_converged(old_centroids, centroids, tol)
+
+        // Break if converged
+        if converged == 1 {
+            break
+        }
+
+        iter = iter + 1
+    }
+
+    println("Converged after", iter, "iterations")
+    println("")
+
+    return (centroids, clusters)
+}
+
+// ============================================================================
+// 3. RUN K-MEANS
+// ============================================================================
+println("3. Running K-means")
+println("------------------")
+
+(mat: final_centroids, vec: final_clusters) = kmeans(X, k, max_iter, tol)
+
+// ============================================================================
+// 4. RESULTS
+// ============================================================================
+println("4. Clustering Results")
+println("--------------------")
+
+println("Final centroids:")
+for i in range(k) {
+    print("  Cluster ")
+    print(i)
+    print(": ")
+    println(final_centroids[i])
+}
+println("")
+
+println("Cluster assignments:")
+for i in range(n_samples) {
+    print("  Point ")
+    print(i)
+    print(": ")
+    print(X[i])
+    print(" -> Cluster ")
+    println(final_clusters[i])
+}
+println("")
+
+// ============================================================================
+// 5. EVALUATION
+// ============================================================================
+println("5. Cluster Evaluation")
+println("--------------------")
+
+// Calculate Within-Cluster Sum of Squares (WCSS)
+fun calculate_wcss(mat: data, vec: clusters, mat: centroids) -> float64 {
+    float64: wcss = 0.0
+
+    for i in range(math.rows(data)) {
+        int: cluster = clusters[i]
+        float64: dist = euclidean_distance(data[i], centroids[cluster])
+        wcss = wcss + dist * dist
+    }
+
+    return wcss
+}
+
+float64: wcss = calculate_wcss(X, final_clusters, final_centroids)
+println("Within-Cluster Sum of Squares (WCSS):", wcss)
+println("")
+
+// Calculate average distance to centroid
+float64: avg_dist = wcss / n_samples
+println("Average distance to centroid:", avg_dist)
+println("")
+
+// ============================================================================
+// 6. VISUALIZATION PREPARATION
+// ============================================================================
+println("6. Visualization Data")
+println("--------------------")
+
+println("Data ready for visualization (cluster assignments by point):")
+for i in range(n_samples) {
+    print("Point ")
+    print(i)
+    print(": ")
+    print(X[i])
+    print(" -> Cluster ")
+    println(final_clusters[i])
+}
+println("")
+
+println("=== K-means Complete! ===")
+println("Clusters found:", k)
+println("Total iterations:", iter)
+println("Final WCSS:", wcss)

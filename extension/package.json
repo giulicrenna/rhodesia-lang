@@ -25,7 +25,7 @@
     "onCommand:rhodesia.showInfo"
   ],
   "main": "./extension.js",
-  "icon": "images/rhodesia-icon.png",
+  "icon": "images/RHODESIA.png",
   "contributes": {
     "languages": [
       {

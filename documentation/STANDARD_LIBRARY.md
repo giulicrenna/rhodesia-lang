@@ -835,10 +835,43 @@ io.close(handle)         // Cerrar archivo (retorna 1 si éxito, 0 si falla)
 // "w+"  - Lectura y escritura, sobrescribe
 // "a+"  - Lectura y añadir al final
 
-// Ejemplo - Abrir y cerrar
+// Ejemplo - Abrir y cerrar manualmente
 int: archivo = io.open("datos.txt", "w")
 // ... operaciones con el archivo ...
 io.close(archivo)
+
+// Ejemplo - Using block (cierre automático) - RECOMENDADO
+using io.open("datos.txt", "w") as archivo {
+    io.write(archivo, "contenido")
+    // El archivo se cierra automáticamente al salir del bloque
+}
+```
+
+#### Bloques Using (Manejo Automático de Recursos)
+
+Rhodesia soporta bloques `using` para garantizar que los archivos se cierren automáticamente, incluso si ocurre un error:
+
+```rhodesia
+// Sintaxis: using expr as var { body }
+using io.open("archivo.txt", "r") as file {
+    str: contenido = io.read(file)
+    println(contenido)
+}
+// El archivo se cierra automáticamente aquí
+
+// Ventajas del using:
+// 1. No necesitas recordar llamar io.close()
+// 2. El archivo se cierra incluso si hay errores
+// 3. Código más limpio y seguro
+
+// Using anidados para trabajar con múltiples archivos
+using io.open("entrada.txt", "r") as input {
+    using io.open("salida.txt", "w") as output {
+        str: datos = io.read(input)
+        io.write(output, datos)
+    }
+}
+// Ambos archivos se cierran automáticamente
 ```
 
 #### Lectura de Archivos
@@ -961,7 +994,7 @@ if io.exists("temporal.txt") {
 
 ### Ejemplos Completos
 
-#### Ejemplo 1: Sistema de Registro (Log)
+#### Ejemplo 1: Sistema de Registro (Log) con Using
 
 ```rhodesia
 str: log_file = "app.log"
@@ -969,20 +1002,19 @@ str: timestamp = "2024-01-15 10:30:00"
 str: mensaje = "[INFO] Aplicación iniciada\n"
 str: linea_log = string.concat(timestamp, " ", mensaje)
 
-// Añadir al log
-int: file = io.open(log_file, "a")
-io.write(file, linea_log)
-io.close(file)
-println("Log registrado")
+// Añadir al log usando 'using' block
+using io.open(log_file, "a") as file {
+    io.write(file, linea_log)
+    println("Log registrado")
+}
 
 // Leer logs
 if io.exists(log_file) {
-    int: file_read = io.open(log_file, "r")
-    str: logs = io.read(file_read)
-    io.close(file_read)
-
-    println("=== LOGS ===")
-    println(logs)
+    using io.open(log_file, "r") as file_read {
+        str: logs = io.read(file_read)
+        println("=== LOGS ===")
+        println(logs)
+    }
 }
 ```
 
@@ -1038,24 +1070,22 @@ if io.exists("config.txt") {
 }
 ```
 
-#### Ejemplo 4: Copia de Seguridad de Archivo
+#### Ejemplo 4: Copia de Seguridad con Using Anidado
 
 ```rhodesia
 str: archivo_original = "datos.txt"
 str: archivo_backup = "datos.backup.txt"
 
 if io.exists(archivo_original) {
-    // Abrir original para lectura
-    int: file_in = io.open(archivo_original, "r")
-    str: contenido = io.read(file_in)
-    io.close(file_in)
-
-    // Escribir backup
-    int: file_out = io.open(archivo_backup, "w")
-    io.write(file_out, contenido)
-    io.close(file_out)
-
-    println("Backup creado exitosamente")
+    // Using anidado para leer y escribir simultáneamente
+    using io.open(archivo_original, "r") as file_in {
+        using io.open(archivo_backup, "w") as file_out {
+            str: contenido = io.read(file_in)
+            io.write(file_out, contenido)
+            println("Backup creado exitosamente")
+        }
+    }
+    // Ambos archivos se cierran automáticamente
 } else {
     println("Error: archivo original no encontrado")
 }
@@ -1174,7 +1204,11 @@ if string.contains(opcion, "3") {
 ### Notas Importantes
 
 - **File Handles**: Los archivos se manejan mediante handles (números enteros) que se obtienen con `io.open()`
-- **Cerrar Archivos**: Siempre cierra los archivos con `io.close()` después de usarlos
+- **Bloques Using** (RECOMENDADO): Usa `using io.open(...) as var { }` para cerrar archivos automáticamente
+  - El archivo se cierra al salir del bloque, incluso si hay errores
+  - Es la forma más segura de manejar archivos
+  - Soporta anidamiento para trabajar con múltiples archivos
+- **Cerrar Manualmente**: Si no usas `using`, debes llamar `io.close()` explícitamente
 - **Modos de Apertura**:
   - `"r"` para lectura
   - `"w"` para escritura (sobrescribe)

@@ -1,0 +1,126 @@
+// Test de bloques 'using' para manejo automático de recursos
+println("=== Test de Bloques Using ===")
+println()
+
+// Test 1: Using básico con io.open
+println("Test 1: Using básico")
+
+using io.open("test_using.txt", "w") as file {
+    io.write(file, "Línea 1: Escrita dentro de using\n")
+    io.write(file, "Línea 2: Segunda línea\n")
+    io.write(file, "Línea 3: Tercera línea\n")
+    println("✓ Escritura dentro del bloque using completada")
+}
+
+println("✓ Bloque using terminado, archivo cerrado automáticamente")
+println()
+
+// Verificar que el archivo existe y leerlo
+println("Test 2: Verificar que el archivo fue cerrado correctamente")
+
+if io.exists("test_using.txt") {
+    using io.open("test_using.txt", "r") as file_read {
+        str: contenido = io.read(file_read)
+        println("Contenido leído:")
+        println(contenido)
+    }
+    println("✓ Lectura completada, archivo cerrado automáticamente")
+} else {
+    println("✗ Error: archivo no encontrado")
+}
+println()
+
+// Test 3: Lectura línea por línea con using
+println("Test 3: Lectura línea por línea con using")
+
+using io.open("test_using.txt", "r") as f {
+    println("Leyendo línea por línea:")
+    str: linea1 = io.readline(f)
+    println("  ", linea1)
+
+    str: linea2 = io.readline(f)
+    println("  ", linea2)
+
+    str: linea3 = io.readline(f)
+    println("  ", linea3)
+}
+
+println("✓ Archivo cerrado automáticamente después de leer")
+println()
+
+// Test 4: Append usando using
+println("Test 4: Append con using")
+
+using io.open("test_using.txt", "a") as file_append {
+    io.write(file_append, "Línea 4: Añadida con append\n")
+    println("✓ Línea añadida")
+}
+
+// Verificar contenido completo
+using io.open("test_using.txt", "r") as f_verify {
+    str: todo = io.read(f_verify)
+    println("Contenido completo:")
+    println(todo)
+}
+println()
+
+// Test 5: Múltiples archivos con using anidados
+println("Test 5: Using anidados (leer y escribir a la vez)")
+
+using io.open("test_using.txt", "r") as input_file {
+    using io.open("test_using_copy.txt", "w") as output_file {
+        str: contenido_original = io.read(input_file)
+        io.write(output_file, "=== COPIA ===\n")
+        io.write(output_file, contenido_original)
+        println("✓ Archivo copiado usando using anidados")
+    }
+}
+
+println("✓ Ambos archivos cerrados automáticamente")
+println()
+
+// Verificar copia
+println("Test 6: Verificar copia")
+using io.open("test_using_copy.txt", "r") as copy {
+    str: copia_contenido = io.read(copy)
+    println("Contenido de la copia:")
+    println(copia_contenido)
+}
+println()
+
+// Test 7: Seek y tell dentro de using
+println("Test 7: Navegación con seek/tell en using")
+
+using io.open("test_using.txt", "r") as nav_file {
+    // Leer inicio
+    str: primeros_10 = io.read(nav_file, 10)
+    println("Primeros 10 bytes:", primeros_10)
+
+    int: pos = io.tell(nav_file)
+    println("Posición actual:", pos)
+
+    // Volver al inicio
+    io.seek(nav_file, 0, 0)
+
+    str: de_nuevo = io.read(nav_file, 10)
+    println("Primeros 10 bytes (de nuevo):", de_nuevo)
+}
+
+println("✓ Navegación completada, archivo cerrado")
+println()
+
+// Limpiar archivos de test
+println("Test 8: Limpieza")
+int: deleted1 = io.remove("test_using.txt")
+int: deleted2 = io.remove("test_using_copy.txt")
+
+if deleted1 {
+    println("✓ test_using.txt eliminado")
+}
+if deleted2 {
+    println("✓ test_using_copy.txt eliminado")
+}
+println()
+
+println("=== Todos los tests de using completados ===")
+println("Los archivos fueron cerrados automáticamente en todos los casos!")
