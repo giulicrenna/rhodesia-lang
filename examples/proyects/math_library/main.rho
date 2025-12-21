@@ -1,0 +1,271 @@
+// main.rho
+// Comprehensive demonstration of the Math Library modules
+
+println("=== Rhodesia Math Library Demo ===")
+println("A comprehensive modular math library for scientific computing")
+println("")
+
+// Import all modules
+include core/core{PI, E, safe_divide, power, clamp, lerp, approx_equal, sign, smoothstep}
+include core/trigonometry{degrees_to_radians, radians_to_degrees, sin_taylor, cos_taylor, tan_approx, asin_approx, atan2_approx}
+include linear_algebra/vectors{vec_distance, vec_project, vec_angle_degrees, vec_normalize_safe, vec_cross_3d, vec_rotate_2d}
+include linear_algebra/matrices{mat_trace, mat_det_3x3, mat_transpose, mat_frobenius_norm, mat_is_symmetric}
+include linear_algebra/decompositions{lu_decompose_3x3, qr_decompose_3x3, mat_eigenvalues_2x2}
+include statistics/descriptive{mean, std_dev, median, correlation, z_score_normalize}
+include statistics/probability{normal_pdf, normal_cdf, binomial_pmf, standard_normal_quantile}
+include statistics/regression{linear_regression, r_squared, polynomial_regression_quadratic}
+include numerical/root_finding{bisection, newton_raphson, quadratic_roots}
+include numerical/optimization{gradient_descent, golden_section_search}
+include numerical/integration{simpsons_rule, adaptive_quadrature, monte_carlo_integration}
+
+println("--- Core Math Functions ---")
+
+// Test core functions
+println("Mathematical constants:")
+println("  PI:", PI)
+println("  E:", E)
+println("")
+
+println("Core functions:")
+println("  safe_divide(10, 2):", safe_divide(10.0, 2.0))
+println("  power(2, 3):", power(2.0, 3))
+println("  clamp(5, 1, 3):", clamp(5.0, 1.0, 3.0))
+println("  lerp(0, 10, 0.5):", lerp(0.0, 10.0, 0.5))
+println("  approx_equal(1.0001, 1.0, 0.01):", approx_equal(1.0001, 1.0, 0.01))
+println("  sign(-3.5):", sign(-3.5))
+println("  smoothstep(0.5, 0.2, 0.8):", smoothstep(0.5, 0.2, 0.8))
+println("")
+
+println("--- Trigonometry Functions ---")
+
+// Test trigonometry
+println("Trigonometric functions:")
+println("  sin_taylor(PI/2, 10):", sin_taylor(PI/2.0, 10))
+println("  cos_taylor(PI, 10):", cos_taylor(PI, 10))
+println("  tan_approx(PI/4):", tan_approx(PI/4.0))
+println("  degrees_to_radians(180):", degrees_to_radians(180.0))
+println("  radians_to_degrees(PI):", radians_to_degrees(PI))
+println("  asin_approx(0.5):", asin_approx(0.5))
+println("  atan2_approx(1, 1):", atan2_approx(1.0, 1.0))
+println("")
+
+println("--- Linear Algebra: Vectors ---")
+
+// Test vector operations
+vec: v1 = [1.0, 2.0, 3.0]
+vec: v2 = [4.0, 5.0, 6.0]
+
+println("Vector operations:")
+println("  v1:", v1)
+println("  v2:", v2)
+println("  vec_distance(v1, v2):", vec_distance(v1, v2))
+println("  vec_project(v1, v2):", vec_project(v1, v2))
+println("  vec_angle_degrees(v1, v2):", vec_angle_degrees(v1, v2), "degrees")
+println("  vec_normalize_safe(v1, 0.0001):", vec_normalize_safe(v1, 0.0001))
+println("  vec_cross_3d(v1, v2):", vec_cross_3d(v1, v2))
+println("  vec_rotate_2d([1,0], PI/2):", vec_rotate_2d([1.0, 0.0], PI/2.0))
+println("")
+
+println("--- Linear Algebra: Matrices ---")
+
+// Test matrix operations
+mat: A = [[1.0, 2.0, 3.0],
+          [4.0, 5.0, 6.0],
+          [7.0, 8.0, 10.0]]
+
+mat: B = [[1.0, 0.0, 0.0],
+          [0.0, 2.0, 0.0],
+          [0.0, 0.0, 3.0]]
+
+println("Matrix operations:")
+println("  Matrix A:")
+println(A)
+println("  Matrix B (diagonal):")
+println(B)
+println("  mat_trace(A):", mat_trace(A))
+println("  mat_det_3x3(A):", mat_det_3x3(A))
+println("  mat_transpose(A):")
+println(mat_transpose(A))
+println("  mat_frobenius_norm(A):", mat_frobenius_norm(A))
+println("  mat_is_symmetric(A, 0.0001):", mat_is_symmetric(A, 0.0001))
+println("  mat_is_symmetric(B, 0.0001):", mat_is_symmetric(B, 0.0001))
+println("")
+
+println("--- Linear Algebra: Decompositions ---")
+
+// Test matrix decompositions
+println("Matrix decompositions:")
+println("  LU decomposition of A:")
+(mat: L, mat: U) = lu_decompose_3x3(A)
+println("    L:")
+println(L)
+println("    U:")
+println(U)
+println("    L*U (should equal A):")
+println(L * U)
+println("")
+
+println("  QR decomposition of A:")
+(mat: Q, mat: R) = qr_decompose_3x3(A)
+println("    Q:")
+println(Q)
+println("    R:")
+println(R)
+println("    Q*R (should equal A):")
+println(Q * R)
+println("")
+
+println("  Eigenvalues of 2x2 submatrix:")
+mat: A2x2 = [[A[0,0], A[0,1]], [A[1,0], A[1,1]]]
+vec: eigenvalues = mat_eigenvalues_2x2(A2x2)
+println("    Matrix:")
+println(A2x2)
+println("    Eigenvalues:", eigenvalues)
+println("")
+
+println("--- Statistics: Descriptive ---")
+
+// Test descriptive statistics
+vec: data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+vec: data2 = [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0]
+
+println("Descriptive statistics:")
+println("  Data:", data)
+println("  mean(data):", mean(data))
+println("  std_dev(data):", std_dev(data))
+println("  median(data):", median(data))
+println("  correlation(data, data2):", correlation(data, data2))
+println("  z_score_normalize(data):", z_score_normalize(data))
+println("")
+
+println("--- Statistics: Probability ---")
+
+// Test probability distributions
+println("Probability distributions:")
+println("  normal_pdf(0, 0, 1):", normal_pdf(0.0, 0.0, 1.0))
+println("  normal_cdf(0, 0, 1):", normal_cdf(0.0, 0.0, 1.0))
+println("  binomial_pmf(2, 5, 0.5):", binomial_pmf(2, 5, 0.5))
+println("  standard_normal_quantile(0.95):", standard_normal_quantile(0.95))
+println("")
+
+println("--- Statistics: Regression ---")
+
+// Test regression
+vec: x_reg = [1.0, 2.0, 3.0, 4.0, 5.0]
+vec: y_reg = [2.0, 4.0, 5.0, 4.0, 5.0]
+
+println("Linear regression:")
+println("  x:", x_reg)
+println("  y:", y_reg)
+(float64: a, float64: b) = linear_regression(x_reg, y_reg)
+println("  Regression line: y =", a, "+", b, "* x")
+println("  R-squared:", r_squared(x_reg, y_reg))
+println("  Prediction at x=3:", linear_regression_predict(x_reg, y_reg, 3.0))
+println("")
+
+println("  Quadratic regression:")
+(float64: a2, float64: b2, float64: c2) = polynomial_regression_quadratic(x_reg, y_reg)
+println("  Quadratic fit: y =", a2, "+", b2, "* x +", c2, "* x^2")
+println("  Prediction at x=3:", polynomial_regression_predict(x_reg, y_reg, 3.0))
+println("")
+
+println("--- Numerical Methods: Root Finding ---")
+
+// Test root finding
+fun test_function(float64: x) -> float64 {
+    return x * x - 4.0  // f(x) = x² - 4, root at x=2
+}
+
+fun test_derivative(float64: x) -> float64 {
+    return 2.0 * x
+}
+
+println("Root finding:")
+println("  Finding root of f(x) = x² - 4")
+println("  Bisection method (1, 3):", bisection(test_function, 1.0, 3.0, 0.0001, 100))
+println("  Newton-Raphson (3, 0.0001):", newton_raphson(test_function, test_derivative, 3.0, 0.0001, 100))
+println("  Quadratic roots (1, 0, -4):", quadratic_roots(1.0, 0.0, -4.0))
+println("")
+
+println("--- Numerical Methods: Optimization ---")
+
+// Test optimization
+fun test_optimization_function(float64: x) -> float64 {
+    return x * x + 2.0 * x + 1.0  // f(x) = (x+1)², minimum at x=-1
+}
+
+fun test_optimization_gradient(float64: x) -> float64 {
+    return 2.0 * x + 2.0
+}
+
+println("Optimization:")
+println("  Minimizing f(x) = (x+1)²")
+println("  Golden section search (-2, 0):", golden_section_search(test_optimization_function, -2.0, 0.0, 0.0001, 100))
+println("  Gradient descent (starting at 3):", gradient_descent(test_optimization_function, test_optimization_gradient, [3.0], 0.1, 0.0001, 100)[0])
+println("")
+
+println("--- Numerical Methods: Integration ---")
+
+// Test integration
+fun test_integration_function(float64: x) -> float64 {
+    return x * x  // ∫x² dx from 0 to 1 = 1/3 ≈ 0.3333
+}
+
+println("Numerical integration:")
+println("  Integrating f(x) = x² from 0 to 1 (should be ≈ 0.3333)")
+println("  Simpson's rule (n=100):", simpsons_rule(test_integration_function, 0.0, 1.0, 100))
+println("  Adaptive quadrature:", adaptive_quadrature(test_integration_function, 0.0, 1.0, 0.0001, 10, 0))
+println("  Monte Carlo (10000 samples):", monte_carlo_integration(test_integration_function, 0.0, 1.0, 10000))
+println("")
+
+println("--- Practical Applications ---")
+
+// Practical example: Physics simulation
+println("Physics simulation - projectile motion:")
+float64: v0 = 20.0  // initial velocity
+float64: angle = 45.0  // launch angle
+float64: g = 9.81  // gravity
+
+float64: angle_rad = degrees_to_radians(angle)
+float64: vx = v0 * cos_taylor(angle_rad, 10)
+float64: vy = v0 * sin_taylor(angle_rad, 10)
+
+float64: time_of_flight = 2.0 * vy / g
+float64: max_height = vy * vy / (2.0 * g)
+float64: range = vx * time_of_flight
+
+println("  Initial velocity:", v0, "m/s at", angle, "degrees")
+println("  Time of flight:", time_of_flight, "seconds")
+println("  Maximum height:", max_height, "meters")
+println("  Range:", range, "meters")
+println("")
+
+// Practical example: Financial calculation
+println("Financial calculation - compound interest:")
+float64: principal = 1000.0
+float64: rate = 0.05  // 5% annual interest
+int: years = 10
+
+float64: future_value = principal * power(1.0 + rate, years)
+println("  Principal:", principal)
+println("  Annual rate:", rate * 100.0, "%")
+println("  After", years, "years:", future_value)
+println("")
+
+// Practical example: Data analysis
+println("Data analysis - statistical summary:")
+vec: dataset = [12.0, 15.0, 18.0, 22.0, 25.0, 28.0, 30.0, 32.0, 35.0, 40.0]
+println("  Dataset:", dataset)
+println("  Mean:", mean(dataset))
+println("  Standard deviation:", std_dev(dataset))
+println("  Median:", median(dataset))
+println("  Min:", min_value(dataset))
+println("  Max:", max_value(dataset))
+println("  Range:", range(dataset))
+println("")
+
+println("=== Demo completed successfully! ===")
+println("")
+println("The Rhodesia Math Library provides a comprehensive set of mathematical")
+println("functions organized into modular components for scientific computing.")
+println("All modules can be imported and used independently in your applications.")

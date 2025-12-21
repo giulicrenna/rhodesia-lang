@@ -1,0 +1,9 @@
+// Test: Resolving name conflicts with aliases
+
+include module_a{process as process_a}
+include module_b{process as process_b}
+
+float64: num = 5.0
+println("Testing conflict resolution:")
+println("process_a(5) =", process_a(num))
+println("process_b(5) =", process_b(num))

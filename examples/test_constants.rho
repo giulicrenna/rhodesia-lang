@@ -1,0 +1,36 @@
+// Test mathematical constants
+
+println("=== Testing Mathematical Constants ===")
+
+// Access constants directly (sin paréntesis)
+println("math.PI =", math.PI)
+println("math.E =", math.E)
+println("math.PHI =", math.PHI)
+println("math.SQRT_2 =", math.SQRT_2)
+println("math.SQRT_3 =", math.SQRT_3)
+
+println("")
+println("=== Using Constants in Calculations ===")
+
+// Use PI in calculations
+float64: circumference = 2.0 * math.PI * 5.0  // circle with radius 5
+println("Circumference (r=5):", circumference)
+
+float64: area = math.PI * 5.0 * 5.0  // circle area
+println("Area (r=5):", area)
+
+// Use E in exponential calculations
+float64: exp_result = math.pow(math.E, 2.0)  // e^2
+println("e^2 =", exp_result)
+
+// Use golden ratio
+float64: phi_squared = math.PHI * math.PHI
+println("φ² =", phi_squared)
+println("φ + 1 =", math.PHI + 1.0)  // φ² = φ + 1 (golden ratio property)
+
+// Pythagorean theorem using SQRT_2
+float64: hypotenuse = math.SQRT_2  // for unit square
+println("Diagonal of unit square:", hypotenuse)
+
+println("")
+println("All constant tests passed!")

@@ -1,0 +1,97 @@
+// ============================================================================
+// matrix_demo.rho - Matrix Operations Demo
+// Demonstrates matrix manipulation in Rhodesia
+// ============================================================================
+
+println("=== Matrix Operations Demo ===")
+println("")
+
+// Create matrices
+mat: A = [[1.0, 2.0, 3.0],
+          [4.0, 5.0, 6.0],
+          [7.0, 8.0, 10.0]]
+
+mat: B = [[1.0, 0.0, 0.0],
+          [0.0, 2.0, 0.0],
+          [0.0, 0.0, 3.0]]
+
+println("Matrix A:")
+println(A)
+println("")
+
+println("Matrix B (diagonal):")
+println(B)
+println("")
+
+// Basic operations
+println("=== Basic Operations ===")
+println("A + B:")
+println(A + B)
+println("")
+
+println("A - B:")
+println(A - B)
+println("")
+
+println("A * B (matrix multiplication):")
+println(A * B)
+println("")
+
+println("2 * A (scalar multiplication):")
+println(2.0 * A)
+println("")
+
+// Transpose
+println("=== Transpose ===")
+println("transpose(A):")
+println(transpose(A))
+println("")
+
+// Matrix inverse
+println("=== Matrix Inverse ===")
+mat: A_inv = inv(A)
+println("inv(A):")
+println(A_inv)
+println("")
+
+println("A * inv(A) (should be ~identity):")
+println(A * A_inv)
+println("")
+
+// Norms and dimensions
+println("=== Matrix Information ===")
+println("rows(A):", rows(A))
+println("cols(A):", cols(A))
+println("size(A):", size(A))
+println("norm(A) [Frobenius]:", norm(A))
+println("sum(A):", sum(A))
+println("mean(A):", mean(A))
+println("")
+
+// Identity matrix
+println("=== Special Matrices ===")
+println("eye(3):")
+println(eye(3))
+println("")
+
+println("zeros(2, 3):")
+println(zeros(2, 3))
+println("")
+
+println("ones(3, 2):")
+println(ones(3, 2))
+println("")
+
+// Matrix-vector multiplication
+println("=== Matrix-Vector Multiplication ===")
+vec: x = [1.0, 2.0, 3.0]
+println("x:", x)
+println("A * x:")
+println(A * x)
+println("")
+
+// Element access
+println("=== Element Access ===")
+println("A[0, 0]:", A[0, 0])
+println("A[1, 2]:", A[1, 2])
+println("A[2, 2]:", A[2, 2])

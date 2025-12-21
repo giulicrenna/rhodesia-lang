@@ -1,0 +1,114 @@
+{
+  "name": "rhodesia-language",
+  "displayName": "Rhodesia Language Support",
+  "description": "Comprehensive language support for Rhodesia (.rho files) including syntax highlighting, intelligent autocomplete, linting, hover documentation, and code navigation",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Languages",
+    "Programming Languages",
+    "Data Science"
+  ],
+  "keywords": [
+    "rhodesia",
+    "rho",
+    "data science",
+    "programming language",
+    "mathematics",
+    "linear algebra",
+    "scientific computing"
+  ],
+  "activationEvents": [
+    "onLanguage:rhodesia",
+    "onCommand:rhodesia.showInfo"
+  ],
+  "main": "./extension.js",
+  "icon": "images/rhodesia-icon.png",
+  "contributes": {
+    "languages": [
+      {
+        "id": "rhodesia",
+        "aliases": [
+          "Rhodesia",
+          "rho"
+        ],
+        "extensions": [
+          ".rho"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rhodesia",
+        "scopeName": "source.rho",
+        "path": "./syntaxes/rhodesia.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "rhodesia.showInfo",
+        "title": "Rhodesia: Show Extension Info"
+      }
+    ],
+    "configuration": {
+      "title": "Rhodesia",
+      "properties": {
+        "rhodesia.enableLinting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable linting for Rhodesia files"
+        },
+        "rhodesia.enableAutocomplete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable autocomplete for Rhodesia files"
+        },
+        "rhodesia.showTypeHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show type hints on hover"
+        },
+        "rhodesia.maxNumberOfProblems": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of problems shown by the linter"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "npx tsc -p ./",
+    "watch": "npx tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "@types/vscode": "^1.75.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.7",
+    "@typescript-eslint/parser": "^5.59.7",
+    "eslint": "^8.41.0",
+    "typescript": "^4.9.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/giulicrenna/rhodesia-lang.git"
+  },
+  "bugs": {
+    "url": "https://github.com/giulicrenna/rhodesia-lang/issues"
+  },
+  "homepage": "https://github.com/giulicrenna/rhodesia-lang/blob/main/extension/README.md",
+  "license": "MIT",
+  "author": {
+    "name": "Giuliano Crenna",
+    "email": "giulicrenna@gmail.com"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

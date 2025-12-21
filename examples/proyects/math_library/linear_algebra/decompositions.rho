@@ -1,0 +1,200 @@
+// decompositions.rho
+// Matrix decomposition algorithms
+
+// LU decomposition (Doolittle algorithm) for 3x3 matrices
+fun lu_decompose_3x3(mat: A) -> (mat, mat) {
+    int: n = 3
+    mat: L = eye(n)
+    mat: U = zeros(n, n)
+
+    // Initialize U with A
+    for i in range(n) {
+        for j in range(n) {
+            U[i, j] = A[i, j]
+        }
+    }
+
+    // Perform LU decomposition
+    for k in range(n) {
+        // Upper triangular part
+        for j in range(k, n) {
+            float64: sum = 0.0
+            for m in range(k) {
+                sum = sum + L[k, m] * U[m, j]
+            }
+            U[k, j] = U[k, j] - sum
+        }
+
+        // Lower triangular part
+        for i in range(k + 1, n) {
+            float64: sum = 0.0
+            for m in range(k) {
+                sum = sum + L[i, m] * U[m, k]
+            }
+            L[i, k] = (U[i, k] - sum) / U[k, k]
+        }
+    }
+
+    return (L, U)
+}
+
+// QR decomposition using Gram-Schmidt for 3x3 matrices
+fun qr_decompose_3x3(mat: A) -> (mat, mat) {
+    int: n = 3
+    mat: Q = zeros(n, n)
+    mat: R = zeros(n, n)
+
+    // Extract columns from A
+    vec: a0 = [A[0, 0], A[1, 0], A[2, 0]]
+    vec: a1 = [A[0, 1], A[1, 1], A[2, 1]]
+    vec: a2 = [A[0, 2], A[1, 2], A[2, 2]]
+
+    // First column
+    vec: u0 = a0
+    vec: e0 = vec_normalize_safe(u0, 0.000001)
+    Q[0, 0] = e0[0]
+    Q[1, 0] = e0[1]
+    Q[2, 0] = e0[2]
+    R[0, 0] = norm(u0)
+
+    // Second column
+    vec: u1 = a1 - dot(a1, e0) * e0
+    vec: e1 = vec_normalize_safe(u1, 0.000001)
+    Q[0, 1] = e1[0]
+    Q[1, 1] = e1[1]
+    Q[2, 1] = e1[2]
+    R[0, 1] = dot(a1, e0)
+    R[1, 1] = norm(u1)
+
+    // Third column
+    vec: u2 = a2 - dot(a2, e0) * e0 - dot(a2, e1) * e1
+    vec: e2 = vec_normalize_safe(u2, 0.000001)
+    Q[0, 2] = e2[0]
+    Q[1, 2] = e2[1]
+    Q[2, 2] = e2[2]
+    R[0, 2] = dot(a2, e0)
+    R[1, 2] = dot(a2, e1)
+    R[2, 2] = norm(u2)
+
+    return (Q, R)
+}
+
+// Cholesky decomposition for positive definite matrices (3x3)
+fun cholesky_decompose_3x3(mat: A) -> mat {
+    int: n = 3
+    mat: L = zeros(n, n)
+
+    // First row
+    L[0, 0] = sqrt(A[0, 0])
+
+    // Second row
+    L[1, 0] = A[1, 0] / L[0, 0]
+    L[1, 1] = sqrt(A[1, 1] - L[1, 0] * L[1, 0])
+
+    // Third row
+    L[2, 0] = A[2, 0] / L[0, 0]
+    L[2, 1] = (A[2, 1] - L[2, 0] * L[1, 0]) / L[1, 1]
+    L[2, 2] = sqrt(A[2, 2] - L[2, 0] * L[2, 0] - L[2, 1] * L[2, 1])
+
+    return L
+}
+
+// Eigenvalue estimation for 2x2 matrices (simple approximation)
+fun mat_eigenvalues_2x2(mat: A) -> vec {
+    float64: trace = mat_trace(A)
+    float64: det = mat_det_2x2(A)
+    float64: discriminant = trace * trace - 4.0 * det
+
+    if discriminant < 0.0 {
+        // Complex eigenvalues (return real part only)
+        float64: real_part = trace / 2.0
+        return [real_part, real_part]
+    } else {
+        float64: sqrt_disc = sqrt(discriminant)
+        float64: lambda1 = (trace + sqrt_disc) / 2.0
+        float64: lambda2 = (trace - sqrt_disc) / 2.0
+        return [lambda1, lambda2]
+    }
+}
+
+// Singular Value Decomposition (SVD) approximation for 2x2 matrices
+fun svd_approximate_2x2(mat: A) -> (mat, vec, mat) {
+    // This is a simplified approximation for demonstration
+    // For a real SVD, more complex algorithms would be needed
+
+    // Compute A^T A
+    mat: ATA = mat_transpose(A) * A
+
+    // Get eigenvalues of A^T A (approximate singular values squared)
+    vec: eigvals = mat_eigenvalues_2x2(ATA)
+    vec: sigma = [sqrt(eigvals[0]), sqrt(eigvals[1])]
+
+    // Simple orthogonal matrices (identity for this approximation)
+    mat: U = eye(2)
+    mat: V = eye(2)
+
+    return (U, sigma, V)
+}
+
+// Matrix condition number estimation (using Frobenius norm)
+fun mat_condition_number(mat: A) -> float64 {
+    float64: norm_A = mat_frobenius_norm(A)
+
+    // For invertible matrices, condition number is ||A|| * ||A⁻¹||
+    // This is a simplified estimation
+    mat: A_inv = inv(A)
+    float64: norm_A_inv = mat_frobenius_norm(A_inv)
+
+    return norm_A * norm_A_inv
+}
+
+// Matrix rank estimation (simple approximation)
+fun mat_rank_estimate(mat: A, float64: epsilon) -> int {
+    // This is a simplified rank estimation
+    // For a real implementation, SVD would be better
+
+    int: rows_a = rows(A)
+    int: cols_a = cols(A)
+    int: rank = 0
+
+    // Count non-zero rows (very simple approach)
+    for i in range(rows_a) {
+        float64: row_norm = 0.0
+        for j in range(cols_a) {
+            row_norm = row_norm + A[i, j] * A[i, j]
+        }
+        row_norm = sqrt(row_norm)
+
+        if row_norm > epsilon {
+            rank = rank + 1
+        }
+    }
+
+    return rank
+}
+
+// Matrix null space estimation (very simple)
+fun mat_null_space_estimate(mat: A, float64: epsilon) -> mat {
+    // This is a very simplified null space estimation
+    // For a real implementation, more sophisticated methods would be needed
+
+    int: cols_a = cols(A)
+    mat: null_space = zeros(cols_a, 1)  // Return a single basis vector
+
+    // Find a column that's approximately zero (very simple approach)
+    for j in range(cols_a) {
+        float64: col_norm = 0.0
+        for i in range(rows(A)) {
+            col_norm = col_norm + A[i, j] * A[i, j]
+        }
+        col_norm = sqrt(col_norm)
+
+        if col_norm <= epsilon {
+            // This column is approximately in the null space
+            null_space[j, 0] = 1.0
+            return null_space
+        }
+    }
+
+    return null_space  // Return zero vector if no null space found
+}

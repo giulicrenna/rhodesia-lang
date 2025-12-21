@@ -1,0 +1,28 @@
+// test_simple.rho
+// Prueba simple del sistema de importación
+
+// Importar funciones del módulo simple_math
+include simple_math{square, cube, double_it}
+
+println("=== Prueba del Sistema de Módulos ===")
+println("")
+
+float64: x = 5.0
+println("x =", x)
+println("square(x) =", square(x))
+println("cube(x) =", cube(x))
+println("double_it(x) =", double_it(x))
+println("")
+
+float64: y = 10.0
+println("y =", y)
+println("square(y) =", square(y))
+println("cube(y) =", cube(y))
+println("")
+
+println("Calculando combinaciones:")
+float64: result = double_it(square(3.0))
+println("double_it(square(3.0)) =", result)
+println("")
+
+println("=== Prueba exitosa ===")

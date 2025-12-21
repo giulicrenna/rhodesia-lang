@@ -1,0 +1,50 @@
+// ============================================================================
+// Basic Statistics Module Usage Examples
+// ============================================================================
+// Quick examples of stats.mean, stats.std, stats.var, stats.cov
+//
+// Usage: ./rhodesia examples/stats_basic.rho
+
+println("Basic Statistics Examples")
+println("==========================\n")
+
+// Example 1: Mean (promedio)
+println("1. Mean (Average)")
+vec: data1 = [10.0, 20.0, 30.0, 40.0, 50.0]
+println("   Data:", data1)
+println("   stats.mean(data):", stats.mean(data1))
+println("")
+
+// Example 2: Variance (varianza)
+println("2. Variance")
+vec: data2 = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
+println("   Data:", data2)
+println("   stats.var(data):", stats.var(data2))
+println("")
+
+// Example 3: Standard Deviation (desviación estándar)
+println("3. Standard Deviation")
+vec: data3 = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
+println("   Data:", data3)
+println("   stats.std(data):", stats.std(data3))
+println("")
+
+// Example 4: Covariance (covarianza)
+println("4. Covariance")
+vec: x = [1.0, 2.0, 3.0, 4.0, 5.0]
+vec: y = [5.0, 4.0, 3.0, 2.0, 1.0]
+println("   X:", x)
+println("   Y:", y)
+println("   stats.cov(x, y):", stats.cov(x, y))
+println("")
+
+// Example 5: All together in a data analysis
+println("5. Complete Data Analysis")
+vec: dataset = [12.5, 15.3, 14.2, 18.9, 16.7, 13.1, 17.4, 15.8]
+println("   Dataset:", dataset)
+println("   Mean:     ", stats.mean(dataset))
+println("   Variance: ", stats.var(dataset))
+println("   Std Dev:  ", stats.std(dataset))
+println("")
+
+println("Done!")

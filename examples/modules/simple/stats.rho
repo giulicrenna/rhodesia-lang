@@ -1,0 +1,47 @@
+// stats.rho
+// Módulo con funciones estadísticas
+
+// Función para calcular la varianza de un vector
+fun variance(vec: data) -> float64 {
+    float64: m = mean(data)
+    vec: centered = data - m
+    vec: squared = centered * centered
+    return sum(squared) / size(data)
+}
+
+// Función para calcular la desviación estándar
+fun std_dev(vec: data) -> float64 {
+    return sqrt(variance(data))
+}
+
+// Función para encontrar el valor mínimo
+fun min_value(vec: data) -> float64 {
+    float64: min_val = data[0]
+    int: n = size(data)
+
+    for i in range(1, n) {
+        float64: val = data[i]
+        float64: diff = min_val - val
+        if diff >= 0.0 {
+            min_val = val
+        }
+    }
+
+    return min_val
+}
+
+// Función para encontrar el valor máximo
+fun max_value(vec: data) -> float64 {
+    float64: max_val = data[0]
+    int: n = size(data)
+
+    for i in range(1, n) {
+        float64: val = data[i]
+        float64: diff = val - max_val
+        if diff >= 0.0 {
+            max_val = val
+        }
+    }
+
+    return max_val
+}

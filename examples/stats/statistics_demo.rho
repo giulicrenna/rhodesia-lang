@@ -1,0 +1,202 @@
+// ============================================================================
+// Rhodesia Statistics Module Demo
+// ============================================================================
+// Demonstrates the statistics module functions: mean, std, var, cov
+//
+// Usage: ./rhodesia examples/statistics_demo.rho
+
+println("==============================================")
+println("  Rhodesia Statistics Module Demo")
+println("==============================================\n")
+
+// ============================================================================
+// 1. Basic Statistics on Vectors
+// ============================================================================
+
+println("1. Basic Statistics on Vectors")
+println("-------------------------------")
+
+vec: data = [10.0, 12.0, 23.0, 23.0, 16.0, 23.0, 21.0, 16.0]
+println("Data:", data)
+
+float64: mean_val = stats.mean(data)
+println("Mean:", mean_val)
+
+float64: variance = stats.var(data)
+println("Variance:", variance)
+
+float64: std_dev = stats.std(data)
+println("Standard Deviation:", std_dev)
+
+println("")
+
+// ============================================================================
+// 2. Statistics on Matrices
+// ============================================================================
+
+println("2. Statistics on Matrices")
+println("--------------------------")
+
+mat: matrix_data = [[1.0, 2.0, 3.0],
+                     [4.0, 5.0, 6.0],
+                     [7.0, 8.0, 9.0]]
+println("Matrix:")
+println(matrix_data)
+
+float64: mat_mean = stats.mean(matrix_data)
+println("Mean of all elements:", mat_mean)
+
+float64: mat_var = stats.var(matrix_data)
+println("Variance of all elements:", mat_var)
+
+float64: mat_std = stats.std(matrix_data)
+println("Standard Deviation of all elements:", mat_std)
+
+println("")
+
+// ============================================================================
+// 3. Covariance between two vectors
+// ============================================================================
+
+println("3. Covariance between two vectors")
+println("----------------------------------")
+
+vec: x = [1.0, 2.0, 3.0, 4.0, 5.0]
+vec: y = [2.0, 4.0, 6.0, 8.0, 10.0]
+
+println("Vector X:", x)
+println("Vector Y:", y)
+
+float64: covariance = stats.cov(x, y)
+println("Covariance(X, Y):", covariance)
+
+// Correlation coefficient: r = cov(X,Y) / (std(X) * std(Y))
+float64: correlation = covariance / (stats.std(x) * stats.std(y))
+println("Correlation coefficient:", correlation)
+
+println("")
+
+// ============================================================================
+// 4. Real-world example: Temperature data analysis
+// ============================================================================
+
+println("4. Temperature Data Analysis")
+println("-----------------------------")
+
+// Daily temperatures in Celsius for two weeks
+vec: temperatures = [22.5, 23.1, 21.8, 24.2, 23.9, 25.0, 24.5,
+                     23.2, 22.8, 23.5, 24.0, 25.5, 26.1, 24.8]
+
+println("Temperature readings (°C):", temperatures)
+println("Number of days:", math.size(temperatures))
+
+float64: avg_temp = stats.mean(temperatures)
+println("Average temperature:", avg_temp, "°C")
+
+float64: temp_std = stats.std(temperatures)
+println("Standard deviation:", temp_std, "°C")
+
+// Calculate temperature range
+float64: min_temp = avg_temp - 2.0 * temp_std
+float64: max_temp = avg_temp + 2.0 * temp_std
+println("Expected range (±2σ):", min_temp, "°C to", max_temp, "°C")
+
+println("")
+
+// ============================================================================
+// 5. Stock Market Returns Analysis
+// ============================================================================
+
+println("5. Stock Market Returns Analysis")
+println("---------------------------------")
+
+// Daily returns for two stocks (in percentage)
+vec: stock_a = [1.2, -0.5, 2.1, 0.8, -1.3, 1.9, 0.4, -0.8, 1.5, 0.9]
+vec: stock_b = [0.8, -0.3, 1.5, 0.5, -0.9, 1.2, 0.6, -0.5, 1.1, 0.7]
+
+println("Stock A returns (%):", stock_a)
+println("Stock B returns (%):", stock_b)
+
+float64: mean_a = stats.mean(stock_a)
+float64: mean_b = stats.mean(stock_b)
+println("\nAverage returns:")
+println("  Stock A:", mean_a, "%")
+println("  Stock B:", mean_b, "%")
+
+float64: vol_a = stats.std(stock_a)
+float64: vol_b = stats.std(stock_b)
+println("\nVolatility (risk):")
+println("  Stock A:", vol_a, "%")
+println("  Stock B:", vol_b, "%")
+
+float64: cov_ab = stats.cov(stock_a, stock_b)
+println("\nCovariance between stocks:", cov_ab)
+
+// Sharpe ratio (assuming risk-free rate = 0 for simplicity)
+float64: sharpe_a = mean_a / vol_a
+float64: sharpe_b = mean_b / vol_b
+println("\nSharpe ratios (return/risk):")
+println("  Stock A:", sharpe_a)
+println("  Stock B:", sharpe_b)
+
+println("")
+
+// ============================================================================
+// 6. Z-score calculation (standardization)
+// ============================================================================
+
+println("6. Z-score Standardization")
+println("---------------------------")
+
+vec: scores = [85.0, 90.0, 78.0, 92.0, 88.0, 76.0, 95.0, 82.0, 89.0, 91.0]
+println("Test scores:", scores)
+
+float64: score_mean = stats.mean(scores)
+float64: score_std = stats.std(scores)
+
+println("Mean score:", score_mean)
+println("Standard deviation:", score_std)
+
+// Calculate z-score for first student (manual calculation)
+float64: first_score = 85.0
+float64: z_score = (first_score - score_mean) / score_std
+println("\nZ-score for score 85:", z_score)
+println("(Indicates how many std deviations from the mean)")
+
+println("")
+
+// ============================================================================
+// 7. Statistical comparison of two datasets
+// ============================================================================
+
+println("7. Comparing Two Datasets")
+println("--------------------------")
+
+vec: group_a = [12.0, 15.0, 14.0, 18.0, 16.0, 13.0, 17.0, 15.0]
+vec: group_b = [22.0, 25.0, 24.0, 28.0, 26.0, 23.0, 27.0, 25.0]
+
+println("Group A:", group_a)
+println("Group B:", group_b)
+
+println("\nGroup A statistics:")
+println("  Mean:", stats.mean(group_a))
+println("  Variance:", stats.var(group_a))
+println("  Std Dev:", stats.std(group_a))
+
+println("\nGroup B statistics:")
+println("  Mean:", stats.mean(group_b))
+println("  Variance:", stats.var(group_b))
+println("  Std Dev:", stats.std(group_b))
+
+// Coefficient of variation (CV = std/mean * 100)
+float64: cv_a = (stats.std(group_a) / stats.mean(group_a)) * 100.0
+float64: cv_b = (stats.std(group_b) / stats.mean(group_b)) * 100.0
+
+println("\nCoefficient of Variation (relative variability):")
+println("  Group A:", cv_a, "%")
+println("  Group B:", cv_b, "%")
+
+println("")
+println("==============================================")
+println("  Demo completed successfully!")
+println("==============================================")

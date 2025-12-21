@@ -1,0 +1,10 @@
+// Test: Import all symbols from module
+
+include test_module{}
+
+float64: x = 5.0
+println("Testing import all symbols:")
+println("square(5) =", square(x))
+println("cube(5) =", cube(x))
+println("double_it(5) =", double_it(x))
+println("MODULE_PI =", MODULE_PI)

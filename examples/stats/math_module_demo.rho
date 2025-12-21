@@ -1,0 +1,113 @@
+// ============================================================================
+// Math Module Demo
+// Demonstrates the new module syntax for mathematical functions
+// ============================================================================
+
+println("========================================")
+println("  Math Module Demonstration")
+println("========================================")
+println("")
+
+// ============================================================================
+// 1. Creation Functions
+// ============================================================================
+println("1. Creation Functions")
+println("---------------------")
+
+vec: v_zeros = math.zeros(5)
+mat: m_zeros = math.zeros(3, 3)
+vec: v_ones = math.ones(4)
+mat: m_identity = math.eye(3)
+
+println("zeros(5): ", v_zeros)
+println("zeros(3,3):")
+println(m_zeros)
+println("ones(4): ", v_ones)
+println("eye(3):")
+println(m_identity)
+println("")
+
+// ============================================================================
+// 2. Linear Algebra Functions
+// ============================================================================
+println("2. Linear Algebra Functions")
+println("---------------------------")
+
+mat: A = [
+    [1.0, 2.0],
+    [3.0, 4.0]
+]
+
+mat: A_t = math.transpose(A)
+mat: A_inv = math.inv(A)
+
+println("Matrix A:")
+println(A)
+println("Transpose of A:")
+println(A_t)
+println("Inverse of A:")
+println(A_inv)
+println("")
+
+// ============================================================================
+// 3. Vector Operations
+// ============================================================================
+println("3. Vector Operations")
+println("--------------------")
+
+vec: v1 = [1.0, 2.0, 3.0, 4.0, 5.0]
+vec: v2 = [5.0, 4.0, 3.0, 2.0, 1.0]
+
+float64: dot_product = math.dot(v1, v2)
+float64: norm_v1 = math.norm(v1)
+float64: sum_v1 = math.sum(v1)
+float64: mean_v1 = math.mean(v1)
+
+println("v1: ", v1)
+println("v2: ", v2)
+println("dot(v1, v2): ", dot_product)
+println("norm(v1): ", norm_v1)
+println("sum(v1): ", sum_v1)
+println("mean(v1): ", mean_v1)
+println("")
+
+// ============================================================================
+// 4. Element-wise Math Functions
+// ============================================================================
+println("4. Element-wise Math Functions")
+println("-------------------------------")
+
+vec: values = [1.0, 4.0, 9.0, 16.0]
+vec: sqrt_values = math.sqrt(values)
+vec: abs_values = math.abs([-1.0, -2.0, 3.0, -4.0])
+
+println("values: ", values)
+println("sqrt(values): ", sqrt_values)
+println("abs([-1,-2,3,-4]): ", abs_values)
+println("")
+
+// ============================================================================
+// 5. Dimension Information
+// ============================================================================
+println("5. Dimension Information")
+println("------------------------")
+
+mat: matrix = [
+    [1.0, 2.0, 3.0],
+    [4.0, 5.0, 6.0]
+]
+
+int: num_rows = math.rows(matrix)
+int: num_cols = math.cols(matrix)
+int: total_size = math.size(matrix)
+
+println("Matrix:")
+println(matrix)
+println("rows: ", num_rows)
+println("cols: ", num_cols)
+println("size: ", total_size)
+println("")
+
+println("========================================")
+println("  Demo Complete!")
+println("========================================")

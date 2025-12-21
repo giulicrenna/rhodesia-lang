@@ -1,0 +1,89 @@
+// Test file for vector module methods
+// Testing: vector.append, vector.remove, vector.reverse, vector.insert
+
+println("=== Vec Module Methods Test ===")
+println("")
+
+// Create initial vector
+vec: original = [1.0, 2.0, 3.0, 4.0, 5.0]
+println("Original vector:", original)
+println("")
+
+// Test vector.append
+println("--- Testing vector.append ---")
+vec: appended = vector.append(original, 6.0)
+println("vector.append(original, 6.0):", appended)
+println("Original (unchanged):", original)
+println("")
+
+// Test multiple appends
+vec: multi_append = vector.append(vector.append(original, 6.0), 7.0)
+println("Multiple appends:", multi_append)
+println("")
+
+// Test vector.remove
+println("--- Testing vector.remove ---")
+vec: removed = vector.remove(original, 2)
+println("vector.remove(original, 2):", removed)
+println("Original (unchanged):", original)
+println("")
+
+// Remove first and last elements
+vec: remove_first = vector.remove(original, 0)
+vec: remove_last = vector.remove(original, 4)
+println("Remove first element:", remove_first)
+println("Remove last element:", remove_last)
+println("")
+
+// Test vector.reverse
+println("--- Testing vector.reverse ---")
+vec: reversed = vector.reverse(original)
+println("vector.reverse(original):", reversed)
+println("Original (unchanged):", original)
+println("")
+
+// Test vector.insert
+println("--- Testing vector.insert ---")
+vec: inserted_middle = vector.insert(original, 2, 99.0)
+println("vector.insert(original, 2, 99.0):", inserted_middle)
+println("Original (unchanged):", original)
+println("")
+
+// Insert at beginning
+vec: inserted_start = vector.insert(original, 0, -1.0)
+println("Insert at start:", inserted_start)
+
+// Insert at end
+vec: inserted_end = vector.insert(original, 5, 100.0)
+println("Insert at end:", inserted_end)
+println("")
+
+// Test vector.size
+println("--- Testing vector.size ---")
+println("vector.size(original):", vector.size(original))
+println("vector.size(appended):", vector.size(appended))
+println("")
+
+// Combining operations
+println("--- Testing combined operations ---")
+vec: v = [10.0, 20.0, 30.0]
+vec: v2 = vector.append(v, 40.0)
+vec: v3 = vector.reverse(v2)
+vec: v4 = vector.remove(v3, 1)
+println("Start:", v)
+println("After append 40:", v2)
+println("After reverse:", v3)
+println("After remove index 1:", v4)
+println("")
+
+// Test with reassignment (indexed assignment)
+println("--- Testing indexed reassignment ---")
+vec: mutable = [1.0, 2.0, 3.0, 4.0]
+println("Before reassignment:", mutable)
+mutable[0] = 100.0
+println("After mutable[0] = 100:", mutable)
+mutable[2] = 300.0
+println("After mutable[2] = 300:", mutable)
+println("")
+
+println("=== All tests completed! ===")

@@ -1,0 +1,15 @@
+// Test module with multiple symbols
+
+fun square(float64: x) -> float64 {
+    return x * x
+}
+
+fun cube(float64: x) -> float64 {
+    return x * x * x
+}
+
+fun double_it(float64: x) -> float64 {
+    return x * 2.0
+}
+
+float64: MODULE_PI = 3.14159

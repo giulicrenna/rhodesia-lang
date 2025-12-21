@@ -1,0 +1,115 @@
+// ============================================
+// Test del tipo Map en Rhodesia
+// ============================================
+
+println("=== Creación y operaciones básicas ===")
+
+// Crear un map vacío
+map: usuario = mapping.create()
+
+// Agregar valores
+mapping.set(usuario, "nombre", "Juan")
+mapping.set(usuario, "edad", 30)
+mapping.set(usuario, "altura", 1.75)
+
+// Mostrar el map
+println("Usuario:", usuario)
+
+// Obtener valores
+str: nombre = mapping.get(usuario, "nombre")
+int: edad = mapping.get(usuario, "edad")
+float64: altura = mapping.get(usuario, "altura")
+
+println("Nombre:", nombre)
+println("Edad:", edad)
+println("Altura:", altura)
+
+println("\n=== Verificación de claves ===")
+
+// Verificar si una clave existe
+int: tiene_nombre = mapping.has(usuario, "nombre")
+int: tiene_email = mapping.has(usuario, "email")
+
+println("Tiene 'nombre':", tiene_nombre)
+println("Tiene 'email':", tiene_email)
+
+println("\n=== Tamaño y estado del map ===")
+
+int: tamanio = mapping.size(usuario)
+println("Tamaño del map:", tamanio)
+
+int: esta_vacio = mapping.isempty(usuario)
+println("¿Está vacío?:", esta_vacio)
+
+println("\n=== Eliminación de elementos ===")
+
+// Agregar un elemento temporal
+mapping.set(usuario, "temporal", "valor")
+println("Map con 'temporal':", usuario)
+
+// Eliminar el elemento
+int: eliminado = mapping.delete(usuario, "temporal")
+println("¿Se eliminó?:", eliminado)
+println("Map sin 'temporal':", usuario)
+
+println("\n=== Map con diferentes tipos de datos ===")
+
+map: datos = mapping.create()
+
+mapping.set(datos, "entero", 42)
+mapping.set(datos, "flotante", 3.14159)
+mapping.set(datos, "texto", "Rhodesia")
+
+// Crear un vector y agregarlo al map
+vec: numeros = [1, 2, 3, 4, 5]
+mapping.set(datos, "vector", numeros)
+
+println("Map con tipos mixtos:", datos)
+
+println("\n=== Copia y actualización de maps ===")
+
+// Copiar un map
+map: usuario_copia = mapping.copy(usuario)
+println("Copia del usuario:", usuario_copia)
+
+// Crear otro map
+map: datos_adicionales = mapping.create()
+mapping.set(datos_adicionales, "ciudad", "Buenos Aires")
+mapping.set(datos_adicionales, "pais", "Argentina")
+
+println("Datos adicionales:", datos_adicionales)
+
+// Actualizar el map original con los datos adicionales
+mapping.update(usuario, datos_adicionales)
+println("Usuario actualizado:", usuario)
+
+println("\n=== Uso en cálculos ===")
+
+map: punto = mapping.create()
+mapping.set(punto, "x", 10.0)
+mapping.set(punto, "y", 20.0)
+
+float64: x = mapping.get(punto, "x")
+float64: y = mapping.get(punto, "y")
+
+float64: distancia = math.sqrt(x * x + y * y)
+println("Punto:", punto)
+println("Distancia al origen:", distancia)
+
+println("\n=== Limpiar un map ===")
+
+map: temp = mapping.create()
+mapping.set(temp, "a", 1)
+mapping.set(temp, "b", 2)
+mapping.set(temp, "c", 3)
+
+println("Map antes de limpiar:", temp)
+println("Tamaño:", mapping.size(temp))
+
+mapping.clear(temp)
+println("Map después de limpiar:", temp)
+println("Tamaño:", mapping.size(temp))
+int: vacio = mapping.isempty(temp)
+println("¿Está vacío?:", vacio)
+
+println("\n=== Test completo exitoso! ===")

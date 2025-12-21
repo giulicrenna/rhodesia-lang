@@ -1,0 +1,4 @@
+// Module B
+fun process(float64: x) -> float64 {
+    return x + 10.0
+}

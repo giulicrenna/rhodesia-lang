@@ -1,0 +1,185 @@
+// ============================================================================
+// control_flow.rho - Control Flow Demo
+// Demonstrates if/else, for, while, break, continue
+// ============================================================================
+
+println("=== Control Flow Demo ===")
+println("")
+
+// ============================================================================
+// IF-ELSE
+// ============================================================================
+println("--- IF-ELSE ---")
+
+int: x = 15
+
+if x > 20 {
+    println("x is greater than 20")
+} else if x > 10 {
+    println("x is between 11 and 20")
+} else if x > 0 {
+    println("x is between 1 and 10")
+} else {
+    println("x is non-positive")
+}
+println("")
+
+// ============================================================================
+// FOR LOOPS
+// ============================================================================
+println("--- FOR LOOPS ---")
+
+println("Counting 0 to 4:")
+for i in range(5) {
+    print("  ")
+    println(i)
+}
+println("")
+
+println("Counting 5 to 9:")
+for i in range(5, 10) {
+    print("  ")
+    println(i)
+}
+println("")
+
+println("Iterating over a vector:")
+vec: values = [10.5, 20.5, 30.5, 40.5]
+for v in values {
+    print("  Value: ")
+    println(v)
+}
+println("")
+
+// ============================================================================
+// WHILE LOOPS
+// ============================================================================
+println("--- WHILE LOOPS ---")
+
+println("Doubling until > 100:")
+int: num = 1
+while num <= 100 {
+    print("  ")
+    println(num)
+    num = num * 2
+}
+println("")
+
+// ============================================================================
+// BREAK STATEMENT
+// ============================================================================
+println("--- BREAK ---")
+
+println("Find first multiple of 7:")
+for i in range(1, 50) {
+    if i % 7 == 0 {
+        print("  Found: ")
+        println(i)
+        break
+    }
+}
+println("")
+
+// ============================================================================
+// CONTINUE STATEMENT
+// ============================================================================
+println("--- CONTINUE ---")
+
+println("Print non-multiples of 3 (from 1-15):")
+for i in range(1, 16) {
+    if i % 3 == 0 {
+        continue
+    }
+    print("  ")
+    println(i)
+}
+println("")
+
+// ============================================================================
+// NESTED LOOPS
+// ============================================================================
+println("--- NESTED LOOPS ---")
+
+println("Multiplication table (5x5):")
+for i in range(1, 6) {
+    for j in range(1, 6) {
+        float64: prod = i * j
+        print(prod)
+        if prod < 10 {
+            print("  ")
+        } else {
+            print(" ")
+        }
+    }
+    println("")
+}
+println("")
+
+// ============================================================================
+// FIZZBUZZ
+// ============================================================================
+println("--- FIZZBUZZ (1-20) ---")
+
+for i in range(1, 21) {
+    if i % 15 == 0 {
+        println("FizzBuzz")
+    } else if i % 3 == 0 {
+        println("Fizz")
+    } else if i % 5 == 0 {
+        println("Buzz")
+    } else {
+        println(i)
+    }
+}
+println("")
+
+// ============================================================================
+// FACTORIAL
+// ============================================================================
+println("--- FACTORIAL ---")
+
+fun factorial(int: n) -> int {
+    int: result = 1
+    int: i = 1
+    while i <= n {
+        result = result * i
+        i = i + 1
+    }
+    return result
+}
+
+for n in range(1, 11) {
+    int: fact = factorial(n)
+    print(n)
+    print("! = ")
+    println(fact)
+}
+println("")
+
+// ============================================================================
+// FIBONACCI
+// ============================================================================
+println("--- FIBONACCI (first 15) ---")
+
+fun fibonacci(int: n) -> int {
+    if n <= 1 {
+        return n
+    }
+    int: a = 0
+    int: b = 1
+    int: i = 2
+    while i <= n {
+        int: temp = a + b
+        a = b
+        b = temp
+        i = i + 1
+    }
+    return b
+}
+
+for i in range(15) {
+    print("fib(")
+    print(i)
+    print(") = ")
+    println(fibonacci(i))
+}

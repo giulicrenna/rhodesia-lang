@@ -1,0 +1,197 @@
+// vectors.rho
+// Advanced vector operations beyond built-in functions
+
+// Vector magnitude (norm)
+fun vec_magnitude(vec: v) -> float64 {
+    return norm(v)
+}
+
+// Vector distance between two vectors
+fun vec_distance(vec: a, vec: b) -> float64 {
+    return norm(a - b)
+}
+
+// Vector projection of a onto b
+fun vec_project(vec: a, vec: b) -> vec {
+    float64: dot_ab = dot(a, b)
+    float64: dot_bb = dot(b, b)
+    float64: scalar = dot_ab / dot_bb
+    return scalar * b
+}
+
+// Vector rejection (component of a perpendicular to b)
+fun vec_reject(vec: a, vec: b) -> vec {
+    return a - vec_project(a, b)
+}
+
+// Vector angle between two vectors in radians
+fun vec_angle_radians(vec: a, vec: b) -> float64 {
+    float64: dot_ab = dot(a, b)
+    float64: mag_a = norm(a)
+    float64: mag_b = norm(b)
+    float64: cos_theta = dot_ab / (mag_a * mag_b)
+    return acos_approx(cos_theta)
+}
+
+// Vector angle between two vectors in degrees
+fun vec_angle_degrees(vec: a, vec: b) -> float64 {
+    return radians_to_degrees(vec_angle_radians(a, b))
+}
+
+// Check if two vectors are parallel (within epsilon)
+fun vec_is_parallel(vec: a, vec: b, float64: epsilon) -> bool {
+    vec: cross_ab = vec_cross_2d(a, b)  // For 2D vectors
+    float64: cross_mag = norm(cross_ab)
+    return cross_mag <= epsilon
+}
+
+// Check if two vectors are orthogonal (within epsilon)
+fun vec_is_orthogonal(vec: a, vec: b, float64: epsilon) -> bool {
+    float64: dot_ab = dot(a, b)
+    return abs(dot_ab) <= epsilon
+}
+
+// Normalize vector with epsilon check
+fun vec_normalize_safe(vec: v, float64: epsilon) -> vec {
+    float64: mag = norm(v)
+    if mag <= epsilon {
+        return v  // Return original if magnitude is too small
+    }
+    return v / mag
+}
+
+// Vector cross product (2D case, returns scalar)
+fun vec_cross_2d(vec: a, vec: b) -> float64 {
+    return a[0] * b[1] - a[1] * b[0]
+}
+
+// Vector cross product (3D case, returns vector)
+fun vec_cross_3d(vec: a, vec: b) -> vec {
+    float64: x = a[1] * b[2] - a[2] * b[1]
+    float64: y = a[2] * b[0] - a[0] * b[2]
+    float64: z = a[0] * b[1] - a[1] * b[0]
+    return [x, y, z]
+}
+
+// Vector reflection over a normal vector
+fun vec_reflect(vec: v, vec: normal) -> vec {
+    vec: n = vec_normalize_safe(normal, 0.000001)
+    float64: dot_vn = dot(v, n)
+    return v - 2.0 * dot_vn * n
+}
+
+// Vector rotation in 2D (angle in radians)
+fun vec_rotate_2d(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: x = v[0] * cos_theta - v[1] * sin_theta
+    float64: y = v[0] * sin_theta + v[1] * cos_theta
+    return [x, y]
+}
+
+// Vector rotation in 3D around X axis
+fun vec_rotate_x(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: y = v[1] * cos_theta - v[2] * sin_theta
+    float64: z = v[1] * sin_theta + v[2] * cos_theta
+    return [v[0], y, z]
+}
+
+// Vector rotation in 3D around Y axis
+fun vec_rotate_y(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: x = v[0] * cos_theta + v[2] * sin_theta
+    float64: z = -v[0] * sin_theta + v[2] * cos_theta
+    return [x, v[1], z]
+}
+
+// Vector rotation in 3D around Z axis
+fun vec_rotate_z(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: x = v[0] * cos_theta - v[1] * sin_theta
+    float64: y = v[0] * sin_theta + v[1] * cos_theta
+    return [x, y, v[2]]
+}
+
+// Vector component-wise multiplication (Hadamard product)
+fun vec_hadamard(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = a[i] * b[i]
+    }
+
+    return result
+}
+
+// Vector component-wise division
+fun vec_divide(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = safe_divide(a[i], b[i])
+    }
+
+    return result
+}
+
+// Vector minimum (component-wise)
+fun vec_min(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        if a[i] < b[i] {
+            result[i] = a[i]
+        } else {
+            result[i] = b[i]
+        }
+    }
+
+    return result
+}
+
+// Vector maximum (component-wise)
+fun vec_max(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        if a[i] > b[i] {
+            result[i] = a[i]
+        } else {
+            result[i] = b[i]
+        }
+    }
+
+    return result
+}
+
+// Vector clamp (component-wise)
+fun vec_clamp(vec: v, float64: min_val, float64: max_val) -> vec {
+    int: n = size(v)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = clamp(v[i], min_val, max_val)
+    }
+
+    return result
+}
+
+// Vector dot product with weights
+fun vec_weighted_dot(vec: a, vec: b, vec: weights) -> float64 {
+    int: n = size(a)
+    float64: result = 0.0
+
+    for i in range(n) {
+        result = result + a[i] * b[i] * weights[i]
+    }
+
+    return result
+}

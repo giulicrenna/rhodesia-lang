@@ -1,0 +1,24 @@
+// Test interactivo de io.input()
+println("=== Test de Entrada Interactiva ===")
+println()
+
+// Pedir nombre
+str: nombre = io.input("Por favor, ingresa tu nombre: ")
+println("Hola,", nombre)
+println()
+
+// Crear un archivo con el nombre
+str: mensaje = string.concat("Bienvenido, ", nombre)
+mensaje = string.concat(mensaje, "!\n")
+io.write("saludo.txt", mensaje)
+println("Se ha creado un archivo de saludo")
+println()
+
+// Leer y mostrar el contenido
+str: contenido = io.read("saludo.txt")
+println("Contenido del archivo:")
+println(contenido)
+
+// Limpiar
+io.remove("saludo.txt")
+println("Archivo de prueba eliminado")

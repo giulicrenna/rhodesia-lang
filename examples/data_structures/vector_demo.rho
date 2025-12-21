@@ -1,0 +1,95 @@
+// ============================================================================
+// vector_demo.rho - Vector Operations Demo
+// Demonstrates vector manipulation in Rhodesia
+// ============================================================================
+
+println("=== Vector Operations Demo ===")
+println("")
+
+// Create vectors
+vec: a = [1.0, 2.0, 3.0, 4.0, 5.0]
+vec: b = [5.0, 4.0, 3.0, 2.0, 1.0]
+
+println("Vector a:", a)
+println("Vector b:", b)
+println("")
+
+// Basic arithmetic
+println("=== Basic Arithmetic ===")
+println("a + b:", a + b)
+println("a - b:", a - b)
+println("a * 2:", a * 2.0)
+println("a / 2:", a / 2.0)
+println("")
+
+// Vector products
+println("=== Vector Products ===")
+println("dot(a, b):", dot(a, b))
+println("")
+
+// Norms and statistics
+println("=== Statistics ===")
+println("norm(a):", norm(a))
+println("sum(a):", sum(a))
+println("mean(a):", mean(a))
+println("size(a):", size(a))
+println("")
+
+// Mathematical functions (element-wise)
+println("=== Element-wise Functions ===")
+println("sqrt(a):", sqrt(a))
+println("exp(a/5):", exp(a / 5.0))
+println("log(a):", log(a))
+println("abs(a - 3):", abs(a - 3.0 * ones(size(a))))
+println("")
+
+// Creating vectors
+println("=== Vector Creation ===")
+println("zeros(5):", zeros(5))
+println("ones(5):", ones(5))
+println("range(5):", range(5))
+println("range(3, 8):", range(3, 8))
+println("")
+
+// Element access
+println("=== Element Access ===")
+println("a[0]:", a[0])
+println("a[2]:", a[2])
+println("a[4]:", a[4])
+println("")
+
+// Vector operations in loop
+println("=== Iterating Over Vectors ===")
+println("Elements of a and their squares:")
+for i in range(size(a)) {
+    float64: val = a[i]
+    float64: squared = val * val
+    print("  a[")
+    print(i)
+    print("] = ")
+    print(val)
+    print(", squared = ")
+    println(squared)
+}
+println("")
+
+// Custom function
+fun normalize(vec: v) -> vec {
+    float64: n = norm(v)
+    return v / n
+}
+
+println("=== Normalized vector a ===")
+vec: a_norm = normalize(a)
+println("normalize(a):", a_norm)
+println("norm(normalize(a)):", norm(a_norm))
+println("")
+
+// Compute angle between vectors
+fun angle_radians(vec: u, vec: v) -> float64 {
+    float64: cos_theta = dot(u, v) / (norm(u) * norm(v))
+    return cos_theta
+}
+
+float64: cos_ab = angle_radians(a, b)
+println("cos(angle(a, b)):", cos_ab)

@@ -1,0 +1,82 @@
+// ============================================================================
+// performance.rho - Performance Measurement Benchmark
+// Demonstrates high-precision timing using get_tick()
+// ============================================================================
+
+println("========================================")
+println("  Performance Measurement Benchmark")
+println("========================================")
+println("")
+
+// ============================================================================
+// MEASUREMENT FUNCTION
+// ============================================================================
+
+fun measure_loop(int: n) -> float64 {
+    float64: start = get_tick()
+    float64: acc = 0.0
+    for i in range(0, n) {
+        acc = acc + i
+    }
+    float64: end = get_tick()
+    return(end - start)
+}
+
+// ============================================================================
+// BENCHMARK EXECUTION
+// ============================================================================
+
+println("Testing get_tick() precision and measure_loop() performance:")
+println("")
+println("Note: Each benchmark runs 15 times for reliable averaging.")
+println("The 'Average time' is per single loop execution.")
+println("The 'Total time' is for all 15 runs (explains inter-output delays).")
+println("")
+
+// Test different loop sizes to demonstrate timing precision
+vec: test_sizes = [1000.0, 10000.0, 100000.0, 1000000.0]
+float64: suite_start = get_tick()
+
+for size in test_sizes {
+    // Run benchmark multiple times for more reliable measurement
+    float64: total_time = 0.0
+    int: num_runs = 15
+
+    for run in range(0, num_runs) {
+        float64: time_taken = measure_loop(size)
+        total_time = total_time + time_taken
+    }
+
+    float64: avg_time = total_time / num_runs
+    println("Loop size: ", size, " | Average time: ", avg_time, " seconds | Total time: ", total_time, " seconds")
+}
+
+float64: suite_end = get_tick()
+println("")
+println("Total suite execution time: ", suite_end - suite_start, " seconds")
+
+println("")
+println("Note: get_tick() provides high-precision monotonic timestamps")
+println("suitable for performance measurement in the microsecond range.")
+println("")
+
+// ============================================================================
+// BASIC TIMING TEST
+// ============================================================================
+
+println("Basic timing test - measuring a simple delay:")
+println("")
+
+float64: t1 = get_tick()
+println("Timestamp 1: ", t1)
+
+float64: t2 = get_tick()
+println("Timestamp 2: ", t2)
+
+println("Difference: ", t2 - t1, " seconds")
+println("(This demonstrates the precision of get_tick())")
+println("")
+
+println("========================================")
+println("  Benchmark Complete!")
+println("========================================")

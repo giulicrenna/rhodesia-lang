@@ -1,0 +1,67 @@
+// ============================================================================
+// hello.rho - Hello World and Basic Examples
+// A gentle introduction to Rhodesia
+// ============================================================================
+
+println("Hello, Rhodesia!")
+println("")
+
+// Variables
+println("=== Variables ===")
+int: age = 25
+float64: pi = 3.14159
+println("age =", age)
+println("pi =", pi)
+println("")
+
+// Vectors
+println("=== Vectors ===")
+vec: numbers = [1, 2, 3, 4, 5.0]
+println("numbers =", numbers)
+println("sum =", math.sum(numbers))
+println("mean =", math.mean(numbers))
+println("norm =", math.norm(numbers))
+println("")
+
+// Matrices
+println("=== Matrices ===")
+mat: m = [[1, 2], [3, 4]]
+println("matrix m:")
+println(m)
+println("transpose(m):")
+println(math.transpose(m))
+println("")
+
+// Basic math
+println("=== Basic Math ===")
+println("2 + 3 =", 2 + 3)
+println("10 / 4 =", 10 / 4)
+println("sqrt(16) =", math.sqrt(16))
+println("exp(1) =", math.exp(1))
+println("")
+
+// Control flow
+println("=== Control Flow ===")
+for i in range(5) {
+    if i % 2 == 0 {
+        println(i, "is even")
+    } else {
+        println(i, "is odd")
+    }
+}
+println("")
+
+// Functions
+println("=== Functions ===")
+fun greet(int: times) -> int {
+    for i in range(times) {
+        println("Welcome to Rhodesia!")
+    }
+    return times
+}
+
+int: count = greet(3)
+println("Greeted", count, "times")
+println("")
+
+println("Done!")

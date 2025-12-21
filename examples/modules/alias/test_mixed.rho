@@ -1,0 +1,9 @@
+// Test: Mixed import (some with alias, some without)
+
+include test_module{square, cube as c, double_it as double}
+
+float64: x = 4.0
+println("Testing mixed import:")
+println("square(4) =", square(x))
+println("c(4) =", c(x))
+println("double(4) =", double(x))

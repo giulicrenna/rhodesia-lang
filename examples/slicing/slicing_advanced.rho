@@ -1,0 +1,92 @@
+// Advanced Slicing Examples - Practical use cases
+
+println("=== Data Analysis with Slicing ===")
+
+// Simulate a time series dataset (10 data points)
+vec: timeSeries = [12.5, 15.3, 18.7, 22.1, 19.8, 21.4, 23.6, 25.2, 24.1, 22.9]
+println("Time series data:")
+println(timeSeries)
+
+// Extract first half for training
+vec: training = timeSeries<:5>
+println("\nTraining data (first half):")
+println(training)
+
+// Extract second half for testing
+vec: testing = timeSeries<5:>
+println("\nTesting data (second half):")
+println(testing)
+
+// Compute statistics on sliding windows
+println("\nMean of first 5 points: ", mean(timeSeries<:5>))
+println("Mean of last 5 points: ", mean(timeSeries<5:>))
+
+println("\n=== Matrix Slicing for Image Processing ===")
+
+// Simulate a 5x5 grayscale image
+mat: image = [[10.0, 20.0, 30.0, 40.0, 50.0],
+              [15.0, 25.0, 35.0, 45.0, 55.0],
+              [20.0, 30.0, 40.0, 50.0, 60.0],
+              [25.0, 35.0, 45.0, 55.0, 65.0],
+              [30.0, 40.0, 50.0, 60.0, 70.0]]
+
+println("Original 5x5 image:")
+println(image)
+
+// Extract 3x3 center region
+mat: center = image<1:4, 1:4>
+println("\nCenter 3x3 region:")
+println(center)
+
+// Extract top-left quadrant
+mat: topLeft = image<:3, :3>
+println("\nTop-left quadrant:")
+println(topLeft)
+
+// Extract bottom-right quadrant
+mat: bottomRight = image<2:, 2:>
+println("\nBottom-right quadrant:")
+println(bottomRight)
+
+println("\n=== Linear Algebra Operations with Slices ===")
+
+// Create a larger matrix
+mat: A = [[1.0, 2.0, 3.0, 4.0],
+          [5.0, 6.0, 7.0, 8.0],
+          [9.0, 10.0, 11.0, 12.0],
+          [13.0, 14.0, 15.0, 16.0]]
+
+println("Matrix A:")
+println(A)
+
+// Extract and transpose a sub-matrix
+mat: subA = A<1:3, 0:2>
+println("\nSub-matrix A<1:3, 0:2>:")
+println(subA)
+println("\nTranspose of sub-matrix:")
+println(transpose(subA))
+
+// Compute norm of different slices
+println("\nNorm of top row: ", norm(A<0:1, :>))
+println("Norm of bottom row: ", norm(A<3:4, :>))
+println("Norm of first column: ", norm(A<:, 0:1>))
+
+println("\n=== Batch Processing with Slices ===")
+
+// Process data in batches
+vec: data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+println("Full dataset:")
+println(data)
+
+// Process in batches of 3
+println("\nBatch 1: ", data<0:3>)
+println("Batch 2: ", data<3:6>)
+println("Batch 3: ", data<6:9>)
+println("Batch 4: ", data<9:>)
+
+// Compute batch statistics
+println("\nBatch 1 mean: ", mean(data<0:3>))
+println("Batch 2 mean: ", mean(data<3:6>))
+println("Batch 3 mean: ", mean(data<6:9>))
+
+println("\n=== Advanced Slicing Complete ===")

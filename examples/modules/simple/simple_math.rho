@@ -1,0 +1,22 @@
+// simple_math.rho
+// Módulo simple con operaciones matemáticas básicas
+
+// Función para calcular el cuadrado de un número
+fun square(float64: x) -> float64 {
+    return x * x
+}
+
+// Función para calcular el cubo de un número
+fun cube(float64: x) -> float64 {
+    return x * x * x
+}
+
+// Función para calcular el doble de un número
+fun double_it(float64: x) -> float64 {
+    return x * 2.0
+}
+
+// Función para calcular la mitad de un número
+fun half(float64: x) -> float64 {
+    return x / 2.0
+}

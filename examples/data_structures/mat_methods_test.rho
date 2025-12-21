@@ -1,0 +1,129 @@
+// Test file for matrix module methods
+// Testing: matrix.append_row, matrix.append_col, matrix.remove_row, matrix.remove_col
+
+println("=== Mat Module Methods Test ===")
+println("")
+
+// Create initial matrix
+mat: original = [[1.0, 2.0, 3.0],
+                 [4.0, 5.0, 6.0],
+                 [7.0, 8.0, 9.0]]
+println("Original matrix:")
+println(original)
+println("")
+
+// Test matrix.append_row
+println("--- Testing matrix.append_row ---")
+vec: new_row = [10.0, 11.0, 12.0]
+mat: with_row = matrix.append_row(original, new_row)
+println("matrix.append_row(original, [10, 11, 12]):")
+println(with_row)
+println("Original (unchanged):")
+println(original)
+println("")
+
+// Test matrix.append_col
+println("--- Testing matrix.append_col ---")
+vec: new_col = [100.0, 200.0, 300.0]
+mat: with_col = matrix.append_col(original, new_col)
+println("matrix.append_col(original, [100, 200, 300]):")
+println(with_col)
+println("Original (unchanged):")
+println(original)
+println("")
+
+// Test matrix.remove_row
+println("--- Testing matrix.remove_row ---")
+mat: removed_row = matrix.remove_row(original, 1)
+println("matrix.remove_row(original, 1) - removes second row:")
+println(removed_row)
+println("Original (unchanged):")
+println(original)
+println("")
+
+// Remove first and last row
+mat: remove_first_row = matrix.remove_row(original, 0)
+mat: remove_last_row = matrix.remove_row(original, 2)
+println("Remove first row:")
+println(remove_first_row)
+println("Remove last row:")
+println(remove_last_row)
+println("")
+
+// Test matrix.remove_col
+println("--- Testing matrix.remove_col ---")
+mat: removed_col = matrix.remove_col(original, 1)
+println("matrix.remove_col(original, 1) - removes second column:")
+println(removed_col)
+println("Original (unchanged):")
+println(original)
+println("")
+
+// Remove first and last column
+mat: remove_first_col = matrix.remove_col(original, 0)
+mat: remove_last_col = matrix.remove_col(original, 2)
+println("Remove first column:")
+println(remove_first_col)
+println("Remove last column:")
+println(remove_last_col)
+println("")
+
+// Test matrix.rows, matrix.cols, matrix.size
+println("--- Testing matrix.rows, matrix.cols, matrix.size ---")
+println("matrix.rows(original):", matrix.rows(original))
+println("matrix.cols(original):", matrix.cols(original))
+println("matrix.size(original):", matrix.size(original))
+println("matrix.rows(with_row):", matrix.rows(with_row))
+println("matrix.cols(with_col):", matrix.cols(with_col))
+println("")
+
+// Combining operations
+println("--- Testing combined operations ---")
+mat: m = [[1.0, 2.0],
+          [3.0, 4.0]]
+println("Start:")
+println(m)
+println("")
+
+vec: r = [5.0, 6.0]
+mat: m2 = matrix.append_row(m, r)
+println("After append_row([5, 6]):")
+println(m2)
+println("")
+
+vec: c = [10.0, 20.0, 30.0]
+mat: m3 = matrix.append_col(m2, c)
+println("After append_col([10, 20, 30]):")
+println(m3)
+println("")
+
+mat: m4 = matrix.remove_row(m3, 0)
+println("After remove_row(0):")
+println(m4)
+println("")
+
+// Test with indexed reassignment
+println("--- Testing matrix indexed reassignment ---")
+mat: mutable = [[1.0, 2.0, 3.0],
+                [4.0, 5.0, 6.0],
+                [7.0, 8.0, 9.0]]
+println("Before reassignment:")
+println(mutable)
+println("")
+
+mutable[0, 0] = 999.0
+println("After mutable[0, 0] = 999:")
+println(mutable)
+println("")
+
+mutable[1, 1] = 888.0
+println("After mutable[1, 1] = 888:")
+println(mutable)
+println("")
+
+mutable[2, 2] = 777.0
+println("After mutable[2, 2] = 777:")
+println(mutable)
+println("")
+
+println("=== All tests completed! ===")

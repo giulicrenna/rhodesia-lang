@@ -1,0 +1,112 @@
+// Test builtin modules: math, stats, numerical
+
+println("=== Testing Math Module ===")
+
+// Constants
+println("PI =", math.PI)
+println("E =", math.E)
+
+// Trigonometric functions
+float64: angle = math.PI / 4.0  // PI/4
+println("sin(π/4) =", math.sin(angle))
+println("cos(π/4) =", math.cos(angle))
+println("tan(π/4) =", math.tan(angle))
+
+// Hyperbolic functions
+println("sinh(1) =", math.sinh(1.0))
+println("cosh(1) =", math.cosh(1.0))
+println("tanh(1) =", math.tanh(1.0))
+
+// Power and rounding
+println("pow(2, 8) =", math.pow(2.0, 8.0))
+println("floor(3.7) =", math.floor(3.7))
+println("ceil(3.2) =", math.ceil(3.2))
+println("round(3.5) =", math.round(3.5))
+
+// Min/Max
+vec: data1 = [5, 2, 8, 1, 9, 3]
+println("min([5,2,8,1,9,3]) =", math.min(data1))
+println("max([5,2,8,1,9,3]) =", math.max(data1))
+
+// Utilities
+println("clamp(15, 0, 10) =", math.clamp(15.0, 0.0, 10.0))
+println("sign(-5.5) =", math.sign(-5.5))
+println("lerp(0, 100, 0.5) =", math.lerp(0.0, 100.0, 0.5))
+
+// Angle conversion
+println("deg2rad(180) =", math.deg2rad(180.0))
+println("rad2deg(PI) =", math.rad2deg(math.PI))
+
+// Factorial
+println("factorial(5) =", math.factorial(5))
+
+println("")
+println("=== Testing Statistics Module ===")
+
+vec: data2 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+// Descriptive statistics
+println("mean =", stats.mean(data2))
+println("std =", stats.std(data2))
+println("var =", stats.var(data2))
+println("median =", stats.median(data2))
+println("min =", stats.min(data2))
+println("max =", stats.max(data2))
+println("percentile(75) =", stats.percentile(data2, 75.0))
+
+// Correlation
+vec: x = [1, 2, 3, 4, 5]
+vec: y = [2, 4, 6, 8, 10]
+println("corr(x, y) =", stats.corr(x, y))
+println("cov(x, y) =", stats.cov(x, y))
+
+// Higher moments
+vec: data3 = [1, 2, 2, 3, 3, 3, 4, 4, 5]
+println("skewness =", stats.skewness(data3))
+println("kurtosis =", stats.kurtosis(data3))
+
+// Z-score normalization
+vec: normalized = stats.zscore([10, 20, 30, 40, 50])
+println("zscore([10,20,30,40,50]) =", normalized)
+
+println("")
+println("=== Testing Numerical Module ===")
+
+// Quadratic equation solver
+vec: roots = numerical.solve_quadratic(1.0, -5.0, 6.0)
+println("solve x^2 - 5x + 6 = 0:", roots)
+
+// Linspace
+vec: lin = numerical.linspace(0.0, 10.0, 5)
+println("linspace(0, 10, 5) =", lin)
+
+// Cumulative operations
+vec: cumsum_result = numerical.cumsum([1, 2, 3, 4, 5])
+println("cumsum([1,2,3,4,5]) =", cumsum_result)
+
+vec: cumprod_result = numerical.cumprod([1, 2, 3, 4])
+println("cumprod([1,2,3,4]) =", cumprod_result)
+
+// Differences
+vec: diff_result = numerical.diff([10, 15, 18, 25, 30])
+println("diff([10,15,18,25,30]) =", diff_result)
+
+// Integration (trapezoidal rule)
+vec: x_int = [0, 1, 2, 3, 4]
+vec: y_int = [0, 1, 4, 9, 16]  // y = x^2
+float64: integral = numerical.trapz(y_int, x_int)
+println("trapz(y=x^2, x=[0,1,2,3,4]) =", integral)
+
+// Polynomial evaluation
+vec: coeffs = [1, 2, 3]  // 1 + 2x + 3x^2
+float64: poly_val = numerical.polyval(coeffs, 2.0)
+println("polyval([1,2,3], 2) =", poly_val)
+
+// Polynomial fitting
+vec: x_fit = [0, 1, 2, 3]
+vec: y_fit = [1, 2, 5, 10]
+vec: fit_coeffs = numerical.polyfit(x_fit, y_fit, 2)
+println("polyfit(degree=2) coeffs =", fit_coeffs)
+
+println("")
+println("All tests completed!")

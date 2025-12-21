@@ -1,0 +1,9 @@
+// Test: Import with aliases
+
+include test_module{square as sq, cube as cb, MODULE_PI as PI}
+
+float64: x = 3.0
+println("Testing import with aliases:")
+println("sq(3) =", sq(x))
+println("cb(3) =", cb(x))
+println("PI =", PI)

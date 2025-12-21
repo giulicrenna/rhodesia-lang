@@ -1,0 +1,121 @@
+// Test del módulo string en Rhodesia
+
+println("=== Tests del Módulo String ===")
+println()
+
+// Test 1: Declaración y length
+println("Test 1: Declaración y length")
+str: saludo = "Hola Rhodesia"
+int: len = string.length(saludo)
+println("String:", saludo)
+println("Longitud:", len)
+println()
+
+// Test 2: Transformación upper/lower
+println("Test 2: Transformación upper/lower")
+str: texto = "RhOdEsIa"
+str: minusculas = string.lower(texto)
+str: mayusculas = string.upper(texto)
+println("Original:", texto)
+println("Minúsculas:", minusculas)
+println("Mayúsculas:", mayusculas)
+println()
+
+// Test 3: Búsqueda
+println("Test 3: Búsqueda")
+str: frase = "Rhodesia Language"
+int: pos = string.find(frase, "Lang")
+int: contiene = string.contains(frase, "esia")
+println("Frase:", frase)
+println("Posición de 'Lang':", pos)
+println("Contiene 'esia':", contiene)
+println()
+
+// Test 4: Verificación de prefijos y sufijos
+println("Test 4: Prefijos y sufijos")
+str: palabra = "programación"
+int: inicia = string.startswith(palabra, "prog")
+int: termina = string.endswith(palabra, "ción")
+println("Palabra:", palabra)
+println("Inicia con 'prog':", inicia)
+println("Termina con 'ción':", termina)
+println()
+
+// Test 5: Substring
+println("Test 5: Substring")
+str: completo = "Hello World"
+str: parte = string.substr(completo, 0, 5)
+println("String completo:", completo)
+println("Substring (0, 5):", parte)
+println()
+
+// Test 6: Replace
+println("Test 6: Replace")
+str: original = "mundo mundo"
+str: reemplazado = string.replace(original, "mundo", "Rhodesia")
+println("Original:", original)
+println("Reemplazado:", reemplazado)
+println()
+
+// Test 7: Trim
+println("Test 7: Trim")
+str: con_espacios = "  texto  "
+str: limpio = string.trim(con_espacios)
+println("Con espacios: '", con_espacios, "'")
+println("Limpio: '", limpio, "'")
+println()
+
+// Test 8: Reverse
+println("Test 8: Reverse")
+str: normal = "abcdef"
+str: invertido = string.reverse(normal)
+println("Normal:", normal)
+println("Invertido:", invertido)
+println()
+
+// Test 9: Repeat
+println("Test 9: Repeat")
+str: patron = "Ha"
+str: repetido = string.repeat(patron, 3)
+println("Patrón:", patron)
+println("Repetido 3 veces:", repetido)
+println()
+
+// Test 10: At (acceso a caracteres)
+println("Test 10: At (acceso a caracteres)")
+str: palabra2 = "Rhodesia"
+str: char0 = string.at(palabra2, 0)
+str: char4 = string.at(palabra2, 4)
+println("Palabra:", palabra2)
+println("Carácter en posición 0:", char0)
+println("Carácter en posición 4:", char4)
+println()
+
+// Test 11: Concat
+println("Test 11: Concat")
+str: p1 = "Rho"
+str: p2 = "de"
+str: p3 = "sia"
+str: resultado = string.concat(p1, p2, p3)
+println("Concatenación:", resultado)
+println()
+
+// Test 12: IsEmpty
+println("Test 12: IsEmpty")
+str: vacio = ""
+str: no_vacio = "texto"
+int: es_vacio1 = string.isempty(vacio)
+int: es_vacio2 = string.isempty(no_vacio)
+println("String vacío es vacío:", es_vacio1)
+println("String con texto es vacío:", es_vacio2)
+println()
+
+// Test 13: Count
+println("Test 13: Count")
+str: banana = "banana"
+int: ocurrencias = string.count(banana, "na")
+println("String:", banana)
+println("Ocurrencias de 'na':", ocurrencias)
+println()
+
+println("=== Todos los tests completados ===")

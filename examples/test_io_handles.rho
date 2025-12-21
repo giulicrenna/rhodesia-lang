@@ -1,0 +1,124 @@
+// Test del módulo IO con file handles
+println("=== Test del Módulo IO con File Handles ===")
+println()
+
+// Test 1: Abrir archivo para escritura
+println("Test 1: Abrir y escribir archivo")
+int: file = io.open("test_handle.txt", "w")
+println("✓ Archivo abierto con handle:", file)
+
+str: contenido = "Primera línea\nSegunda línea\nTercera línea\n"
+int: bytes = io.write(file, contenido)
+println("✓ Escritos", bytes, "bytes")
+
+io.close(file)
+println("✓ Archivo cerrado")
+println()
+
+// Test 2: Abrir archivo para lectura
+println("Test 2: Leer archivo completo")
+int: file_read = io.open("test_handle.txt", "r")
+println("✓ Archivo abierto para lectura, handle:", file_read)
+
+str: leido = io.read(file_read)
+println("✓ Contenido leído:")
+println(leido)
+
+io.close(file_read)
+println("✓ Archivo cerrado")
+println()
+
+// Test 3: Leer línea por línea
+println("Test 3: Leer línea por línea")
+int: file_lines = io.open("test_handle.txt", "r")
+
+str: line1 = io.readline(file_lines)
+println("Línea 1:", line1)
+
+str: line2 = io.readline(file_lines)
+println("Línea 2:", line2)
+
+str: line3 = io.readline(file_lines)
+println("Línea 3:", line3)
+
+io.close(file_lines)
+println("✓ Lectura línea por línea completada")
+println()
+
+// Test 4: Append (añadir)
+println("Test 4: Añadir contenido")
+int: file_append = io.open("test_handle.txt", "a")
+str: nueva_linea = "Cuarta línea añadida\n"
+io.write(file_append, nueva_linea)
+io.close(file_append)
+println("✓ Contenido añadido")
+
+// Verificar
+int: file_verify = io.open("test_handle.txt", "r")
+str: contenido_completo = io.read(file_verify)
+println("Contenido actualizado:")
+println(contenido_completo)
+io.close(file_verify)
+println()
+
+// Test 5: Seek y Tell
+println("Test 5: Navegación con seek y tell")
+int: file_seek = io.open("test_handle.txt", "r")
+
+int: pos1 = io.tell(file_seek)
+println("Posición inicial:", pos1)
+
+// Leer 10 bytes
+str: chunk1 = io.read(file_seek, 10)
+println("Primeros 10 bytes:", chunk1)
+
+int: pos2 = io.tell(file_seek)
+println("Posición después de leer:", pos2)
+
+// Volver al inicio
+int: new_pos = io.seek(file_seek, 0, 0)
+println("Posición después de seek(0, 0):", new_pos)
+
+// Leer de nuevo
+str: chunk2 = io.read(file_seek, 10)
+println("Primeros 10 bytes (de nuevo):", chunk2)
+
+io.close(file_seek)
+println("✓ Test de navegación completado")
+println()
+
+// Test 6: Modo lectura/escritura
+println("Test 6: Modo lectura/escritura (r+)")
+int: file_rw = io.open("test_handle.txt", "r+")
+
+// Leer el principio
+str: inicio = io.read(file_rw, 7)
+println("Inicio del archivo:", inicio)
+
+// Ir al final
+io.seek(file_rw, 0, 2)
+
+// Escribir al final
+io.write(file_rw, "Quinta línea\n")
+
+// Volver al inicio y leer todo
+io.seek(file_rw, 0, 0)
+str: todo = io.read(file_rw)
+println("Contenido completo:")
+println(todo)
+
+io.close(file_rw)
+println("✓ Modo r+ funciona correctamente")
+println()
+
+// Test 7: Limpiar
+println("Test 7: Eliminar archivo de prueba")
+int: eliminado = io.remove("test_handle.txt")
+if eliminado {
+    println("✓ Archivo eliminado correctamente")
+} else {
+    println("✗ Error al eliminar archivo")
+}
+println()
+
+println("=== Todos los tests completados ===")

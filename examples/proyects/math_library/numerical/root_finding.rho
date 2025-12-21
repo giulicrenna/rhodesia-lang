@@ -1,0 +1,301 @@
+// root_finding.rho
+// Root finding algorithms
+
+// Bisection method for finding roots
+fun bisection(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+    float64: fa = f(a)
+    float64: fb = f(b)
+
+    if fa * fb > 0.0 {
+        println("Warning: Function has same sign at endpoints")
+        return (a + b) / 2.0
+    }
+
+    for iter in range(max_iter) {
+        float64: c = (a + b) / 2.0
+        float64: fc = f(c)
+
+        if abs(fc) < tol || (b - a) / 2.0 < tol {
+            return c
+        }
+
+        if fa * fc < 0.0 {
+            b = c
+            fb = fc
+        } else {
+            a = c
+            fa = fc
+        }
+    }
+
+    return (a + b) / 2.0
+}
+
+// Newton-Raphson method for finding roots
+fun newton_raphson(fun: f, fun: df, float64: x0, float64: tol, int: max_iter) -> float64 {
+    float64: x = x0
+
+    for iter in range(max_iter) {
+        float64: fx = f(x)
+        float64: dfx = df(x)
+
+        if abs(dfx) < tol {
+            println("Warning: Derivative close to zero")
+            return x
+        }
+
+        float64: x_new = x - fx / dfx
+
+        if abs(x_new - x) < tol || abs(fx) < tol {
+            return x_new
+        }
+
+        x = x_new
+    }
+
+    return x
+}
+
+// Secant method (approximate Newton without derivative)
+fun secant_method(fun: f, float64: x0, float64: x1, float64: tol, int: max_iter) -> float64 {
+    float64: x_prev = x0
+    float64: x_curr = x1
+
+    for iter in range(max_iter) {
+        float64: fx_prev = f(x_prev)
+        float64: fx_curr = f(x_curr)
+
+        if abs(fx_curr - fx_prev) < tol {
+            println("Warning: Function values too close")
+            return x_curr
+        }
+
+        float64: x_next = x_curr - fx_curr * (x_curr - x_prev) / (fx_curr - fx_prev)
+
+        if abs(x_next - x_curr) < tol || abs(fx_curr) < tol {
+            return x_next
+        }
+
+        x_prev = x_curr
+        x_curr = x_next
+    }
+
+    return x_curr
+}
+
+// Fixed-point iteration
+fun fixed_point_iteration(fun: g, float64: x0, float64: tol, int: max_iter) -> float64 {
+    float64: x = x0
+
+    for iter in range(max_iter) {
+        float64: x_new = g(x)
+
+        if abs(x_new - x) < tol {
+            return x_new
+        }
+
+        x = x_new
+    }
+
+    return x
+}
+
+// False position (regula falsi) method
+fun false_position(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+    float64: fa = f(a)
+    float64: fb = f(b)
+
+    if fa * fb > 0.0 {
+        println("Warning: Function has same sign at endpoints")
+        return (a + b) / 2.0
+    }
+
+    for iter in range(max_iter) {
+        float64: c = (a * fb - b * fa) / (fb - fa)
+        float64: fc = f(c)
+
+        if abs(fc) < tol || abs(b - a) < tol {
+            return c
+        }
+
+        if fa * fc < 0.0 {
+            b = c
+            fb = fc
+        } else {
+            a = c
+            fa = fc
+        }
+    }
+
+    return (a + b) / 2.0
+}
+
+// Brent's method (combination of bisection, secant, and inverse quadratic interpolation)
+fun brent_method(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+    float64: fa = f(a)
+    float64: fb = f(b)
+
+    if fa * fb > 0.0 {
+        println("Warning: Function has same sign at endpoints")
+        return (a + b) / 2.0
+    }
+
+    if abs(fa) < abs(fb) {
+        // Swap a and b to have |fa| < |fb|
+        float64: temp = a
+        a = b
+        b = temp
+        temp = fa
+        fa = fb
+        fb = temp
+    }
+
+    float64: c = a
+    float64: fc = fa
+    bool: mflag = true
+    float64: s = 0.0
+    float64: d = 0.0
+
+    for iter in range(max_iter) {
+        if fa != fc && fb != fc {
+            // Inverse quadratic interpolation
+            s = a * fb * fc / ((fa - fb) * (fa - fc)) +
+                b * fa * fc / ((fb - fa) * (fb - fc)) +
+                c * fa * fb / ((fc - fa) * (fc - fb))
+        } else {
+            // Secant method
+            s = b - fb * (b - a) / (fb - fa)
+        }
+
+        float64: s_tol = 2.0 * tol * abs(b) + 0.5 * tol
+        float64: b_tol = 2.0 * tol * abs(b) + 0.5 * tol
+
+        if (abs(s - b) >= s_tol && abs(s - b) >= b_tol) ||
+           (mflag && abs(s - b) >= 0.5 * abs(b - c)) ||
+           (!mflag && abs(s - b) >= 0.5 * abs(c - d)) {
+            // Bisection step
+            s = (a + b) / 2.0
+            mflag = true
+        } else {
+            mflag = false
+        }
+
+        float64: fs = f(s)
+
+        if abs(fs) < tol {
+            return s
+        }
+
+        if sign(fa) == sign(fs) {
+            a = s
+            fa = fs
+        } else {
+            b = s
+            fb = fs
+        }
+
+        if abs(fa) < abs(fb) {
+            // Swap a and b to have |fa| < |fb|
+            float64: temp = a
+            a = b
+            b = temp
+            temp = fa
+            fa = fb
+            fb = temp
+        }
+    }
+
+    return b
+}
+
+// Find all roots of a quadratic equation: ax² + bx + c = 0
+fun quadratic_roots(float64: a, float64: b, float64: c) -> (float64, float64) {
+    float64: discriminant = b * b - 4.0 * a * c
+
+    if discriminant < 0.0 {
+        // Complex roots (return real part only)
+        float64: real_part = -b / (2.0 * a)
+        return (real_part, real_part)
+    } else {
+        float64: sqrt_disc = sqrt(discriminant)
+        float64: root1 = (-b + sqrt_disc) / (2.0 * a)
+        float64: root2 = (-b - sqrt_disc) / (2.0 * a)
+        return (root1, root2)
+    }
+}
+
+// Find all roots of a cubic equation: ax³ + bx² + cx + d = 0
+fun cubic_roots(float64: a, float64: b, float64: c, float64: d) -> vec {
+    // Normalize coefficients
+    float64: a1 = b / a
+    float64: a2 = c / a
+    float64: a3 = d / a
+
+    // Calculate intermediate values
+    float64: Q = (3.0 * a2 - a1 * a1) / 9.0
+    float64: R = (9.0 * a1 * a2 - 27.0 * a3 - 2.0 * a1 * a1 * a1) / 54.0
+    float64: D = Q * Q * Q + R * R
+
+    vec: roots = zeros(3)
+
+    if D > 0.0 {
+        // One real root, two complex
+        float64: S = sign(R) * power(abs(R) + sqrt(D), 1.0/3.0)
+        float64: T = sign(R) * power(abs(R) - sqrt(D), 1.0/3.0)
+
+        roots[0] = -a1/3.0 + (S + T)
+        roots[1] = -a1/3.0 - (S + T)/2.0  // Real part of complex roots
+        roots[2] = roots[1]  // Same real part
+    } else if D == 0.0 {
+        // All roots real, at least two equal
+        float64: S = sign(R) * power(abs(R), 1.0/3.0)
+
+        roots[0] = -a1/3.0 + S + S
+        roots[1] = -a1/3.0 - S
+        roots[2] = roots[1]
+    } else {
+        // All roots real and distinct (trigonometric solution)
+        float64: theta = acos_approx(R / sqrt(-Q * Q * Q))
+        float64: sqrt_Q = sqrt(-Q)
+
+        roots[0] = 2.0 * sqrt_Q * cos_taylor(theta / 3.0, 10) - a1 / 3.0
+        roots[1] = 2.0 * sqrt_Q * cos_taylor((theta + 2.0 * PI) / 3.0, 10) - a1 / 3.0
+        roots[2] = 2.0 * sqrt_Q * cos_taylor((theta + 4.0 * PI) / 3.0, 10) - a1 / 3.0
+    }
+
+    return roots
+}
+
+// Multi-dimensional root finding using Newton's method
+fun multidimensional_newton(fun: F, fun: J, vec: x0, float64: tol, int: max_iter) -> vec {
+    int: n = size(x0)
+    vec: x = x0
+
+    for iter in range(max_iter) {
+        // Evaluate function and Jacobian at current point
+        vec: Fx = F(x)
+        mat: Jx = J(x)
+
+        // Check for convergence
+        float64: norm_Fx = norm(Fx)
+        if norm_Fx < tol {
+            return x
+        }
+
+        // Solve linear system: Jx * delta = -Fx
+        vec: delta = inv(Jx) * (-Fx)
+
+        // Update solution
+        vec: x_new = x + delta
+
+        // Check for convergence in x
+        float64: norm_delta = norm(delta)
+        if norm_delta < tol {
+            return x_new
+        }
+
+        x = x_new
+    }
+
+    return x
+}

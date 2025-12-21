@@ -1,0 +1,73 @@
+# Rhodesia Extension Test File
+# This file is used to test the extension features
+
+// Test variables with different types
+int: counter = 42
+float64: pi = 3.14159
+vec: vector_data = [1.0, 2.0, 3.0, 4.0, 5.0]
+mat: matrix_data = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+string: greeting = "Hello, Rhodesia!"
+
+// Test function declaration
+fun calculate_norm(vec: data) -> float64 {
+    return norm(data)
+}
+
+// Test built-in functions
+float64: result_norm = norm(vector_data)
+float64: result_dot = dot(vector_data, vector_data)
+mat: result_transpose = transpose(matrix_data)
+float64: result_sum = sum(vector_data)
+float64: result_mean = mean(vector_data)
+
+// Test control flow
+if result_norm > 1.0 {
+    println("Norm is greater than 1")
+} else {
+    println("Norm is 1 or less")
+}
+
+// Test loop
+for i in range(5) {
+    println("Iteration:", i)
+}
+
+// Test while loop
+int: j = 0
+while j < 3 {
+    println("While iteration:", j)
+    j = j + 1
+}
+
+// Test function call with our custom function
+float64: custom_norm = calculate_norm([3.0, 4.0])
+println("Custom norm result:", custom_norm)
+
+// Test mathematical functions
+vec: sqrt_result = sqrt([1.0, 4.0, 9.0, 16.0])
+vec: exp_result = exp([0.0, 1.0, 2.0])
+vec: log_result = log([1.0, 2.718, 7.389])
+vec: abs_result = abs([-1.0, -2.0, 3.0])
+
+// Test matrix operations
+mat: zeros_mat = zeros(2, 2)
+mat: ones_mat = ones(3, 3)
+mat: eye_mat = eye(4)
+
+// Test trigonometric functions
+float64: sin_val = sin(0.0)
+float64: cos_val = cos(0.0)
+float64: tan_val = tan(0.0)
+
+// Test size functions
+int: vec_size = size(vector_data)
+int: mat_rows = rows(matrix_data)
+int: mat_cols = cols(matrix_data)
+
+// Test print functions
+print("Final results: ")
+println("Norm:", result_norm)
+println("Sum:", result_sum)
+println("Mean:", result_mean)
+println("Vector size:", vec_size)
+println("Matrix dimensions:", mat_rows, "x", mat_cols)

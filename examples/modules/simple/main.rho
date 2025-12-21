@@ -1,0 +1,43 @@
+// main.rho
+// Ejemplo de uso del sistema de importación de módulos
+
+// Importar funciones específicas de math_utils
+include math_utils{square, cube, normalize}
+
+// Importar funciones específicas de stats
+include stats{variance, std_dev, min_value, max_value}
+
+println("=== Demo del Sistema de Módulos de Rhodesia ===")
+println("")
+
+// Usar funciones de math_utils
+println("--- Funciones Matemáticas ---")
+float64: x = 5.0
+println("square(5.0) =", square(x))
+println("cube(5.0) =", cube(x))
+
+vec: v = [3.0, 4.0]
+vec: normalized = normalize(v)
+println("normalize([3.0, 4.0]) =", normalized)
+println("")
+
+// Usar funciones de stats
+println("--- Funciones Estadísticas ---")
+vec: data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+
+println("Datos:", data)
+println("Media:", mean(data))
+println("Varianza:", variance(data))
+println("Desviación estándar:", std_dev(data))
+println("Mínimo:", min_value(data))
+println("Máximo:", max_value(data))
+println("")
+
+// Combinar funciones de ambos módulos
+println("--- Combinación de Funciones ---")
+vec: squared_data = [square(1.0), square(2.0), square(3.0), square(4.0), square(5.0)]
+println("Datos al cuadrado:", squared_data)
+println("Desviación estándar de los cuadrados:", std_dev(squared_data))
+println("")
+
+println("=== Demo completada ===")

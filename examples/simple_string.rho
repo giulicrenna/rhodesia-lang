@@ -1,0 +1,25 @@
+// Ejemplo simple de uso de strings en Rhodesia
+
+// Declaración de strings
+str: nombre = "hola"
+println("String declarado:", nombre)
+
+// Usar funciones del módulo string
+str: mayusculas = string.upper(nombre)
+println("En mayúsculas:", mayusculas)
+
+str: minusculas = string.lower("RHODESIA")
+println("En minúsculas:", minusculas)
+
+// Obtener longitud
+int: longitud = string.length(nombre)
+println("Longitud de 'hola':", longitud)
+
+// Verificar contenido
+str: texto = "Rhodesia es genial"
+int: tiene = string.contains(texto, "genial")
+println("Contiene 'genial':", tiene)
+
+// Concatenar
+str: resultado = string.concat("Rho", "de", "sia")
+println("Concatenación:", resultado)

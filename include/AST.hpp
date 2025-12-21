@@ -1,0 +1,641 @@
+/**
+ * @file AST.hpp
+ * @brief Abstract Syntax Tree node definitions for Rhodesia
+ * 
+ * Defines all AST node types using the Visitor pattern for evaluation.
+ */
+
+#ifndef RHODESIA_AST_HPP
+#define RHODESIA_AST_HPP
+
+#include "Token.hpp"
+#include "RhoValue.hpp"
+#include <memory>
+#include <vector>
+#include <string>
+#include <optional>
+
+namespace Rhodesia {
+
+// Forward declarations
+class ASTVisitor;
+
+// ============================================================================
+// Base Classes
+// ============================================================================
+
+/**
+ * @brief Base class for all AST nodes
+ */
+class ASTNode {
+public:
+    virtual ~ASTNode() = default;
+    
+    SourceLocation location;
+    
+    virtual void accept(ASTVisitor& visitor) = 0;
+    
+protected:
+    ASTNode() = default;
+    explicit ASTNode(SourceLocation loc) : location(loc) {}
+};
+
+using ASTNodePtr = std::unique_ptr<ASTNode>;
+
+/**
+ * @brief Base class for expression nodes (produce values)
+ */
+class ExprNode : public ASTNode {
+public:
+    // Optional type annotation (for type checking)
+    std::optional<RhoType> inferredType;
+    
+protected:
+    ExprNode() = default;
+    explicit ExprNode(SourceLocation loc) : ASTNode(loc) {}
+};
+
+using ExprPtr = std::unique_ptr<ExprNode>;
+
+/**
+ * @brief Base class for statement nodes (perform actions)
+ */
+class StmtNode : public ASTNode {
+protected:
+    StmtNode() = default;
+    explicit StmtNode(SourceLocation loc) : ASTNode(loc) {}
+};
+
+using StmtPtr = std::unique_ptr<StmtNode>;
+
+// ============================================================================
+// Expression Nodes
+// ============================================================================
+
+/**
+ * @brief Integer literal: 42
+ */
+class IntLiteralNode : public ExprNode {
+public:
+    int64_t value;
+    
+    explicit IntLiteralNode(int64_t val, SourceLocation loc = {})
+        : ExprNode(loc), value(val) {
+        inferredType = RhoType::Int;
+    }
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Float literal: 3.14
+ */
+class FloatLiteralNode : public ExprNode {
+public:
+    double value;
+    
+    explicit FloatLiteralNode(double val, SourceLocation loc = {})
+        : ExprNode(loc), value(val) {
+        inferredType = RhoType::Float64;
+    }
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Boolean literal: true, false
+ */
+class BoolLiteralNode : public ExprNode {
+public:
+    bool value;
+    
+    explicit BoolLiteralNode(bool val, SourceLocation loc = {})
+        : ExprNode(loc), value(val) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief String literal: "hello"
+ */
+class StringLiteralNode : public ExprNode {
+public:
+    std::string value;
+    
+    explicit StringLiteralNode(std::string val, SourceLocation loc = {})
+        : ExprNode(loc), value(std::move(val)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Vector literal: [1.0, 2.0, 3.0]
+ */
+class VectorLiteralNode : public ExprNode {
+public:
+    std::vector<ExprPtr> elements;
+    
+    explicit VectorLiteralNode(std::vector<ExprPtr> elems, SourceLocation loc = {})
+        : ExprNode(loc), elements(std::move(elems)) {
+        inferredType = RhoType::Vec;
+    }
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Matrix literal: [[1, 2], [3, 4]]
+ */
+class MatrixLiteralNode : public ExprNode {
+public:
+    std::vector<std::vector<ExprPtr>> rows;
+    
+    explicit MatrixLiteralNode(std::vector<std::vector<ExprPtr>> r, SourceLocation loc = {})
+        : ExprNode(loc), rows(std::move(r)) {
+        inferredType = RhoType::Mat;
+    }
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Variable reference: x, myVar
+ */
+class IdentifierNode : public ExprNode {
+public:
+    std::string name;
+    
+    explicit IdentifierNode(std::string n, SourceLocation loc = {})
+        : ExprNode(loc), name(std::move(n)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Binary operator types
+ */
+enum class BinaryOp {
+    Add,      // +
+    Sub,      // -
+    Mul,      // *
+    Div,      // /
+    Mod,      // %
+    Eq,       // ==
+    Ne,       // !=
+    Lt,       // <
+    Gt,       // >
+    Le,       // <=
+    Ge,       // >=
+    And,      // and
+    Or        // or
+};
+
+inline std::string binaryOpToString(BinaryOp op) {
+    switch (op) {
+        case BinaryOp::Add: return "+";
+        case BinaryOp::Sub: return "-";
+        case BinaryOp::Mul: return "*";
+        case BinaryOp::Div: return "/";
+        case BinaryOp::Mod: return "%";
+        case BinaryOp::Eq:  return "==";
+        case BinaryOp::Ne:  return "!=";
+        case BinaryOp::Lt:  return "<";
+        case BinaryOp::Gt:  return ">";
+        case BinaryOp::Le:  return "<=";
+        case BinaryOp::Ge:  return ">=";
+        case BinaryOp::And: return "and";
+        case BinaryOp::Or:  return "or";
+    }
+    return "?";
+}
+
+/**
+ * @brief Binary operation: a + b, x * y
+ */
+class BinaryOpNode : public ExprNode {
+public:
+    BinaryOp op;
+    ExprPtr left;
+    ExprPtr right;
+    
+    BinaryOpNode(BinaryOp o, ExprPtr l, ExprPtr r, SourceLocation loc = {})
+        : ExprNode(loc), op(o), left(std::move(l)), right(std::move(r)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Unary operator types
+ */
+enum class UnaryOp {
+    Neg,     // -
+    Not      // not
+};
+
+inline std::string unaryOpToString(UnaryOp op) {
+    switch (op) {
+        case UnaryOp::Neg: return "-";
+        case UnaryOp::Not: return "not";
+    }
+    return "?";
+}
+
+/**
+ * @brief Unary operation: -x, not b
+ */
+class UnaryOpNode : public ExprNode {
+public:
+    UnaryOp op;
+    ExprPtr operand;
+    
+    UnaryOpNode(UnaryOp o, ExprPtr expr, SourceLocation loc = {})
+        : ExprNode(loc), op(o), operand(std::move(expr)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Function call: norm(v), inv(m)
+ */
+class FunctionCallNode : public ExprNode {
+public:
+    std::string name;
+    std::vector<ExprPtr> arguments;
+
+    FunctionCallNode(std::string n, std::vector<ExprPtr> args, SourceLocation loc = {})
+        : ExprNode(loc), name(std::move(n)), arguments(std::move(args)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Member access: math.zeros, math.transpose
+ */
+class MemberAccessNode : public ExprNode {
+public:
+    std::string object;      // "math"
+    std::string member;      // "zeros"
+    std::vector<ExprPtr> arguments;  // Function arguments if it's a call
+
+    MemberAccessNode(std::string obj, std::string memb, std::vector<ExprPtr> args = {}, SourceLocation loc = {})
+        : ExprNode(loc), object(std::move(obj)), member(std::move(memb)), arguments(std::move(args)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Index access: v[i], m[i, j]
+ */
+class IndexAccessNode : public ExprNode {
+public:
+    ExprPtr target;
+    std::vector<ExprPtr> indices;
+
+    IndexAccessNode(ExprPtr t, std::vector<ExprPtr> idx, SourceLocation loc = {})
+        : ExprNode(loc), target(std::move(t)), indices(std::move(idx)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Slice specification: start:end or just :end or start:
+ */
+struct SliceSpec {
+    std::optional<ExprPtr> start;  // nullptr means start from beginning
+    std::optional<ExprPtr> end;    // nullptr means go to end
+
+    SliceSpec() = default;
+    SliceSpec(std::optional<ExprPtr> s, std::optional<ExprPtr> e)
+        : start(std::move(s)), end(std::move(e)) {}
+};
+
+/**
+ * @brief Slice access: v<1:5>, m<0:2, 1:3>
+ */
+class SliceNode : public ExprNode {
+public:
+    ExprPtr target;
+    std::vector<SliceSpec> slices;  // One for vectors, two for matrices
+
+    SliceNode(ExprPtr t, std::vector<SliceSpec> s, SourceLocation loc = {})
+        : ExprNode(loc), target(std::move(t)), slices(std::move(s)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+// ============================================================================
+// Statement Nodes
+// ============================================================================
+
+/**
+ * @brief Variable declaration: tipo: nombre = valor
+ */
+class VarDeclNode : public StmtNode {
+public:
+    RhoType type;
+    std::string name;
+    ExprPtr initializer;
+    
+    VarDeclNode(RhoType t, std::string n, ExprPtr init, SourceLocation loc = {})
+        : StmtNode(loc), type(t), name(std::move(n)), initializer(std::move(init)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Assignment: nombre = valor
+ */
+class AssignmentNode : public StmtNode {
+public:
+    std::string name;
+    ExprPtr value;
+    
+    // For indexed assignment: v[i] = x
+    std::vector<ExprPtr> indices;
+    
+    AssignmentNode(std::string n, ExprPtr val, SourceLocation loc = {})
+        : StmtNode(loc), name(std::move(n)), value(std::move(val)) {}
+    
+    AssignmentNode(std::string n, std::vector<ExprPtr> idx, ExprPtr val, SourceLocation loc = {})
+        : StmtNode(loc), name(std::move(n)), value(std::move(val)), indices(std::move(idx)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Expression statement: print(x)
+ */
+class ExprStmtNode : public StmtNode {
+public:
+    ExprPtr expression;
+    
+    explicit ExprStmtNode(ExprPtr expr, SourceLocation loc = {})
+        : StmtNode(loc), expression(std::move(expr)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Return statement: return expr
+ */
+class ReturnNode : public StmtNode {
+public:
+    ExprPtr value;  // May be nullptr for void return
+    
+    explicit ReturnNode(ExprPtr val = nullptr, SourceLocation loc = {})
+        : StmtNode(loc), value(std::move(val)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Block of statements: { ... }
+ */
+class BlockNode : public StmtNode {
+public:
+    std::vector<StmtPtr> statements;
+    
+    explicit BlockNode(std::vector<StmtPtr> stmts = {}, SourceLocation loc = {})
+        : StmtNode(loc), statements(std::move(stmts)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Function parameter
+ */
+struct FunctionParam {
+    RhoType type;
+    std::string name;
+    SourceLocation location;
+};
+
+/**
+ * @brief Function declaration: fun name(args) -> type { body }
+ */
+class FunctionDeclNode : public StmtNode {
+public:
+    std::string name;
+    std::vector<FunctionParam> params;
+    RhoType returnType;
+    std::unique_ptr<BlockNode> body;
+    
+    FunctionDeclNode(std::string n, std::vector<FunctionParam> p, 
+                     RhoType ret, std::unique_ptr<BlockNode> b, 
+                     SourceLocation loc = {})
+        : StmtNode(loc), name(std::move(n)), params(std::move(p)),
+          returnType(ret), body(std::move(b)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief For loop: for i in range(n) { body }
+ */
+class ForLoopNode : public StmtNode {
+public:
+    std::string iterVar;
+    ExprPtr iterable;  // Usually a range() call
+    std::unique_ptr<BlockNode> body;
+    
+    ForLoopNode(std::string var, ExprPtr iter, std::unique_ptr<BlockNode> b,
+                SourceLocation loc = {})
+        : StmtNode(loc), iterVar(std::move(var)), iterable(std::move(iter)),
+          body(std::move(b)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief While loop: while cond { body }
+ */
+class WhileLoopNode : public StmtNode {
+public:
+    ExprPtr condition;
+    std::unique_ptr<BlockNode> body;
+    
+    WhileLoopNode(ExprPtr cond, std::unique_ptr<BlockNode> b, SourceLocation loc = {})
+        : StmtNode(loc), condition(std::move(cond)), body(std::move(b)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief If statement: if cond { then } else { else }
+ */
+class IfStmtNode : public StmtNode {
+public:
+    ExprPtr condition;
+    std::unique_ptr<BlockNode> thenBranch;
+    std::unique_ptr<BlockNode> elseBranch;  // May be nullptr
+    
+    IfStmtNode(ExprPtr cond, std::unique_ptr<BlockNode> then,
+               std::unique_ptr<BlockNode> els = nullptr, SourceLocation loc = {})
+        : StmtNode(loc), condition(std::move(cond)),
+          thenBranch(std::move(then)), elseBranch(std::move(els)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Break statement
+ */
+class BreakNode : public StmtNode {
+public:
+    explicit BreakNode(SourceLocation loc = {}) : StmtNode(loc) {}
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Continue statement
+ */
+class ContinueNode : public StmtNode {
+public:
+    explicit ContinueNode(SourceLocation loc = {}) : StmtNode(loc) {}
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Using statement: using expr as var { body }
+ * Automatically calls io.close() on the variable when exiting the block
+ */
+class UsingNode : public StmtNode {
+public:
+    ExprPtr resourceExpr;     // Expression that returns the resource (e.g., io.open(...))
+    std::string varName;      // Variable name to bind the resource to
+    StmtPtr body;             // Block to execute
+
+    UsingNode(ExprPtr expr, std::string name, StmtPtr bodyStmt, SourceLocation loc = {})
+        : StmtNode(loc), resourceExpr(std::move(expr)), varName(std::move(name)),
+          body(std::move(bodyStmt)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Import specification for a single symbol with optional alias
+ */
+struct ImportSpec {
+    std::string symbolName;  // Original name in module
+    std::string alias;       // Alias name (empty if no alias)
+
+    ImportSpec(std::string name, std::string aliasName = "")
+        : symbolName(std::move(name)), alias(std::move(aliasName)) {}
+
+    // Get the name to use in the importing scope
+    std::string getImportedName() const {
+        return alias.empty() ? symbolName : alias;
+    }
+};
+
+/**
+ * @brief Include statement: include module_name{symbol1, symbol2 as alias}
+ */
+class IncludeNode : public StmtNode {
+public:
+    std::string moduleName;
+    std::vector<ImportSpec> symbols;  // Symbols to import (empty means import all)
+
+    IncludeNode(std::string module, std::vector<ImportSpec> syms, SourceLocation loc = {})
+        : StmtNode(loc), moduleName(std::move(module)), symbols(std::move(syms)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+// ============================================================================
+// Program Node (Root)
+// ============================================================================
+
+/**
+ * @brief Root node containing all top-level declarations
+ */
+class ProgramNode : public ASTNode {
+public:
+    std::vector<StmtPtr> statements;
+    
+    explicit ProgramNode(std::vector<StmtPtr> stmts = {})
+        : statements(std::move(stmts)) {}
+    
+    void accept(ASTVisitor& visitor) override;
+};
+
+// ============================================================================
+// Visitor Interface
+// ============================================================================
+
+/**
+ * @brief Visitor pattern interface for AST traversal
+ */
+class ASTVisitor {
+public:
+    virtual ~ASTVisitor() = default;
+    
+    // Expressions
+    virtual void visit(IntLiteralNode& node) = 0;
+    virtual void visit(FloatLiteralNode& node) = 0;
+    virtual void visit(BoolLiteralNode& node) = 0;
+    virtual void visit(StringLiteralNode& node) = 0;
+    virtual void visit(VectorLiteralNode& node) = 0;
+    virtual void visit(MatrixLiteralNode& node) = 0;
+    virtual void visit(IdentifierNode& node) = 0;
+    virtual void visit(BinaryOpNode& node) = 0;
+    virtual void visit(UnaryOpNode& node) = 0;
+    virtual void visit(FunctionCallNode& node) = 0;
+    virtual void visit(MemberAccessNode& node) = 0;
+    virtual void visit(IndexAccessNode& node) = 0;
+    virtual void visit(SliceNode& node) = 0;
+    
+    // Statements
+    virtual void visit(VarDeclNode& node) = 0;
+    virtual void visit(AssignmentNode& node) = 0;
+    virtual void visit(ExprStmtNode& node) = 0;
+    virtual void visit(ReturnNode& node) = 0;
+    virtual void visit(BlockNode& node) = 0;
+    virtual void visit(FunctionDeclNode& node) = 0;
+    virtual void visit(ForLoopNode& node) = 0;
+    virtual void visit(WhileLoopNode& node) = 0;
+    virtual void visit(IfStmtNode& node) = 0;
+    virtual void visit(BreakNode& node) = 0;
+    virtual void visit(ContinueNode& node) = 0;
+    virtual void visit(UsingNode& node) = 0;
+    virtual void visit(IncludeNode& node) = 0;
+
+    // Program
+    virtual void visit(ProgramNode& node) = 0;
+};
+
+// ============================================================================
+// Accept Implementations (inline)
+// ============================================================================
+
+inline void IntLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void FloatLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void BoolLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void StringLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void VectorLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void MatrixLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void IdentifierNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void BinaryOpNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void UnaryOpNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void FunctionCallNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void MemberAccessNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void IndexAccessNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void SliceNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void VarDeclNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void AssignmentNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void ExprStmtNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void ReturnNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void BlockNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void FunctionDeclNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void ForLoopNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void WhileLoopNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void IfStmtNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void BreakNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void ContinueNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void UsingNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void IncludeNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void ProgramNode::accept(ASTVisitor& v) { v.visit(*this); }
+
+} // namespace Rhodesia
+
+#endif // RHODESIA_AST_HPP

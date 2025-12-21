@@ -1,3 +1,8 @@
-
 *.pyc
 src/tempCodeRunnerFile.py
+build/
+.*
+CMakeFiles
+*.cmake
+rhodesia
+extension/node_modules/

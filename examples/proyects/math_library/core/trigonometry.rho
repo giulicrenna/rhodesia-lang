@@ -1,0 +1,163 @@
+// trigonometry.rho
+// Trigonometric functions and angle conversions
+
+// Convert degrees to radians
+fun degrees_to_radians(float64: degrees) -> float64 {
+    return degrees * PI / 180.0
+}
+
+// Convert radians to degrees
+fun radians_to_degrees(float64: radians) -> float64 {
+    return radians * 180.0 / PI
+}
+
+// Wrap angle to [0, 2π) range
+fun wrap_angle(float64: angle) -> float64 {
+    float64: two_pi = 2.0 * PI
+    float64: result = angle % two_pi
+    if result < 0.0 {
+        result = result + two_pi
+    }
+    return result
+}
+
+// Wrap angle to [-π, π] range
+fun wrap_angle_symmetric(float64: angle) -> float64 {
+    float64: result = wrap_angle(angle)
+    if result > PI {
+        result = result - 2.0 * PI
+    }
+    return result
+}
+
+// Calculate sine using Taylor series approximation
+fun sin_taylor(float64: x, int: terms) -> float64 {
+    float64: result = 0.0
+    float64: x_wrapped = wrap_angle(x)
+
+    for n in range(terms) {
+        int: sign = 1
+        if n % 2 == 1 {
+            sign = -1
+        }
+        float64: term = sign * power(x_wrapped, 2 * n + 1) / factorial(2 * n + 1)
+        result = result + term
+    }
+
+    return result
+}
+
+// Calculate cosine using Taylor series approximation
+fun cos_taylor(float64: x, int: terms) -> float64 {
+    float64: result = 0.0
+    float64: x_wrapped = wrap_angle(x)
+
+    for n in range(terms) {
+        int: sign = 1
+        if n % 2 == 1 {
+            sign = -1
+        }
+        float64: term = sign * power(x_wrapped, 2 * n) / factorial(2 * n)
+        result = result + term
+    }
+
+    return result
+}
+
+// Calculate tangent as sin/cos
+fun tan_approx(float64: x) -> float64 {
+    return sin_taylor(x, 10) / cos_taylor(x, 10)
+}
+
+// Calculate arcsine using approximation
+fun asin_approx(float64: x) -> float64 {
+    // Simple approximation for arcsine
+    float64: abs_x = abs(x)
+    float64: result = 0.0
+
+    if abs_x <= 0.5 {
+        result = x + (x * x * x) / 6.0 + (3.0 * x * x * x * x * x) / 40.0
+    } else {
+        float64: sqrt_val = sqrt(1.0 - x * x)
+        result = PI/2.0 - sqrt_val * (1.0 - (x * x) / 6.0 - (3.0 * x * x * x * x) / 80.0)
+    }
+
+    if x < 0.0 {
+        result = -result
+    }
+
+    return result
+}
+
+// Calculate arccosine using arcsine
+fun acos_approx(float64: x) -> float64 {
+    return PI/2.0 - asin_approx(x)
+}
+
+// Calculate arctangent using approximation
+fun atan_approx(float64: x) -> float64 {
+    float64: abs_x = abs(x)
+    float64: result = 0.0
+
+    if abs_x < 1.0 {
+        result = x - (x * x * x) / 3.0 + (x * x * x * x * x) / 5.0 - (x * x * x * x * x * x * x) / 7.0
+    } else {
+        result = PI/2.0 - 1.0/x + 1.0/(3.0 * x * x * x) - 1.0/(5.0 * x * x * x * x * x)
+    }
+
+    if x < 0.0 {
+        result = -result
+    }
+
+    return result
+}
+
+// Calculate arctangent of y/x with correct quadrant
+fun atan2_approx(float64: y, float64: x) -> float64 {
+    if x > 0.0 {
+        return atan_approx(y / x)
+    }
+    if x < 0.0 {
+        if y >= 0.0 {
+            return atan_approx(y / x) + PI
+        } else {
+            return atan_approx(y / x) - PI
+        }
+    }
+    // x == 0
+    if y > 0.0 {
+        return PI / 2.0
+    }
+    if y < 0.0 {
+        return -PI / 2.0
+    }
+    return 0.0  // undefined
+}
+
+// Helper function: factorial (needed for Taylor series)
+fun factorial(int: n) -> float64 {
+    if n <= 1 {
+        return 1.0
+    }
+    float64: result = 1.0
+    for i in range(2, n + 1) {
+        result = result * float64(i)
+    }
+    return result
+}
+
+// Calculate hyperbolic sine
+fun sinh_approx(float64: x) -> float64 {
+    return (exp(x) - exp(-x)) / 2.0
+}
+
+// Calculate hyperbolic cosine
+fun cosh_approx(float64: x) -> float64 {
+    return (exp(x) + exp(-x)) / 2.0
+}
+
+// Calculate hyperbolic tangent
+fun tanh_approx(float64: x) -> float64 {
+    float64: exp_2x = exp(2.0 * x)
+    return (exp_2x - 1.0) / (exp_2x + 1.0)
+}

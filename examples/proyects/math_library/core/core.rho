@@ -1,0 +1,100 @@
+// core.rho
+// Core mathematical functions and constants
+
+// Mathematical constants
+float64: PI = 3.141592653589793
+float64: E = 2.718281828459045
+float64: PHI = 1.618033988749895  // Golden ratio
+float64: SQRT_2 = 1.414213562373095
+float64: SQRT_3 = 1.732050807568877
+
+// Basic arithmetic operations with error handling
+fun safe_divide(float64: a, float64: b) -> float64 {
+    float64: epsilon = 0.000001
+    float64: abs_b = abs(b)
+    if abs_b <= epsilon {
+        println("Warning: Division by very small number")
+        return a / epsilon  // Return large value instead of infinity
+    }
+    return a / b
+}
+
+// Power function with integer exponent
+fun power(float64: base, int: exponent) -> float64 {
+    float64: result = 1.0
+    int: abs_exp = abs(exponent)
+
+    for i in range(abs_exp) {
+        result = result * base
+    }
+
+    if exponent < 0 {
+        return 1.0 / result
+    }
+    return result
+}
+
+// Absolute value for vectors
+fun vec_abs(vec: v) -> vec {
+    int: n = size(v)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = abs(v[i])
+    }
+
+    return result
+}
+
+// Clamp function to restrict value to range
+fun clamp(float64: value, float64: min_val, float64: max_val) -> float64 {
+    if value < min_val {
+        return min_val
+    }
+    if value > max_val {
+        return max_val
+    }
+    return value
+}
+
+// Linear interpolation
+fun lerp(float64: a, float64: b, float64: t) -> float64 {
+    return a + t * (b - a)
+}
+
+// Map value from one range to another
+fun map_range(float64: value, float64: from_min, float64: from_max, float64: to_min, float64: to_max) -> float64 {
+    float64: t = (value - from_min) / (from_max - from_min)
+    return lerp(to_min, to_max, t)
+}
+
+// Check if two floating point numbers are approximately equal
+fun approx_equal(float64: a, float64: b, float64: epsilon) -> bool {
+    float64: diff = abs(a - b)
+    return diff <= epsilon
+}
+
+// Sign function
+fun sign(float64: x) -> float64 {
+    if x > 0.0 {
+        return 1.0
+    }
+    if x < 0.0 {
+        return -1.0
+    }
+    return 0.0
+}
+
+// Step function
+fun step(float64: x, float64: threshold) -> float64 {
+    if x >= threshold {
+        return 1.0
+    }
+    return 0.0
+}
+
+// Smoothstep function (smooth interpolation)
+fun smoothstep(float64: x, float64: edge0, float64: edge1) -> float64 {
+    float64: t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0)
+    return t * t * (3.0 - 2.0 * t)
+}

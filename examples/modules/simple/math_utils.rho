@@ -1,0 +1,36 @@
+// math_utils.rho
+// Módulo con funciones matemáticas útiles
+
+// Función para calcular el cuadrado de un número
+fun square(float64: x) -> float64 {
+    return x * x
+}
+
+// Función para calcular el cubo de un número
+fun cube(float64: x) -> float64 {
+    return x * x * x
+}
+
+// Función para calcular la distancia euclidiana entre dos puntos
+fun distance(vec: p1, vec: p2) -> float64 {
+    vec: diff = p1 - p2
+    float64: dotprod = dot(diff, diff)
+    return sqrt(dotprod)
+}
+
+// Función para normalizar un vector
+fun normalize(vec: v) -> vec {
+    float64: dotprod = dot(v, v)
+    float64: len = sqrt(dotprod)
+    float64: epsilon = 0.000001
+    float64: diff = len - 0.0
+    if diff <= epsilon {
+        return v
+    }
+    return v / len
+}
+
+// Función para calcular el promedio de un vector
+fun average(vec: v) -> float64 {
+    return mean(v)
+}
