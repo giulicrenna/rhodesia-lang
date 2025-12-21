@@ -53,7 +53,7 @@ vec: temperatures = [22.1, 23.5, 21.8, 24.2]
 
 println("Coordinates:", coordinates)
 println("First temperature:", temperatures[0])
-println("Number of temperatures:", size(temperatures))
+println("Number of temperatures:", math.size(temperatures))
 ```
 
 ### Matrix Variables
@@ -93,7 +93,7 @@ vec: v = [4, 5, 6]
 println("Vector sum:", u + v)     // [5, 7, 9]
 println("Vector difference:", u - v)  // [-3, -3, -3]
 println("Scalar multiplication:", 2 * u)  // [2, 4, 6]
-println("Dot product:", dot(u, v))  // 32
+println("Dot product:", math.dot(u, v))  // 32
 ```
 
 ### Matrix Operations
@@ -109,7 +109,7 @@ println("Matrix multiplication:")
 println(A * B)
 
 println("Transpose of A:")
-println(transpose(A))
+println(math.transpose(A))
 ```
 
 ## Control Flow
@@ -216,10 +216,10 @@ println("Measurements:", measurements)
 println("")
 
 // Statistics
-float64: total = sum(measurements)
-float64: average = mean(measurements)
-float64: min_val = min(measurements)  // Assuming min() is available
-float64: max_val = max(measurements)  // Assuming max() is available
+float64: total = math.sum(measurements)
+float64: average = stats.mean(measurements)
+float64: min_val = math.min(measurements)  // min/max functions
+float64: max_val = math.max(measurements)  // min/max functions
 
 println("Statistics:")
 println("  Total:", total)
@@ -232,8 +232,8 @@ println("")
 // Data processing
 vec: normalized = measurements - average
 vec: squared_diff = normalized * normalized
-float64: variance = mean(squared_diff)
-float64: std_dev = sqrt(variance)
+float64: variance = stats.mean(squared_diff)
+float64: std_dev = math.sqrt(variance)
 
 println("Variance Analysis:")
 println("  Variance:", variance)

@@ -36,43 +36,44 @@ make
 
 ## Documentation Sections
 
-### 📚 Language Reference
+### Language Reference
 Learn the syntax, types, and control structures of Rhodesia.
 
 [**Language Basics**](language/syntax.md) - Variables, types, and expressions
 [**Control Flow**](language/control-flow.md) - If statements, loops, and functions
 [**Type System**](language/types.md) - Understanding Rhodesia's type system
 
-### 🧮 Standard Library
+### Standard Library
 Explore the built-in functions and data structures.
 
 [**Functions**](standard-library/functions.md) - Built-in mathematical and utility functions
 [**Vectors & Matrices**](standard-library/vectors-matrices.md) - Vector and matrix operations
 [**Built-ins**](standard-library/builtins.md) - Core built-in functions
 
-### 💻 Examples
+### Examples
 Practical code examples to learn by doing.
 
 [**Basic Examples**](examples/basics.md) - Hello World and basic operations
 [**Data Structures**](examples/data-structures.md) - Working with vectors and matrices
+[**Input/Output**](examples/io.md) - File operations and user input
 [**Machine Learning**](examples/machine-learning.md) - Regression, clustering, and more
 [**Modules**](examples/modules.md) - Code organization with modules
 
-### 🎓 Tutorials
+### Tutorials
 Step-by-step guides for common tasks.
 
 [**Basic Tutorial**](tutorials/basics.md) - Getting started with Rhodesia
 [**Data Science**](tutorials/data-science.md) - Statistical analysis and visualization
 [**Algorithms**](tutorials/algorithms.md) - Implementing numerical algorithms
 
-### 🔧 API & Architecture
+### API & Architecture
 Technical details and performance optimization.
 
 [**Architecture**](api/architecture.md) - System architecture and design
 [**Technical API**](api/technical.md) - Low-level API reference
 [**Performance Guide**](api/performance.md) - Optimization techniques
 
-### ❓ Troubleshooting
+### Troubleshooting
 Debugging and error handling.
 
 [**Error Reference**](troubleshooting/errors.md) - Common errors and solutions
@@ -87,7 +88,7 @@ println("Hello, Rhodesia!")
 // Vector operations
 vec: u = [1, 2, 3]
 vec: v = [4, 5, 6]
-float64: dot_product = dot(u, v)
+float64: dot_product = math.dot(u, v)
 println("Dot product:", dot_product)
 
 // Matrix operations

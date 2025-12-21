@@ -36,8 +36,8 @@ println("Y values:", y)
 println("")
 
 // Design matrix with intercept
-mat: X = ones(size(x), 2)
-for i in range(size(x)) {
+mat: X = math.ones(math.size(x), 2)
+for i in range(math.size(x)) {
     X[i, 1] = x[i]
 }
 
@@ -47,9 +47,9 @@ println("")
 
 // OLS Estimator: β = (X'X)^(-1) X'y
 fun ols_fit(mat: X, vec: y) -> vec {
-    mat: xt = transpose(X)
+    mat: xt = math.transpose(X)
     mat: xtx = xt * X
-    mat: xtx_inv = inv(xtx)
+    mat: xtx_inv = math.inv(xtx)
     vec: xty = xt * y
     vec: beta = xtx_inv * xty
     return beta
@@ -68,7 +68,7 @@ vec: y_pred = X * beta
 
 println("Predictions vs Actual:")
 println("Index | Actual | Predicted")
-for i in range(size(y)) {
+for i in range(math.size(y)) {
     print(i)
     print("     | ")
     print(y[i])
@@ -78,14 +78,14 @@ for i in range(size(y)) {
 println("")
 
 // Model evaluation
-float64: y_mean = mean(y)
+float64: y_mean = stats.mean(y)
 vec: residuals = y - y_pred
-vec: y_centered = y - y_mean * ones(size(y))
+vec: y_centered = y - y_mean * math.ones(math.size(y))
 
-float64: ss_res = dot(residuals, residuals)
-float64: ss_tot = dot(y_centered, y_centered)
+float64: ss_res = math.dot(residuals, residuals)
+float64: ss_tot = math.dot(y_centered, y_centered)
 float64: r_squared = 1.0 - ss_res / ss_tot
-float64: rmse = sqrt(ss_res / size(y))
+float64: rmse = math.sqrt(ss_res / math.size(y))
 
 println("Model Evaluation:")
 println("Sum of Squared Residuals:", ss_res)
@@ -103,10 +103,10 @@ println("")
 
 // Generate synthetic data: y = 2 + 3*x1 + 1.5*x2 + noise
 int: n_obs = 50
-mat: X_multi = ones(n_obs, 3)  // intercept + 2 variables
+mat: X_multi = math.ones(n_obs, 3)  // intercept + 2 variables
 
-vec: x1 = range(n_obs) / 10.0
-vec: x2 = range(n_obs) / 5.0
+vec: x1 = math.range(n_obs) / 10.0
+vec: x2 = math.range(n_obs) / 5.0
 
 // y = 2 + 3*x1 + 1.5*x2 + noise
 vec: noise = [0.1, -0.2, 0.3, -0.1, 0.4, -0.3, 0.2, -0.2, 0.1, -0.1,
@@ -150,11 +150,11 @@ println("=== K-Means Clustering ===")
 println("")
 
 fun k_means(mat: data, int: k, int: max_iter) -> vec {
-    int: n = rows(data)
-    int: d = cols(data)
+    int: n = math.rows(data)
+    int: d = math.cols(data)
 
     // Initialize centroids randomly (simple deterministic approach)
-    mat: centroids = zeros(k, d)
+    mat: centroids = math.zeros(k, d)
     for i in range(k) {
         int: idx = i * n / k
         for j in range(d) {
@@ -164,7 +164,7 @@ fun k_means(mat: data, int: k, int: max_iter) -> vec {
 
     // Main K-means loop
     for iter in range(max_iter) {
-        vec: labels = zeros(n)
+        vec: labels = math.zeros(n)
 
         // Assign points to nearest centroids
         for i in range(n) {
@@ -172,8 +172,8 @@ fun k_means(mat: data, int: k, int: max_iter) -> vec {
             int: best_centroid = 0
 
             for c in range(k) {
-                vec: point = zeros(d)
-                vec: centroid = zeros(d)
+                vec: point = math.zeros(d)
+                vec: centroid = math.zeros(d)
 
                 for j in range(d) {
                     point[j] = data[i, j]
@@ -181,7 +181,7 @@ fun k_means(mat: data, int: k, int: max_iter) -> vec {
                 }
 
                 vec: diff = point - centroid
-                float64: dist = norm(diff)
+                float64: dist = math.norm(diff)
 
                 if dist < min_dist {
                     min_dist = dist
@@ -193,8 +193,8 @@ fun k_means(mat: data, int: k, int: max_iter) -> vec {
         }
 
         // Update centroids
-        vec: counts = zeros(k)
-        mat: new_centroids = zeros(k, d)
+        vec: counts = math.zeros(k)
+        mat: new_centroids = math.zeros(k, d)
 
         for i in range(n) {
             int: c = labels[i]
@@ -239,7 +239,7 @@ println("")
 vec: clusters = k_means(data, 2, 10)
 
 println("Cluster assignments:")
-for i in range(rows(data)) {
+for i in range(math.rows(data)) {
     print("Point ")
     print(i)
     print(": [")
@@ -270,13 +270,13 @@ println("")
 
 // Basic statistics
 fun calculate_stats(vec: data) -> vec {
-    float64: mean_val = mean(data)
+    float64: mean_val = stats.mean(data)
     vec: diff = data - mean_val
     vec: diff_sq = diff * diff
-    float64: variance = mean(diff_sq)
-    float64: std_dev = sqrt(variance)
+    float64: variance = stats.mean(diff_sq)
+    float64: std_dev = math.sqrt(variance)
 
-    return [mean_val, variance, std_dev, min(data), max(data)]
+    return [mean_val, variance, std_dev, math.min(data), math.max(data)]
 }
 
 vec: stats1 = calculate_stats(sample1)
@@ -300,21 +300,21 @@ println("")
 
 // T-test (simplified)
 fun t_test(vec: a, vec: b) -> vec {
-    float64: mean_a = mean(a)
-    float64: mean_b = mean(b)
+    float64: mean_a = stats.mean(a)
+    float64: mean_b = stats.mean(b)
 
-    int: n_a = size(a)
-    int: n_b = size(b)
+    int: n_a = math.size(a)
+    int: n_b = math.size(b)
 
     vec: diff_a = a - mean_a
     vec: diff_b = b - mean_b
 
-    float64: var_a = mean(diff_a * diff_a)
-    float64: var_b = mean(diff_b * diff_b)
+    float64: var_a = stats.mean(diff_a * diff_a)
+    float64: var_b = stats.mean(diff_b * diff_b)
 
     // t-statistic
     float64: diff_means = mean_a - mean_b
-    float64: se = sqrt(var_a/n_a + var_b/n_b)
+    float64: se = math.sqrt(var_a/n_a + var_b/n_b)
     float64: t_stat = diff_means / se
 
     // degrees of freedom (Welch-Satterthwaite)
@@ -349,14 +349,14 @@ fun min_max_normalize(vec: data) -> vec {
     }
 
     // Normalize
-    vec: normalized = zeros(size(data))
+    vec: normalized = math.zeros(math.size(data))
     float64: range_val = max_val - min_val
 
     if range_val == 0 {
         return normalized  // All values are the same
     }
 
-    for i in range(size(data)) {
+    for i in range(math.size(data)) {
         normalized[i] = (data[i] - min_val) / range_val
     }
 
@@ -364,16 +364,16 @@ fun min_max_normalize(vec: data) -> vec {
 }
 
 fun z_score_normalize(vec: data) -> vec {
-    float64: mean_val = mean(data)
+    float64: mean_val = stats.mean(data)
 
     // Calculate standard deviation
     vec: diff = data - mean_val
     vec: diff_sq = diff * diff
-    float64: variance = mean(diff_sq)
-    float64: std_dev = sqrt(variance)
+    float64: variance = stats.mean(diff_sq)
+    float64: std_dev = math.sqrt(variance)
 
     if std_dev == 0 {
-        return zeros(size(data))
+        return math.zeros(math.size(data))
     }
 
     return diff / std_dev

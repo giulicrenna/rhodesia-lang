@@ -1,6 +1,6 @@
 # Standard Library Functions
 
-This page documents the built-in functions available in Rhodesia's standard library.
+This page documents the functions available in Rhodesia's standard library modules. Rhodesia organizes functions into logical modules that must be imported or accessed with module prefixes.
 
 ## Table of Contents
 
@@ -11,103 +11,89 @@ This page documents the built-in functions available in Rhodesia's standard libr
 - [Utility Functions](#utility-functions)
 - [Input/Output Functions](#inputoutput-functions)
 
-## Mathematical Functions
+## Mathematical Functions (math module)
+
+All mathematical functions are available through the `math` module.
 
 ### Basic Math
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `sqrt(x)` | Square root | `sqrt(16)` → `4.0` |
-| `exp(x)` | Exponential (e^x) | `exp(1)` → `2.718` |
-| `log(x)` | Natural logarithm | `log(2.718)` → `1.0` |
-| `abs(x)` | Absolute value | `abs(-5)` → `5` |
+| `math.sqrt(x)` | Square root | `math.sqrt(16)` → `4.0` |
+| `math.exp(x)` | Exponential (e^x) | `math.exp(1)` → `2.718` |
+| `math.log(x)` | Natural logarithm | `math.log(2.718)` → `1.0` |
+| `math.abs(x)` | Absolute value | `math.abs(-5)` → `5` |
 
 ### Trigonometric Functions
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `sin(x)` | Sine | `sin(3.14159/2)` → `1.0` |
-| `cos(x)` | Cosine | `cos(0)` → `1.0` |
-| `tan(x)` | Tangent | `tan(3.14159/4)` → `1.0` |
+| `math.sin(x)` | Sine | `math.sin(3.14159/2)` → `1.0` |
+| `math.cos(x)` | Cosine | `math.cos(0)` → `1.0` |
+| `math.tan(x)` | Tangent | `math.tan(3.14159/4)` → `1.0` |
 
-## Vector Functions
+## Vector Functions (math module)
+
+Vector operations are available through the `math` module.
 
 ### Vector Creation
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `zeros(n)` | Vector of n zeros | `zeros(3)` → `[0, 0, 0]` |
-| `ones(n)` | Vector of n ones | `ones(3)` → `[1, 1, 1]` |
-| `range(n)` | Vector `[0, 1, ..., n-1]` | `range(3)` → `[0, 1, 2]` |
-| `range(start, end)` | Vector `[start, ..., end-1]` | `range(2, 5)` → `[2, 3, 4]` |
+| `math.zeros(n)` | Vector of n zeros | `math.zeros(3)` → `[0, 0, 0]` |
+| `math.ones(n)` | Vector of n ones | `math.ones(3)` → `[1, 1, 1]` |
+| `math.range(n)` | Vector `[0, 1, ..., n-1]` | `math.range(3)` → `[0, 1, 2]` |
+| `math.range(start, end)` | Vector `[start, ..., end-1]` | `math.range(2, 5)` → `[2, 3, 4]` |
 
 ### Vector Operations
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `norm(v)` | Euclidean norm | `norm([3,4])` → `5.0` |
-| `sum(v)` | Sum of elements | `sum([1,2,3])` → `6.0` |
-| `mean(v)` | Mean of elements | `mean([1,2,3])` → `2.0` |
-| `size(v)` | Number of elements | `size([1,2,3])` → `3` |
+| `math.norm(v)` | Euclidean norm | `math.norm([3,4])` → `5.0` |
+| `math.sum(v)` | Sum of elements | `math.sum([1,2,3])` → `6.0` |
+| `math.size(v)` | Number of elements | `math.size([1,2,3])` → `3` |
 
 ### Vector Products
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `dot(u, v)` | Dot product | `dot([1,2],[3,4])` → `11.0` |
+| `math.dot(u, v)` | Dot product | `math.dot([1,2],[3,4])` → `11.0` |
 
-## Matrix Functions
+## Matrix Functions (math module)
+
+Matrix operations are available through the `math` module.
 
 ### Matrix Creation
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `zeros(m, n)` | m×n matrix of zeros | `zeros(2,3)` → `[[0,0,0],[0,0,0]]` |
-| `ones(m, n)` | m×n matrix of ones | `ones(2,3)` → `[[1,1,1],[1,1,1]]` |
-| `eye(n)` | n×n identity matrix | `eye(3)` → `[[1,0,0],[0,1,0],[0,0,1]]` |
+| `math.zeros(m, n)` | m×n matrix of zeros | `math.zeros(2,3)` → `[[0,0,0],[0,0,0]]` |
+| `math.ones(m, n)` | m×n matrix of ones | `math.ones(2,3)` → `[[1,1,1],[1,1,1]]` |
+| `math.eye(n)` | n×n identity matrix | `math.eye(3)` → `[[1,0,0],[0,1,0],[0,0,1]]` |
 
 ### Matrix Operations
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `transpose(M)` | Matrix transpose | `transpose([[1,2],[3,4]])` → `[[1,3],[2,4]]` |
-| `inv(M)` | Matrix inverse | `inv([[1,2],[3,4]])` → `[[-2,1],[1.5,-0.5]]` |
-| `norm(M)` | Frobenius norm | `norm([[1,2],[3,4]])` → `5.477` |
-| `rows(M)` | Number of rows | `rows([[1,2],[3,4]])` → `2` |
-| `cols(M)` | Number of columns | `cols([[1,2],[3,4]])` → `2` |
-| `size(M)` | Total elements | `size([[1,2],[3,4]])` → `4` |
+| `math.transpose(M)` | Matrix transpose | `math.transpose([[1,2],[3,4]])` → `[[1,3],[2,4]]` |
+| `math.inv(M)` | Matrix inverse | `math.inv([[1,2],[3,4]])` → `[[-2,1],[1.5,-0.5]]` |
+| `math.norm(M)` | Frobenius norm | `math.norm([[1,2],[3,4]])` → `5.477` |
+| `math.rows(M)` | Number of rows | `math.rows([[1,2],[3,4]])` → `2` |
+| `math.cols(M)` | Number of columns | `math.cols([[1,2],[3,4]])` → `2` |
+| `math.size(M)` | Total elements | `math.size([[1,2],[3,4]])` → `4` |
 
-## Statistical Functions
+## Statistical Functions (stats module)
+
+Statistical functions are available through the `stats` module.
 
 ### Basic Statistics
 
-```rhodesia
-// Mean
-fun mean(vec: data) -> float64 {
-    return sum(data) / size(data)
-}
-
-// Variance
-fun variance(vec: data) -> float64 {
-    float64: m = mean(data)
-    vec: diff = data - m
-    return mean(diff * diff)
-}
-
-// Standard deviation
-fun std_dev(vec: data) -> float64 {
-    return sqrt(variance(data))
-}
-
-// Covariance
-fun covariance(vec: x, vec: y) -> float64 {
-    float64: mx = mean(x)
-    float64: my = mean(y)
-    vec: dx = x - mx
-    vec: dy = y - my
-    return mean(dx * dy)
-}
-```
+| Function | Description | Example |
+|----------|-------------|---------|
+| `stats.mean(v)` | Mean of elements | `stats.mean([1,2,3])` → `2.0` |
+| `stats.var(v)` | Variance of elements | `stats.var([1,2,3])` → `0.667` |
+| `stats.std(v)` | Standard deviation | `stats.std([1,2,3])` → `0.816` |
+| `stats.cov(x, y)` | Covariance between vectors | `stats.cov([1,2],[2,4])` → `1.0` |
 
 ### Regression Functions
 
@@ -211,33 +197,40 @@ fun project(vec: u, vec: v) -> vec {
 }
 ```
 
-## Input/Output Functions
+## Input/Output Functions (io module)
 
-### Basic I/O
+Input/output operations are available through the `io` module.
+
+### File Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `io.open(filename, mode)` | Open file, returns handle | `io.open("data.txt", "r")` |
+| `io.close(handle)` | Close file handle | `io.close(file_handle)` |
+| `io.read(handle)` | Read entire file | `io.read(file_handle)` |
+| `io.write(handle, content)` | Write string to file | `io.write(file_handle, "text")` |
+
+### File Information
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `io.exists(filename)` | Check if file exists | `io.exists("file.txt")` |
+| `io.filesize(filename)` | Get file size in bytes | `io.filesize("file.txt")` |
+| `io.remove(filename)` | Delete file | `io.remove("file.txt")` |
+
+### User Input
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `io.input()` | Read line from stdin | `io.input()` |
+| `io.input(prompt)` | Read line with prompt | `io.input("Enter name: ")` |
+
+### Basic Output
 
 | Function | Description | Example |
 |----------|-------------|---------|
 | `print(...)` | Print without newline | `print("Hello")` |
 | `println(...)` | Print with newline | `println("Hello")` |
-
-### Formatted Output
-
-```rhodesia
-// Basic usage
-print("Value: ", 42)          // "Value: 42"
-println("Result: ", 3.14)     // "Result: 3.14"
-
-// Multiple values
-println("x =", 10, "y =", 20) // "x = 10 y = 20"
-
-// Vector and matrix output
-vec: v = [1, 2, 3]
-println("Vector:", v)         // "Vector: [1, 2, 3]"
-
-mat: m = [[1, 2], [3, 4]]
-println("Matrix:")
-println(m)                   // Prints matrix with formatting
-```
 
 ## Examples
 
@@ -248,12 +241,12 @@ println(m)                   // Prints matrix with formatting
 vec: data = [12.5, 15.2, 18.7, 14.1, 16.8, 19.3, 13.9, 17.5, 15.8, 18.2]
 
 println("Dataset Statistics:")
-println("  Sum:     ", sum(data))
-println("  Mean:    ", mean(data))
-println("  Norm:    ", norm(data))
-println("  Size:    ", size(data))
-println("  Variance:", variance(data))
-println("  Std Dev: ", std_dev(data))
+println("  Sum:     ", math.sum(data))
+println("  Mean:    ", stats.mean(data))
+println("  Norm:    ", math.norm(data))
+println("  Size:    ", math.size(data))
+println("  Variance:", stats.var(data))
+println("  Std Dev: ", stats.std(data))
 println("")
 
 // Normalization
@@ -282,10 +275,10 @@ println("A * B:")
 println(A * B)
 
 println("Transpose of A:")
-println(transpose(A))
+println(math.transpose(A))
 
 println("Inverse of A:")
-println(inv(A))
+println(math.inv(A))
 ```
 
 ## Next Steps

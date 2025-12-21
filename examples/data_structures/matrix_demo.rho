@@ -44,12 +44,12 @@ println("")
 // Transpose
 println("=== Transpose ===")
 println("transpose(A):")
-println(transpose(A))
+println(math.transpose(A))
 println("")
 
 // Matrix inverse
 println("=== Matrix Inverse ===")
-mat: A_inv = inv(A)
+mat: A_inv = math.inv(A)
 println("inv(A):")
 println(A_inv)
 println("")
@@ -60,26 +60,26 @@ println("")
 
 // Norms and dimensions
 println("=== Matrix Information ===")
-println("rows(A):", rows(A))
-println("cols(A):", cols(A))
-println("size(A):", size(A))
-println("norm(A) [Frobenius]:", norm(A))
-println("sum(A):", sum(A))
-println("mean(A):", mean(A))
+println("rows(A):", math.rows(A))
+println("cols(A):", math.cols(A))
+println("size(A):", math.size(A))
+println("norm(A) [Frobenius]:", math.norm(A))
+println("sum(A):", math.sum(A))
+println("mean(A):", stats.mean(A))
 println("")
 
 // Identity matrix
 println("=== Special Matrices ===")
 println("eye(3):")
-println(eye(3))
+println(math.eye(3))
 println("")
 
 println("zeros(2, 3):")
-println(zeros(2, 3))
+println(math.zeros(2, 3))
 println("")
 
 println("ones(3, 2):")
-println(ones(3, 2))
+println(math.ones(3, 2))
 println("")
 
 // Matrix-vector multiplication

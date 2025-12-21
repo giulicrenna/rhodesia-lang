@@ -24,31 +24,31 @@ println("")
 
 // Vector products
 println("=== Vector Products ===")
-println("dot(a, b):", dot(a, b))
+println("dot(a, b):", math.dot(a, b))
 println("")
 
 // Norms and statistics
 println("=== Statistics ===")
-println("norm(a):", norm(a))
-println("sum(a):", sum(a))
-println("mean(a):", mean(a))
-println("size(a):", size(a))
+println("norm(a):", math.norm(a))
+println("sum(a):", math.sum(a))
+println("mean(a):", stats.mean(a))
+println("size(a):", math.size(a))
 println("")
 
 // Mathematical functions (element-wise)
 println("=== Element-wise Functions ===")
-println("sqrt(a):", sqrt(a))
-println("exp(a/5):", exp(a / 5.0))
-println("log(a):", log(a))
-println("abs(a - 3):", abs(a - 3.0 * ones(size(a))))
+println("sqrt(a):", math.sqrt(a))
+println("exp(a/5):", math.exp(a / 5.0))
+println("log(a):", math.log(a))
+println("abs(a - 3):", math.abs(a - 3.0 * math.ones(math.size(a))))
 println("")
 
 // Creating vectors
 println("=== Vector Creation ===")
-println("zeros(5):", zeros(5))
-println("ones(5):", ones(5))
-println("range(5):", range(5))
-println("range(3, 8):", range(3, 8))
+println("zeros(5):", math.zeros(5))
+println("ones(5):", math.ones(5))
+println("range(5):", math.range(5))
+println("range(3, 8):", math.range(3, 8))
 println("")
 
 // Element access
@@ -61,7 +61,7 @@ println("")
 // Vector operations in loop
 println("=== Iterating Over Vectors ===")
 println("Elements of a and their squares:")
-for i in range(size(a)) {
+for i in range(math.size(a)) {
     float64: val = a[i]
     float64: squared = val * val
     print("  a[")
@@ -75,19 +75,19 @@ println("")
 
 // Custom function
 fun normalize(vec: v) -> vec {
-    float64: n = norm(v)
+    float64: n = math.norm(v)
     return v / n
 }
 
 println("=== Normalized vector a ===")
 vec: a_norm = normalize(a)
 println("normalize(a):", a_norm)
-println("norm(normalize(a)):", norm(a_norm))
+println("norm(normalize(a)):", math.norm(a_norm))
 println("")
 
 // Compute angle between vectors
 fun angle_radians(vec: u, vec: v) -> float64 {
-    float64: cos_theta = dot(u, v) / (norm(u) * norm(v))
+    float64: cos_theta = math.dot(u, v) / (math.norm(u) * math.norm(v))
     return cos_theta
 }
 
