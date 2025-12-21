@@ -37,6 +37,7 @@ kramdown:
 # Plugins
 plugins:
   - jekyll-relative-links
+  - jekyll-mermaid
 
 # Collections
 collections:
