@@ -1,0 +1,14 @@
+// Minimal closure test
+print("Test 1: Simple variable capture")
+int: x = 5
+function: f = lambda(y) -> x + y
+print(f(3))
+
+print("Test 2: Two functions")
+fun makeAdder(int: n) -> function {
+    return lambda(a) -> a + n
+}
+function: add5 = makeAdder(5)
+print(add5(10))
+
+print("Done!")

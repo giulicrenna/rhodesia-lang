@@ -248,7 +248,24 @@ public:
         }
         return names;
     }
-    
+
+    /**
+     * @brief Get all symbols from all accessible scopes (for closures)
+     * Returns all visible variables from innermost to outermost scope
+     */
+    std::unordered_map<std::string, Symbol> getAllCurrentScopeSymbols() const {
+        std::unordered_map<std::string, Symbol> allSymbols;
+
+        // Iterate from outermost to innermost so inner scopes shadow outer ones
+        for (const auto& scope : scopes_) {
+            for (const auto& [name, symbol] : scope) {
+                allSymbols[name] = symbol;
+            }
+        }
+
+        return allSymbols;
+    }
+
     /**
      * @brief Get all visible variable names
      */

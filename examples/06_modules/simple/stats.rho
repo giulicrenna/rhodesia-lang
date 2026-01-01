@@ -3,10 +3,10 @@
 
 // Función para calcular la varianza de un vector
 fun variance(vec: data) -> float64 {
-    float64: m = mean(data)
+    float64: m = stats.mean(data)
     vec: centered = data - m
     vec: squared = centered * centered
-    return sum(squared) / size(data)
+    return math.sum(squared) / math.size(data)
 }
 
 // Función para calcular la desviación estándar

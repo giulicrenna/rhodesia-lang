@@ -10,25 +10,29 @@
  */
 
 /**
-    Implementar:
-        - Tipo de dato arr, que permita cualquier tipo de dato dentro (similar a RhoMap pero indexado por enteros)
-        - Acceso dinamico a miembros de RhoMap (ej: map["key1"] = 42)
-        - tipo de dato bool
-        - Operadores logicos (&, |, !)
-        - Manejo de errores mas robusto en el REPL (no salir al primer error)
-        - condicional ternario (cond ? expr1 : expr2)
-        - Mejorar mensajes de error (ej: division por cero, indice fuera de rango, etc)
-        - Implementar variables en indexado de matrices y vectores (ej: mat[i, j] = 5)
-        - Funciones de orden superior y closures
-        - Manejo de excepciones (try/catch/throw)
-        - Tipo de dato float para números decimales
+    Implementado:
+        ✓ Tipos enteros adicionales (int8, int16, int32, uint8, uint16, uint32, uint64, byte)
+        ✓ Tipo Complex para números complejos con make_complex()
+        ✓ Tipo Set (conjunto sin duplicados) con make_set()
+        ✓ Tipo Tuple (tupla inmutable) con make_tuple()
+        ✓ Tipo Record (estructura con campos nombrados) con make_record()
+        ✓ Tipo Enum (enumeraciones)
+        ✓ Valor Null explícito
+        ✓ Módulo Time (Date, Time, DateTime, Duration, Timestamp)
+        ✓ Parser completo para nuevos tipos de datos
+        ✓ Evaluator con conversiones automáticas y soporte completo
+        ✓ Funciones built-in para crear tipos complejos
+
+    Pendiente:
+        - Sintaxis literal para complex, set, tuple, record
         - Estructuras de control (switch/case, do/while)
         - Operadores bitwise básicos (<<, >>, &, |, ^, ~)
         - Documentación integrada y docstrings
         - Optimizaciones básicas de rendimiento (caching)
         - Generadores básicos con yield
-        - Manejo de fechas y tiempos básico
         - Sistema de logging integrado (log, warn, error)
+        - Integración del módulo Time con sistema de módulos
+        - Métodos adicionales para manipular tipos complejos
 */
 
 #include "Lexer.hpp"

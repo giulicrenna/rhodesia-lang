@@ -141,39 +141,75 @@ private:
         if (match(TokenType::KwWhile)) return parseWhileLoop();
         if (match(TokenType::KwIf)) return parseIfStmt();
         if (match(TokenType::KwUsing)) return parseUsing();
+        if (match(TokenType::KwTry)) return parseTryCatch();
+        if (match(TokenType::KwThrow)) return parseThrow();
         if (match(TokenType::KwReturn)) return parseReturn();
         if (match(TokenType::KwBreak)) return parseBreak();
         if (match(TokenType::KwContinue)) return parseContinue();
         if (match(TokenType::LBrace)) return parseBlock();
-        
+
         // Check for variable declaration: tipo: nombre = ...
         if (isTypeKeyword(peek().type)) {
             return parseVarDecl();
         }
-        
+
         // Otherwise, expression or assignment
         return parseExprOrAssignment();
     }
     
     bool isTypeKeyword(TokenType type) const {
         return type == TokenType::KwInt ||
+               type == TokenType::KwInt8 ||
+               type == TokenType::KwInt16 ||
+               type == TokenType::KwInt32 ||
+               type == TokenType::KwUInt8 ||
+               type == TokenType::KwUInt16 ||
+               type == TokenType::KwUInt32 ||
+               type == TokenType::KwUInt64 ||
+               type == TokenType::KwByte ||
                type == TokenType::KwFloat64 ||
+               type == TokenType::KwComplex ||
+               type == TokenType::KwBool ||
                type == TokenType::KwVec ||
                type == TokenType::KwMat ||
                type == TokenType::KwStr ||
-               type == TokenType::KwMap;
+               type == TokenType::KwMap ||
+               type == TokenType::KwArr ||
+               type == TokenType::KwSet ||
+               type == TokenType::KwTuple ||
+               type == TokenType::KwRecord ||
+               type == TokenType::KwEnum ||
+               type == TokenType::KwFunction ||
+               type == TokenType::KwNull;
     }
     
     RhoType parseType() {
         Token t = advance();
         switch (t.type) {
             case TokenType::KwInt: return RhoType::Int;
+            case TokenType::KwInt8: return RhoType::Int8;
+            case TokenType::KwInt16: return RhoType::Int16;
+            case TokenType::KwInt32: return RhoType::Int32;
+            case TokenType::KwUInt8: return RhoType::UInt8;
+            case TokenType::KwUInt16: return RhoType::UInt16;
+            case TokenType::KwUInt32: return RhoType::UInt32;
+            case TokenType::KwUInt64: return RhoType::UInt64;
+            case TokenType::KwByte: return RhoType::Byte;
             case TokenType::KwFloat64: return RhoType::Float64;
+            case TokenType::KwComplex: return RhoType::Complex;
+            case TokenType::KwBool: return RhoType::Bool;
             case TokenType::KwVec: return RhoType::Vec;
             case TokenType::KwMat: return RhoType::Mat;
             case TokenType::KwStr: return RhoType::String;
             case TokenType::KwMap: return RhoType::Map;
+            case TokenType::KwArr: return RhoType::Arr;
+            case TokenType::KwSet: return RhoType::Set;
+            case TokenType::KwTuple: return RhoType::Tuple;
+            case TokenType::KwRecord: return RhoType::Record;
+            case TokenType::KwEnum: return RhoType::Enum;
+            case TokenType::KwFunction: return RhoType::Function;
             case TokenType::KwVoid: return RhoType::Void;
+            case TokenType::KwNull: return RhoType::Null;
             default:
                 throw ParseError("Expected type", t);
         }
@@ -374,6 +410,36 @@ private:
     }
 
     /**
+     * @brief Parse throw statement: throw expression
+     */
+    StmtPtr parseThrow() {
+        SourceLocation loc = previous().location;
+        ExprPtr expr = parseExpression();
+        return std::make_unique<ThrowNode>(std::move(expr), loc);
+    }
+
+    /**
+     * @brief Parse try/catch statement: try { body } catch exceptionVar { handler }
+     */
+    StmtPtr parseTryCatch() {
+        SourceLocation loc = previous().location;
+
+        // Parse try block
+        consume(TokenType::LBrace, "'{' after 'try'");
+        StmtPtr tryBody = parseBlockInner();
+
+        // Parse catch clause
+        consume(TokenType::KwCatch, "'catch' after try block");
+        Token exceptionVar = consume(TokenType::Identifier, "exception variable name after 'catch'");
+
+        consume(TokenType::LBrace, "'{' after catch variable");
+        StmtPtr catchBody = parseBlockInner();
+
+        CatchClause catchClause(exceptionVar.value, std::move(catchBody));
+        return std::make_unique<TryCatchNode>(std::move(tryBody), std::move(catchClause), loc);
+    }
+
+    /**
      * @brief Parse include statement: include module_name{symbol1, symbol2 as alias}
      */
     StmtPtr parseInclude() {
@@ -431,11 +497,29 @@ private:
     // ========================================================================
     // Expression Parsing (Pratt Parser / Precedence Climbing)
     // ========================================================================
-    
+
     ExprPtr parseExpression() {
-        return parseOr();
+        return parseTernary();
     }
-    
+
+    /**
+     * @brief Parse ternary conditional: cond ? expr1 : expr2
+     * Lowest precedence, right-associative
+     */
+    ExprPtr parseTernary() {
+        ExprPtr condition = parseOr();
+
+        if (match(TokenType::Question)) {
+            SourceLocation loc = previous().location;
+            ExprPtr trueExpr = parseExpression();  // Right-associative, so parse full expression
+            consume(TokenType::Colon, "':' after true expression in ternary operator");
+            ExprPtr falseExpr = parseExpression();  // Right-associative
+            return std::make_unique<TernaryOpNode>(std::move(condition), std::move(trueExpr), std::move(falseExpr), loc);
+        }
+
+        return condition;
+    }
+
     ExprPtr parseOr() {
         ExprPtr left = parseAnd();
         
@@ -593,21 +677,72 @@ private:
                     expr = std::make_unique<MemberAccessNode>(ident->name, member, std::vector<ExprPtr>{}, loc);
                 }
             }
-            else if (match(TokenType::Less)) {
-                // Slice access: expr<start:end> or expr<row_start:row_end, col_start:col_end>
-                SourceLocation loc = previous().location;
-                std::vector<SliceSpec> slices;
+            else if (check(TokenType::Less)) {
+                // Need to distinguish between slice and comparison
+                // Slice has form: expr<start:end> with a colon inside
+                // Comparison doesn't - it's handled at a higher precedence level
+                //
+                // We peek ahead to see if this looks like a slice (has : or starts with :)
+                // This is a simple heuristic: if we see < followed by : or <digit>+:, it's a slice
+                // IMPORTANT: Must not confuse with ternary operator (? ... : ...)
+                size_t savedPos = current_;
+                advance(); // consume <
 
-                // Parse first slice (start:end)
-                slices.push_back(parseSliceSpec());
-
-                // Check for second slice (for matrices)
-                while (match(TokenType::Comma)) {
-                    slices.push_back(parseSliceSpec());
+                bool isSlice = false;
+                if (check(TokenType::Colon)) {
+                    isSlice = true; // <:...>
+                } else if (check(TokenType::IntLiteral) || check(TokenType::FloatLiteral) ||
+                          check(TokenType::Identifier) || check(TokenType::Minus)) {
+                    // Could be slice start, need to check for : after expression
+                    // For now, use a simple heuristic: try to find : before > or other operators
+                    // BUT: if we find ? before :, it's a ternary operator, not a slice
+                    int depth = 0;
+                    while (!isAtEnd() && depth < 10) { // look ahead max 10 tokens
+                        if (check(TokenType::Question)) {
+                            // This is a ternary operator, not a slice!
+                            isSlice = false;
+                            break;
+                        }
+                        if (check(TokenType::Colon)) {
+                            isSlice = true;
+                            break;
+                        }
+                        if (check(TokenType::Greater) && depth > 0) {
+                            break;
+                        }
+                        // Stop if we see tokens that indicate it's not a slice
+                        if (check(TokenType::RParen) || check(TokenType::RBracket) ||
+                            check(TokenType::Newline) || check(TokenType::Eof) ||
+                            check(TokenType::LBrace) || check(TokenType::RBrace)) {
+                            break;
+                        }
+                        advance();
+                        depth++;
+                    }
                 }
 
-                consume(TokenType::Greater, "'>' after slice");
-                expr = std::make_unique<SliceNode>(std::move(expr), std::move(slices), loc);
+                // Restore position
+                current_ = savedPos;
+
+                if (isSlice) {
+                    match(TokenType::Less); // consume the <
+                    SourceLocation loc = previous().location;
+                    std::vector<SliceSpec> slices;
+
+                    // Parse first slice (start:end)
+                    slices.push_back(parseSliceSpec());
+
+                    // Check for second slice (for matrices)
+                    while (match(TokenType::Comma)) {
+                        slices.push_back(parseSliceSpec());
+                    }
+
+                    consume(TokenType::Greater, "'>' after slice");
+                    expr = std::make_unique<SliceNode>(std::move(expr), std::move(slices), loc);
+                } else {
+                    // Not a slice, let higher precedence handle it (comparison operator)
+                    break;
+                }
             }
             else if (match(TokenType::LParen)) {
                 // Function call on result (chained)
@@ -626,6 +761,8 @@ private:
 
     /**
      * @brief Parse slice specification: start:end, :end, start:, or :
+     * Now supports full expressions including variables, arithmetic, and negative indices
+     * NOTE: We parse up to Term level to avoid consuming comparison operators (<, >) or logical operators
      */
     SliceSpec parseSliceSpec() {
         std::optional<ExprPtr> start;
@@ -633,7 +770,7 @@ private:
 
         // Check if we have a start expression (not starting with ':')
         if (!check(TokenType::Colon)) {
-            start = parseTerm();  // Parse arithmetic expressions only
+            start = parseTerm();  // Parse arithmetic expressions (no comparisons, no logical ops)
         }
 
         // Expect colon
@@ -641,7 +778,7 @@ private:
 
         // Check if we have an end expression (not ending with ',' or '>')
         if (!check(TokenType::Comma) && !check(TokenType::Greater)) {
-            end = parseTerm();  // Parse arithmetic expressions only
+            end = parseTerm();  // Parse arithmetic expressions (no comparisons, no logical ops)
         }
 
         return SliceSpec(std::move(start), std::move(end));
@@ -656,6 +793,11 @@ private:
         }
         if (match(TokenType::KwFalse)) {
             return std::make_unique<BoolLiteralNode>(false, loc);
+        }
+
+        // Null literal
+        if (match(TokenType::KwNull)) {
+            return std::make_unique<NullLiteralNode>(loc);
         }
         
         // Number literals
@@ -685,18 +827,23 @@ private:
             return parseArrayLiteral(loc);
         }
         
+        // Lambda expression
+        if (match(TokenType::KwLambda)) {
+            return parseLambda(loc);
+        }
+
         // Identifier or function call
         if (match(TokenType::Identifier)) {
             std::string name = previous().value;
-            
+
             // Check for function call
             if (match(TokenType::LParen)) {
                 return parseFunctionCall(name, loc);
             }
-            
+
             return std::make_unique<IdentifierNode>(name, loc);
         }
-        
+
         throw ParseError("Expected expression", peek());
     }
     
@@ -747,16 +894,65 @@ private:
      */
     ExprPtr parseFunctionCall(const std::string& name, SourceLocation loc) {
         std::vector<ExprPtr> args;
-        
+
         if (!check(TokenType::RParen)) {
             args.push_back(parseExpression());
             while (match(TokenType::Comma)) {
                 args.push_back(parseExpression());
             }
         }
-        
+
         consume(TokenType::RParen, "')' after arguments");
         return std::make_unique<FunctionCallNode>(name, std::move(args), loc);
+    }
+
+    /**
+     * @brief Parse lambda expression
+     * Syntax: lambda(x, y) { body } or fn(x) => expression
+     */
+    ExprPtr parseLambda(SourceLocation loc) {
+        consume(TokenType::LParen, "'(' after lambda keyword");
+
+        // Parse parameters
+        std::vector<LambdaParam> params;
+        if (!check(TokenType::RParen)) {
+            do {
+                // Support optional type annotations: lambda(int: x, y) or lambda(x, y)
+                std::optional<RhoType> paramType;
+
+                // Check if parameter has type annotation
+                if (isTypeKeyword(peek().type)) {
+                    paramType = parseType();
+                    consume(TokenType::Colon, "':' after parameter type in lambda");
+                }
+
+                Token paramToken = consume(TokenType::Identifier, "parameter name");
+                params.emplace_back(paramToken.value, paramType);
+            } while (match(TokenType::Comma));
+        }
+
+        consume(TokenType::RParen, "')' after lambda parameters");
+
+        // Check for arrow (expression lambda) or brace (block lambda)
+        bool isExpression = false;
+        std::unique_ptr<ExprNode> body;
+
+        if (match(TokenType::Arrow)) {
+            // Expression lambda: fn(x) => x * 2
+            isExpression = true;
+            body = parseExpression();
+        } else if (match(TokenType::LBrace)) {
+            // Block lambda: lambda(x) { return x * 2 }
+            // Parse block as expression (will be evaluated as statement block)
+            auto block = parseBlockInner();
+            // Convert BlockNode to ExprNode wrapper (we'll handle this in evaluator)
+            // For now, store the block pointer as expression
+            body = std::unique_ptr<ExprNode>(reinterpret_cast<ExprNode*>(block.release()));
+        } else {
+            throw ParseError("Expected '=>' or '{' after lambda parameters", peek());
+        }
+
+        return std::make_unique<LambdaNode>(std::move(params), std::move(body), isExpression, loc);
     }
 };
 

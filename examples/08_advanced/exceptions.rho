@@ -1,0 +1,163 @@
+/**
+ * @file test_exceptions.rho
+ * @brief Test cases for exception handling (try/catch/throw)
+ */
+
+println("=== Testing Exception Handling ===")
+println("")
+
+// Test 1: Basic try/catch with division by zero
+println("Test 1: Catching division by zero")
+try {
+    float64: x = 10.0 / 0.0
+    println("This should not execute")
+} catch err {
+    println("Caught error:")
+    println(err)
+}
+println("Continued after error")
+println("")
+
+// Test 2: Basic try/catch with index out of bounds
+println("Test 2: Catching index out of bounds")
+try {
+    vec: v = [1.0, 2.0, 3.0]
+    println(v[100])
+    println("This should not execute")
+} catch err {
+    println("Caught error:")
+    println(err)
+}
+println("Continued after error")
+println("")
+
+// Test 3: Throw a custom string exception
+println("Test 3: Throwing custom string exception")
+try {
+    println("Before throw")
+    throw "This is a custom error message!"
+    println("This should not execute")
+} catch err {
+    println("Caught custom error:")
+    println(err)
+}
+println("Continued after custom error")
+println("")
+
+// Test 4: Throw a numeric value
+println("Test 4: Throwing numeric value")
+try {
+    int: errorCode = 404
+    throw errorCode
+    println("This should not execute")
+} catch err {
+    println("Caught error code:")
+    println(err)
+}
+println("")
+
+// Test 5: Try/catch with no error (success case)
+println("Test 5: Try/catch with no error")
+try {
+    float64: result = 10.0 / 2.0
+    println("Division successful:")
+    println(result)
+} catch err {
+    println("This should not execute")
+}
+println("Continued normally")
+println("")
+
+// Test 6: Nested try/catch
+println("Test 6: Nested try/catch")
+try {
+    println("Outer try block")
+    try {
+        println("Inner try block")
+        throw "Inner error"
+        println("This should not execute")
+    } catch innerErr {
+        println("Caught in inner catch:")
+        println(innerErr)
+        throw "Re-throwing from inner catch"
+    }
+    println("This should not execute")
+} catch outerErr {
+    println("Caught in outer catch:")
+    println(outerErr)
+}
+println("")
+
+// Test 7: Try/catch in a function
+fun safeDivide(float64: a, float64: b) -> float64 {
+    try {
+        return a / b
+    } catch err {
+        println("Error in safeDivide:")
+        println(err)
+        return 0.0
+    }
+}
+
+println("Test 7: Try/catch in function")
+float64: result1 = safeDivide(10.0, 2.0)
+println("10.0 / 2.0 =")
+println(result1)
+
+float64: result2 = safeDivide(10.0, 0.0)
+println("10.0 / 0.0 =")
+println(result2)
+println("")
+
+// Test 8: Try/catch with matrix operations
+println("Test 8: Try/catch with matrix operations")
+try {
+    mat: m = [[1.0, 2.0], [3.0, 4.0]]
+    println(m[10, 10])  // Out of bounds
+    println("This should not execute")
+} catch err {
+    println("Caught matrix error:")
+    println(err)
+}
+println("")
+
+// Test 9: Multiple operations in try block
+println("Test 9: Multiple operations in try block")
+try {
+    int: a = 5
+    int: b = 10
+    int: c = a + b
+    println("a + b =")
+    println(c)
+
+    float64: x = 100.0 / 0.0  // This will throw
+    println("This should not execute")
+} catch err {
+    println("Caught error during calculations:")
+    println(err)
+}
+println("")
+
+// Test 10: Throw in conditional
+println("Test 10: Throw in conditional")
+fun checkPositive(int: n) -> int {
+    if n < 0 {
+        throw "Number must be positive!"
+    }
+    return n * 2
+}
+
+try {
+    int: positive = checkPositive(5)
+    println("checkPositive(5) =")
+    println(positive)
+
+    int: negative = checkPositive(-3)
+    println("This should not execute")
+} catch err {
+    println("Caught validation error:")
+    println(err)
+}
+println("")
+
+println("=== All exception tests completed! ===")

@@ -1,0 +1,115 @@
+// Comprehensive test of higher-order functions and closures in Rhodesia
+
+print("=== Higher-Order Functions & Closures Demo ===\n")
+
+// 1. Simple lambda expressions
+print("1. Simple lambdas:")
+function: square = lambda(x) -> x * x
+function: cube = lambda(x) -> x * x * x
+print("  square(5) = ")
+print(square(5))
+print("  cube(3) = ")
+print(cube(3))
+
+// 2. Lambda with multiple parameters
+print("\n2. Multi-parameter lambda:")
+function: add = lambda(a, b) -> a + b
+function: mult = lambda(a, b) -> a * b
+print("  add(7, 3) = ")
+print(add(7, 3))
+print("  mult(7, 3) = ")
+print(mult(7, 3))
+
+// 3. Closures - capturing variables
+print("\n3. Closures:")
+int: factor = 10
+function: scale = lambda(x) -> x * factor
+print("  scale(5) with factor=10: ")
+print(scale(5))
+
+// 4. Functions returning functions
+print("\n4. Functions returning functions:")
+fun makeMultiplier(int: n) -> function {
+    return lambda(x) -> x * n
+}
+function: times2 = makeMultiplier(2)
+function: times5 = makeMultiplier(5)
+print("  times2(7) = ")
+print(times2(7))
+print("  times5(7) = ")
+print(times5(7))
+
+// 5. Functions taking functions as parameters
+print("\n5. Higher-order functions:")
+fun applyTwice(function: f, int: x) -> int {
+    return f(f(x))
+}
+function: addOne = lambda(n) -> n + 1
+print("  applyTwice(addOne, 10) = ")
+print(applyTwice(addOne, 10))
+
+// 6. Composing functions
+print("\n6. Function composition:")
+fun compose(function: f, function: g, int: x) -> int {
+    return f(g(x))
+}
+function: double = lambda(n) -> n * 2
+function: increment = lambda(n) -> n + 1
+print("  compose(double, increment, 5) = double(increment(5)) = ")
+print(compose(double, increment, 5))
+
+// 7. Block lambdas with complex logic
+print("\n7. Block lambdas:")
+function: max = lambda(a, b) {
+    if a > b {
+        return a
+    } else {
+        return b
+    }
+}
+function: min = lambda(a, b) {
+    if a < b {
+        return a
+    } else {
+        return b
+    }
+}
+print("  max(15, 23) = ")
+print(max(15, 23))
+print("  min(15, 23) = ")
+print(min(15, 23))
+
+// 8. Nested closures
+print("\n8. Nested closures:")
+fun makeCounter(int: start) -> function {
+    return lambda(increment) -> start + increment
+}
+function: counter100 = makeCounter(100)
+print("  counter100(5) = ")
+print(counter100(5))
+print("  counter100(50) = ")
+print(counter100(50))
+
+// 9. Practical example: Mathematical operations
+print("\n9. Practical example - Math operations:")
+fun applyOp(function: op, int: a, int: b) -> int {
+    return op(a, b)
+}
+print("  applyOp(add, 10, 5) = ")
+print(applyOp(add, 10, 5))
+print("  applyOp(mult, 10, 5) = ")
+print(applyOp(mult, 10, 5))
+
+// 10. Currying-like behavior
+print("\n10. Currying-style functions:")
+fun curry_add(int: a) -> function {
+    return lambda(b) -> a + b
+}
+function: add_10 = curry_add(10)
+function: add_100 = curry_add(100)
+print("  add_10(7) = ")
+print(add_10(7))
+print("  add_100(7) = ")
+print(add_100(7))
+
+print("\n=== All tests completed successfully! ===")

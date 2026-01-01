@@ -1,0 +1,13 @@
+// Test returning function from function
+print("Testing function returning function:")
+
+fun makeAdder(int: n) -> function {
+    function: adder = lambda(x) -> x + n
+    return adder
+}
+
+function: add10 = makeAdder(10)
+print("add10(5) = ")
+print(add10(5))
+
+print("Done!")

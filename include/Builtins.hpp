@@ -760,6 +760,44 @@ private:
         };
 
         // ====================================================================
+        // New Data Types Constructors
+        // ====================================================================
+
+        // make_complex(real, imag) -> complex - create complex number
+        functions_["make_complex"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) {
+                throw ArgumentError::wrongCount("make_complex", 2, args.size(), loc);
+            }
+            double real = toDouble(args[0]);
+            double imag = toDouble(args[1]);
+            return std::make_shared<RhoComplex>(real, imag);
+        };
+
+        // make_set() -> set - create empty set
+        // make_set(val1, val2, ...) -> set - create set with values
+        functions_["make_set"] = [](const std::vector<RhoValue>& args, SourceLocation) -> RhoValue {
+            auto s = std::make_shared<RhoSet>();
+            for (const auto& arg : args) {
+                s->add(arg);
+            }
+            return s;
+        };
+
+        // make_tuple(val1, val2, ...) -> tuple - create tuple
+        functions_["make_tuple"] = [](const std::vector<RhoValue>& args, SourceLocation) -> RhoValue {
+            std::vector<RhoValue> values(args.begin(), args.end());
+            return std::make_shared<RhoTuple>(std::move(values));
+        };
+
+        // make_record() -> record - create empty record
+        functions_["make_record"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 0) {
+                throw ArgumentError::wrongCount("make_record", 0, args.size(), loc);
+            }
+            return std::make_shared<RhoRecord>();
+        };
+
+        // ====================================================================
         // Statistics Module Functions
         // ====================================================================
 
@@ -2331,6 +2369,118 @@ private:
             }
 
             return newMap;
+        };
+
+        // ====================================================================
+        // Array Module Functions
+        // ====================================================================
+
+        auto& arrayModule = modules_["array"];
+
+        // array.create(size) -> arr (create array with initial size)
+        arrayModule["create"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("array.create", 1, args.size(), loc);
+            }
+
+            size_t size = static_cast<size_t>(toInt(args[0]));
+            return std::make_shared<RhoArray>(size);
+        };
+
+        // array.empty() -> arr (create empty array)
+        arrayModule["empty"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 0) {
+                throw ArgumentError::wrongCount("array.empty", 0, args.size(), loc);
+            }
+            return std::make_shared<RhoArray>();
+        };
+
+        // array.push(arr, value) -> arr (append value to end)
+        arrayModule["push"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) {
+                throw ArgumentError::wrongCount("array.push", 2, args.size(), loc);
+            }
+
+            auto* arrPtr = std::get_if<std::shared_ptr<RhoArray>>(&args[0]);
+            if (!arrPtr) {
+                throw ArgumentError("array.push", "first argument must be arr", loc);
+            }
+
+            (*arrPtr)->push(args[1]);
+            return *arrPtr;
+        };
+
+        // array.pop(arr) -> value (remove and return last element)
+        arrayModule["pop"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("array.pop", 1, args.size(), loc);
+            }
+
+            auto* arrPtr = std::get_if<std::shared_ptr<RhoArray>>(&args[0]);
+            if (!arrPtr) {
+                throw ArgumentError("array.pop", "argument must be arr", loc);
+            }
+
+            return (*arrPtr)->pop();
+        };
+
+        // array.size(arr) -> int
+        arrayModule["size"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("array.size", 1, args.size(), loc);
+            }
+
+            auto* arrPtr = std::get_if<std::shared_ptr<RhoArray>>(&args[0]);
+            if (!arrPtr) {
+                throw ArgumentError("array.size", "argument must be arr", loc);
+            }
+
+            return static_cast<int64_t>((*arrPtr)->size());
+        };
+
+        // array.isempty(arr) -> bool
+        arrayModule["isempty"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("array.isempty", 1, args.size(), loc);
+            }
+
+            auto* arrPtr = std::get_if<std::shared_ptr<RhoArray>>(&args[0]);
+            if (!arrPtr) {
+                throw ArgumentError("array.isempty", "argument must be arr", loc);
+            }
+
+            return (*arrPtr)->empty();
+        };
+
+        // array.clear(arr) -> arr
+        arrayModule["clear"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("array.clear", 1, args.size(), loc);
+            }
+
+            auto* arrPtr = std::get_if<std::shared_ptr<RhoArray>>(&args[0]);
+            if (!arrPtr) {
+                throw ArgumentError("array.clear", "argument must be arr", loc);
+            }
+
+            (*arrPtr)->clear();
+            return *arrPtr;
+        };
+
+        // array.resize(arr, newSize) -> arr
+        arrayModule["resize"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) {
+                throw ArgumentError::wrongCount("array.resize", 2, args.size(), loc);
+            }
+
+            auto* arrPtr = std::get_if<std::shared_ptr<RhoArray>>(&args[0]);
+            if (!arrPtr) {
+                throw ArgumentError("array.resize", "first argument must be arr", loc);
+            }
+
+            size_t newSize = static_cast<size_t>(toInt(args[1]));
+            (*arrPtr)->resize(newSize);
+            return *arrPtr;
         };
 
         // ====================================================================

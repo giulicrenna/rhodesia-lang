@@ -1,0 +1,94 @@
+// Test script for new data types in Rhodesia
+// Tests: int8, int16, int32, uint8, uint16, uint32, uint64, byte
+//        complex, set, tuple, record, enum, null
+
+println("=== Testing New Integer Types ===")
+
+// Integer types
+int8: x8 = 127
+int16: x16 = 32767
+int32: x32 = 2147483647
+uint8: u8 = 255
+uint16: u16 = 65535
+uint32: u32 = 4294967295
+// Note: uint64 max value is too large for current parser
+uint64: u64 = 1000000000
+byte: b = 255
+
+println("int8: ", x8)
+println("int16: ", x16)
+println("int32: ", x32)
+println("uint8: ", u8)
+println("uint16: ", u16)
+println("uint32: ", u32)
+println("uint64: ", u64)
+println("byte: ", b)
+
+println("\n=== Testing Complex Numbers ===")
+
+// Complex numbers (implemented via built-in functions)
+complex: c1 = make_complex(3.0, 4.0)
+complex: c2 = make_complex(1.0, 2.0)
+println("Complex 1: ", c1)
+println("Complex 2: ", c2)
+// Note: Methods like magnitude(), phase() not yet implemented
+// println("Magnitude c1: ", c1.magnitude())
+// println("Phase c1: ", c1.phase())
+
+println("\n=== Testing Set ===")
+
+// Set (implemented via built-in functions)
+set: s1 = make_set(1, 2, 3, 2, 1)
+println("Set: ", s1)
+// Note: Methods like add(), size(), contains() not yet implemented
+// s1.add(4)
+// println("Size: ", s1.size())
+// println("Contains 2: ", s1.contains(2))
+
+println("\n=== Testing Tuple ===")
+
+// Tuple (implemented via built-in functions)
+tuple: t1 = make_tuple(1, "hello", 3.14, true)
+println("Tuple: ", t1)
+// Note: Methods like size(), get() and indexing not yet implemented
+// println("Size: ", t1.size())
+// println("Element 0: ", t1[0])
+// println("Element 1: ", t1[1])
+
+println("\n=== Testing Record ===")
+
+// Record (implemented via built-in functions)
+record: person = make_record()
+println("Record: ", person)
+// Note: Field access and methods not yet fully implemented
+// person.setField("name", "Alice")
+// person.setField("age", 30)
+// println("Name: ", person.getField("name"))
+// println("Age: ", person.getField("age"))
+
+println("\n=== Testing Enum ===")
+
+// Enum (not yet implemented in parser)
+// enum: Color {
+//     Red,
+//     Green,
+//     Blue
+// }
+// Color: c = Color::Red
+// println("Color: ", c)
+println("Enum: Not yet implemented")
+
+println("\n=== Testing Null ===")
+
+// Null (implemented)
+null: n = null
+println("Null value: ", n)
+
+// Note: Null comparisons not yet working properly
+// null: maybeValue = null
+// if maybeValue == null {
+//     println("Value is null")
+// }
+
+println("\n=== All Tests Completed ===")
+println("Note: Most tests are commented out - they need parser/evaluator implementation")

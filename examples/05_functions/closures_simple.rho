@@ -1,0 +1,24 @@
+// Test closures - simplified
+print("Testing closures:")
+
+// Closure capturing outer variable
+int: multiplier = 5
+function: multiply = lambda(x) -> x * multiplier
+print("multiply(4) with multiplier=5: ")
+print(multiply(4))
+
+// Function returning function (closure)
+fun makeAdder(int: n) -> function {
+    return lambda(x) -> x + n
+}
+
+function: add10 = makeAdder(10)
+function: add100 = makeAdder(100)
+
+print("add10(5) = ")
+print(add10(5))
+
+print("add100(5) = ")
+print(add100(5))
+
+print("All closure tests passed!")

@@ -25,15 +25,33 @@ enum class TokenType {
     
     // Type keywords
     KwInt,           // int
+    KwInt8,          // int8
+    KwInt16,         // int16
+    KwInt32,         // int32
+    KwUInt8,         // uint8
+    KwUInt16,        // uint16
+    KwUInt32,        // uint32
+    KwUInt64,        // uint64
+    KwByte,          // byte
     KwFloat64,       // float64
+    KwComplex,       // complex
+    KwBool,          // bool
     KwVec,           // vec
     KwMat,           // mat
     KwStr,           // str
     KwMap,           // map
+    KwArr,           // arr
+    KwSet,           // set
+    KwTuple,         // tuple
+    KwRecord,        // record
+    KwEnum,          // enum
+    KwFunction,      // function
     KwVoid,          // void
+    KwNull,          // null
     
     // Control flow keywords
     KwFun,           // fun
+    KwLambda,        // lambda (or fn for short lambda syntax)
     KwReturn,        // return
     KwFor,           // for
     KwIn,            // in
@@ -43,6 +61,9 @@ enum class TokenType {
     KwBreak,         // break
     KwContinue,      // continue
     KwUsing,         // using
+    KwTry,           // try
+    KwCatch,         // catch
+    KwThrow,         // throw
 
     // Module system
     KwInclude,       // include
@@ -72,7 +93,10 @@ enum class TokenType {
     
     // Operators - Assignment
     Assign,          // =
-    
+
+    // Operators - Ternary
+    Question,        // ?
+
     // Delimiters
     LParen,          // (
     RParen,          // )
@@ -101,13 +125,31 @@ inline std::string tokenTypeToString(TokenType type) {
         {TokenType::FloatLiteral, "FloatLiteral"},
         {TokenType::Identifier, "Identifier"},
         {TokenType::KwInt, "int"},
+        {TokenType::KwInt8, "int8"},
+        {TokenType::KwInt16, "int16"},
+        {TokenType::KwInt32, "int32"},
+        {TokenType::KwUInt8, "uint8"},
+        {TokenType::KwUInt16, "uint16"},
+        {TokenType::KwUInt32, "uint32"},
+        {TokenType::KwUInt64, "uint64"},
+        {TokenType::KwByte, "byte"},
         {TokenType::KwFloat64, "float64"},
+        {TokenType::KwComplex, "complex"},
+        {TokenType::KwBool, "bool"},
         {TokenType::KwVec, "vec"},
         {TokenType::KwMat, "mat"},
         {TokenType::KwStr, "str"},
         {TokenType::KwMap, "map"},
+        {TokenType::KwArr, "arr"},
+        {TokenType::KwSet, "set"},
+        {TokenType::KwTuple, "tuple"},
+        {TokenType::KwRecord, "record"},
+        {TokenType::KwEnum, "enum"},
+        {TokenType::KwFunction, "function"},
         {TokenType::KwVoid, "void"},
+        {TokenType::KwNull, "null"},
         {TokenType::KwFun, "fun"},
+        {TokenType::KwLambda, "lambda"},
         {TokenType::KwReturn, "return"},
         {TokenType::KwFor, "for"},
         {TokenType::KwIn, "in"},
@@ -117,6 +159,9 @@ inline std::string tokenTypeToString(TokenType type) {
         {TokenType::KwBreak, "break"},
         {TokenType::KwContinue, "continue"},
         {TokenType::KwUsing, "using"},
+        {TokenType::KwTry, "try"},
+        {TokenType::KwCatch, "catch"},
+        {TokenType::KwThrow, "throw"},
         {TokenType::KwInclude, "include"},
         {TokenType::KwAs, "as"},
         {TokenType::KwAnd, "and"},
@@ -137,6 +182,7 @@ inline std::string tokenTypeToString(TokenType type) {
         {TokenType::LessEqual, "<="},
         {TokenType::GreaterEqual, ">="},
         {TokenType::Assign, "="},
+        {TokenType::Question, "?"},
         {TokenType::LParen, "("},
         {TokenType::RParen, ")"},
         {TokenType::LBracket, "["},
@@ -197,7 +243,7 @@ struct Token {
     }
     
     bool isTypeKeyword() const {
-        return type >= TokenType::KwInt && type <= TokenType::KwVoid;
+        return type >= TokenType::KwInt && type <= TokenType::KwNull;
     }
     
     bool isOperator() const {
@@ -223,13 +269,32 @@ struct Token {
 inline const std::unordered_map<std::string, TokenType>& getKeywords() {
     static const std::unordered_map<std::string, TokenType> keywords = {
         {"int", TokenType::KwInt},
+        {"int8", TokenType::KwInt8},
+        {"int16", TokenType::KwInt16},
+        {"int32", TokenType::KwInt32},
+        {"uint8", TokenType::KwUInt8},
+        {"uint16", TokenType::KwUInt16},
+        {"uint32", TokenType::KwUInt32},
+        {"uint64", TokenType::KwUInt64},
+        {"byte", TokenType::KwByte},
         {"float64", TokenType::KwFloat64},
+        {"complex", TokenType::KwComplex},
+        {"bool", TokenType::KwBool},
         {"vec", TokenType::KwVec},
         {"mat", TokenType::KwMat},
         {"str", TokenType::KwStr},
         {"map", TokenType::KwMap},
+        {"arr", TokenType::KwArr},
+        {"set", TokenType::KwSet},
+        {"tuple", TokenType::KwTuple},
+        {"record", TokenType::KwRecord},
+        {"enum", TokenType::KwEnum},
+        {"function", TokenType::KwFunction},
         {"void", TokenType::KwVoid},
+        {"null", TokenType::KwNull},
         {"fun", TokenType::KwFun},
+        {"lambda", TokenType::KwLambda},
+        {"fn", TokenType::KwLambda},  // Short alias for lambda
         {"return", TokenType::KwReturn},
         {"for", TokenType::KwFor},
         {"in", TokenType::KwIn},
@@ -239,6 +304,9 @@ inline const std::unordered_map<std::string, TokenType>& getKeywords() {
         {"break", TokenType::KwBreak},
         {"continue", TokenType::KwContinue},
         {"using", TokenType::KwUsing},
+        {"try", TokenType::KwTry},
+        {"catch", TokenType::KwCatch},
+        {"throw", TokenType::KwThrow},
         {"include", TokenType::KwInclude},
         {"as", TokenType::KwAs},
         {"and", TokenType::KwAnd},

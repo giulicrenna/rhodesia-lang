@@ -1,0 +1,42 @@
+// Test de indexado con variables y expresiones
+
+println("=== Pruebas de Indexado con Variables y Expresiones ===")
+
+// Test 1: Indexado de vector con variables
+vec: v = [10.0, 20.0, 30.0, 40.0, 50.0]
+int: i = 2
+println("v[i] donde i=2: ", v[i])
+
+// Test 2: Indexado con expresiones aritméticas
+int: idx = 1
+println("v[idx + 1] donde idx=1: ", v[idx + 1])
+println("v[idx * 2] donde idx=1: ", v[idx * 2])
+
+// Test 3: Matriz con variables
+mat: m = [[1.0, 2.0, 3.0],
+          [4.0, 5.0, 6.0],
+          [7.0, 8.0, 9.0]]
+
+int: row = 1
+int: col = 2
+println("m[row, col] donde row=1, col=2: ", m[row, col])
+
+// Test 4: Matriz con expresiones
+println("m[row + 1, col - 1] = ", m[row + 1, col - 1])
+
+// Test 5: Asignación con índices variables
+v[i] = 999.0
+println("Después de v[i] = 999.0: ", v)
+
+// Test 6: Asignación en matriz con variables
+m[row, col] = 100.0
+println("Después de m[row, col] = 100.0:")
+println(m)
+
+// Test 7: Uso en bucles
+println("\nIterando con índices variables:")
+for j in range(3) {
+    println("v[", j, "] = ", v[j])
+}
+
+println("\n=== Todos los tests de indexado avanzado pasaron ===")

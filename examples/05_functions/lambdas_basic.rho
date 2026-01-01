@@ -1,0 +1,15 @@
+// Simple lambda test
+print("Testing simple lambda:")
+
+// Test 1: Expression lambda
+function: double = lambda(x) -> x * 2
+print("double(5) = ")
+print(double(5))
+
+// Test 2: Closure
+int: factor = 10
+function: multiply = lambda(x) -> x * factor
+print("multiply(3) with factor=10: ")
+print(multiply(3))
+
+print("Done!")

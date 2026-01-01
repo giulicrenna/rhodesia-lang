@@ -121,10 +121,21 @@ public:
 class StringLiteralNode : public ExprNode {
 public:
     std::string value;
-    
+
     explicit StringLiteralNode(std::string val, SourceLocation loc = {})
         : ExprNode(loc), value(std::move(val)) {}
-    
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Null literal: null
+ */
+class NullLiteralNode : public ExprNode {
+public:
+    explicit NullLiteralNode(SourceLocation loc = {})
+        : ExprNode(loc) {}
+
     void accept(ASTVisitor& visitor) override;
 };
 
@@ -247,10 +258,25 @@ class UnaryOpNode : public ExprNode {
 public:
     UnaryOp op;
     ExprPtr operand;
-    
+
     UnaryOpNode(UnaryOp o, ExprPtr expr, SourceLocation loc = {})
         : ExprNode(loc), op(o), operand(std::move(expr)) {}
-    
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Ternary conditional operator: cond ? expr1 : expr2
+ */
+class TernaryOpNode : public ExprNode {
+public:
+    ExprPtr condition;
+    ExprPtr trueExpr;
+    ExprPtr falseExpr;
+
+    TernaryOpNode(ExprPtr cond, ExprPtr tExpr, ExprPtr fExpr, SourceLocation loc = {})
+        : ExprNode(loc), condition(std::move(cond)), trueExpr(std::move(tExpr)), falseExpr(std::move(fExpr)) {}
+
     void accept(ASTVisitor& visitor) override;
 };
 
@@ -319,6 +345,35 @@ public:
 
     SliceNode(ExprPtr t, std::vector<SliceSpec> s, SourceLocation loc = {})
         : ExprNode(loc), target(std::move(t)), slices(std::move(s)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Lambda parameter (can be typed or untyped)
+ */
+struct LambdaParam {
+    std::string name;
+    std::optional<RhoType> type;  // Optional type annotation
+
+    LambdaParam(std::string n, std::optional<RhoType> t = std::nullopt)
+        : name(std::move(n)), type(t) {}
+};
+
+/**
+ * @brief Lambda expression: lambda(x, y) { x + y } or fn(x) => x * 2
+ */
+class LambdaNode : public ExprNode {
+public:
+    std::vector<LambdaParam> params;
+    std::unique_ptr<ExprNode> body;  // Single expression or block
+    bool isExpression;  // true if body is a single expression (=> syntax)
+
+    LambdaNode(std::vector<LambdaParam> p, std::unique_ptr<ExprNode> b,
+               bool isExpr = false, SourceLocation loc = {})
+        : ExprNode(loc), params(std::move(p)), body(std::move(b)), isExpression(isExpr) {
+        inferredType = RhoType::Function;
+    }
 
     void accept(ASTVisitor& visitor) override;
 };
@@ -542,6 +597,44 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
+/**
+ * @brief Throw statement: throw expr
+ */
+class ThrowNode : public StmtNode {
+public:
+    ExprPtr expression;  // Expression to throw (can be string, error object, etc.)
+
+    explicit ThrowNode(ExprPtr expr, SourceLocation loc = {})
+        : StmtNode(loc), expression(std::move(expr)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Catch clause for try/catch
+ */
+struct CatchClause {
+    std::string exceptionVar;  // Variable name to bind the exception to
+    StmtPtr body;              // Catch block body
+
+    CatchClause(std::string var, StmtPtr catchBody)
+        : exceptionVar(std::move(var)), body(std::move(catchBody)) {}
+};
+
+/**
+ * @brief Try/catch statement: try { body } catch exceptionVar { handler }
+ */
+class TryCatchNode : public StmtNode {
+public:
+    StmtPtr tryBody;           // Try block body
+    CatchClause catchClause;   // Catch clause
+
+    TryCatchNode(StmtPtr tryStmt, CatchClause catchCl, SourceLocation loc = {})
+        : StmtNode(loc), tryBody(std::move(tryStmt)), catchClause(std::move(catchCl)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
 // ============================================================================
 // Program Node (Root)
 // ============================================================================
@@ -575,15 +668,18 @@ public:
     virtual void visit(FloatLiteralNode& node) = 0;
     virtual void visit(BoolLiteralNode& node) = 0;
     virtual void visit(StringLiteralNode& node) = 0;
+    virtual void visit(NullLiteralNode& node) = 0;
     virtual void visit(VectorLiteralNode& node) = 0;
     virtual void visit(MatrixLiteralNode& node) = 0;
     virtual void visit(IdentifierNode& node) = 0;
     virtual void visit(BinaryOpNode& node) = 0;
     virtual void visit(UnaryOpNode& node) = 0;
+    virtual void visit(TernaryOpNode& node) = 0;
     virtual void visit(FunctionCallNode& node) = 0;
     virtual void visit(MemberAccessNode& node) = 0;
     virtual void visit(IndexAccessNode& node) = 0;
     virtual void visit(SliceNode& node) = 0;
+    virtual void visit(LambdaNode& node) = 0;
     
     // Statements
     virtual void visit(VarDeclNode& node) = 0;
@@ -599,6 +695,8 @@ public:
     virtual void visit(ContinueNode& node) = 0;
     virtual void visit(UsingNode& node) = 0;
     virtual void visit(IncludeNode& node) = 0;
+    virtual void visit(ThrowNode& node) = 0;
+    virtual void visit(TryCatchNode& node) = 0;
 
     // Program
     virtual void visit(ProgramNode& node) = 0;
@@ -612,15 +710,18 @@ inline void IntLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void FloatLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void BoolLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void StringLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void NullLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void VectorLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void MatrixLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void IdentifierNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void BinaryOpNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void UnaryOpNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void TernaryOpNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void FunctionCallNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void MemberAccessNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void IndexAccessNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void SliceNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void LambdaNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void VarDeclNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void AssignmentNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void ExprStmtNode::accept(ASTVisitor& v) { v.visit(*this); }
@@ -634,6 +735,8 @@ inline void BreakNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void ContinueNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void UsingNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void IncludeNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void ThrowNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void TryCatchNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void ProgramNode::accept(ASTVisitor& v) { v.visit(*this); }
 
 } // namespace Rhodesia

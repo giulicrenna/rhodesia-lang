@@ -269,6 +269,7 @@ private:
             case '*': return Token(TokenType::Star, "*", startLoc);
             case '/': return Token(TokenType::Slash, "/", startLoc);
             case '%': return Token(TokenType::Percent, "%", startLoc);
+            case '?': return Token(TokenType::Question, "?", startLoc);
             
             // Two-character tokens
             case '-':

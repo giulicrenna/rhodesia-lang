@@ -1,0 +1,75 @@
+// Test de slicing con variables, expresiones e índices negativos
+
+println("=== Pruebas de Slicing Avanzado ===")
+
+// Test 1: Slicing con variables
+vec: data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+int: start = 2
+int: end = 7
+vec: slice1 = data<start:end>
+println("data<start:end> donde start=2, end=7: ", slice1)
+
+// Test 2: Slicing con variables calculadas
+int: offset = 3
+int: inicio = offset - 1
+int: fin = offset + 3
+vec: slice2 = data<inicio:fin>
+println("data<inicio:fin> donde inicio=2, fin=6: ", slice2)
+
+// Test 3: Índices negativos (estilo Python)
+println("\n--- Índices Negativos ---")
+vec: last3 = data<-3:>
+println("data<-3:> (últimos 3 elementos): ", last3)
+
+vec: allButLast2 = data<:-2>
+println("data<:-2> (todos excepto últimos 2): ", allButLast2)
+
+vec: middle = data<-7:-2>
+println("data<-7:-2> (desde -7 hasta -2): ", middle)
+
+// Test 4: Matriz con slicing variable
+mat: matrix = [[1.0, 2.0, 3.0, 4.0, 5.0],
+               [6.0, 7.0, 8.0, 9.0, 10.0],
+               [11.0, 12.0, 13.0, 14.0, 15.0],
+               [16.0, 17.0, 18.0, 19.0, 20.0],
+               [21.0, 22.0, 23.0, 24.0, 25.0]]
+
+println("\n--- Slicing de Matrices ---")
+int: r1 = 1
+int: r2 = 4
+int: c1 = 1
+int: c2 = 4
+
+mat: submat = matrix<r1:r2, c1:c2>
+println("matrix<1:4, 1:4>:")
+println(submat)
+
+// Test 5: Matriz con índices negativos
+mat: lastRows = matrix<-2:, :>
+println("\nmatrix<-2:, :> (últimas 2 filas completas):")
+println(lastRows)
+
+mat: firstCols = matrix<:, :-2>
+println("\nmatrix<:, :-2> (todas las filas, excepto últimas 2 columnas):")
+println(firstCols)
+
+// Test 6: Combinación de índices positivos y negativos
+mat: corner = matrix<-3:, -3:>
+println("\nmatrix<-3:, -3:> (esquina inferior derecha 3x3):")
+println(corner)
+
+// Test 7: Slicing dinámico en bucle
+println("\n--- Slicing Dinámico en Bucle ---")
+for i in range(3) {
+    vec: window = data<i:i+3>
+    println("Ventana ", i, ": ", window)
+}
+
+// Test 8: Con operador ternario
+int: n = 5
+int: start_idx = n > 3 ? 2 : 0
+int: end_idx = n > 3 ? 8 : 5
+vec: conditional_slice = data<start_idx:end_idx>
+println("\nSlice condicional (n>3): ", conditional_slice)
+
+println("\n=== Todos los tests de slicing avanzado pasaron ===")

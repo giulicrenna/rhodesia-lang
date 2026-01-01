@@ -1,0 +1,43 @@
+// Test del operador ternario (cond ? expr1 : expr2)
+
+println("=== Pruebas del Operador Ternario ===")
+
+// Test 1: Básico con enteros
+int: x = 5
+int: y = 10
+int: max = x > y ? x : y
+println("max(5, 10) = ", max)
+
+// Test 2: Con expresiones
+int: a = 3
+int: b = 7
+int: result = (a + b) > 8 ? a * 2 : b * 2
+println("(3 + 7) > 8 ? 3*2 : 7*2 = ", result)
+
+// Test 3: Anidado (asociatividad derecha)
+int: num = 15
+str: category = num < 10 ? "pequeño" : num < 20 ? "mediano" : "grande"
+println("15 es: ", category)
+
+// Test 4: Con booleanos
+bool: esPositivo = true
+str: signo = esPositivo ? "positivo" : "negativo"
+println("El número es: ", signo)
+
+// Test 5: Con valores flotantes
+float64: f1 = 3.14
+float64: f2 = 2.71
+float64: larger = f1 > f2 ? f1 : f2
+println("El mayor entre 3.14 y 2.71: ", larger)
+
+// Test 6: Evaluación perezosa (lazy evaluation)
+// Solo debe evaluar la rama correspondiente
+int: n = 5
+int: safe = n > 0 ? n * 20 : 0
+println("n > 0 ? n*20 : 0 = ", safe)
+
+int: zero = 0
+int: safe2 = zero > 0 ? zero * 10 : 42
+println("Con zero=0, resultado seguro: ", safe2)
+
+println("\n=== Todos los tests del operador ternario pasaron ===")

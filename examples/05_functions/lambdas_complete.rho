@@ -1,0 +1,111 @@
+// Test higher-order functions and closures in Rhodesia
+
+print("=== Lambda expressions and closures test ===")
+
+// Test 1: Simple lambda expression
+print("\n1. Simple lambda:")
+function: square = fn(x) -> x * x
+print("square(5) = ")
+print(square(5))
+
+// Test 2: Lambda with multiple parameters
+print("\n2. Lambda with multiple parameters:")
+function: add = lambda(x, y) -> x + y
+print("add(3, 7) = ")
+print(add(3, 7))
+
+// Test 3: Lambda with block body
+print("\n3. Lambda with block body:")
+function: max = lambda(a, b) {
+    if a > b {
+        return a
+    } else {
+        return b
+    }
+}
+print("max(10, 20) = ")
+print(max(10, 20))
+
+// Test 4: Closure - lambda capturing outer variable
+print("\n4. Closure test:")
+int: multiplier = 3
+function: makeMultiplier = lambda(x) -> x * multiplier
+print("makeMultiplier(5) with multiplier=3: ")
+print(makeMultiplier(5))
+
+// Test 5: Higher-order function - function that returns a function
+print("\n5. Higher-order function:")
+fun makeAdder(int: n) -> function {
+    return lambda(x) -> x + n
+}
+function: add10 = makeAdder(10)
+print("add10(5) = ")
+print(add10(5))
+
+// Test 6: Function that takes function as parameter
+print("\n6. Function taking function as parameter:")
+fun apply(function: f, int: x) -> int {
+    return f(x)
+}
+function: double = fn(x) -> x * 2
+print("apply(double, 21) = ")
+print(apply(double, 21))
+
+// Test 7: Map-like operation (manual implementation)
+print("\n7. Map-like operation:")
+fun mapVec(function: f, vec: v) -> vec {
+    vec: result = math.zeros(size(v))
+    int: i = 0
+    for x in v {
+        result[i] = f(x)
+        i = i + 1
+    }
+    return result
+}
+vec: numbers = [1.0, 2.0, 3.0, 4.0, 5.0]
+vec: squared = mapVec(square, numbers)
+print("map(square, [1,2,3,4,5]) = ")
+print(squared)
+
+// Test 8: Filter-like operation
+print("\n8. Filter-like operation:")
+fun filterVec(function: predicate, vec: v) -> vec {
+    arr: temp = arr(0)
+    for x in v {
+        if predicate(x) {
+            temp.push(x)
+        }
+    }
+    // Convert array to vector
+    vec: result = math.zeros(temp.size())
+    int: i = 0
+    for x in temp {
+        result[i] = x
+        i = i + 1
+    }
+    return result
+}
+function: isEven = lambda(x) -> (x % 2) == 0
+vec: evens = filterVec(isEven, numbers)
+print("filter(isEven, [1,2,3,4,5]) = ")
+print(evens)
+
+// Test 9: Nested closures
+print("\n9. Nested closures:")
+fun makeCounter(int: start) -> function {
+    int: count = start
+    return lambda() {
+        int: result = count
+        count = count + 1
+        return result
+    }
+}
+function: counter = makeCounter(100)
+print("counter() = ")
+print(counter())
+print("counter() = ")
+print(counter())
+print("counter() = ")
+print(counter())
+
+print("\n=== All lambda tests completed! ===")

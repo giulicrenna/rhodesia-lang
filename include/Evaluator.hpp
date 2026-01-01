@@ -67,11 +67,15 @@ public:
     }
 
     void visit(BoolLiteralNode& node) override {
-        result_ = node.value ? int64_t(1) : int64_t(0);
+        result_ = node.value;
     }
 
     void visit(StringLiteralNode& node) override {
         result_ = node.value;
+    }
+
+    void visit(NullLiteralNode& node) override {
+        result_ = std::make_shared<RhoNull>();
     }
 
     void visit(VectorLiteralNode& node) override {
@@ -127,8 +131,22 @@ public:
         if (node.op == UnaryOp::Neg) {
             result_ = applyNegation(operand, node.location);
         } else if (node.op == UnaryOp::Not) {
-            result_ = isTruthy(operand) ? int64_t(0) : int64_t(1);
+            result_ = !isTruthy(operand);
         }
+    }
+
+    void visit(TernaryOpNode& node) override {
+        // Evaluate condition
+        node.condition->accept(*this);
+        bool conditionValue = isTruthy(result_);
+
+        // Only evaluate the corresponding branch (lazy evaluation)
+        if (conditionValue) {
+            node.trueExpr->accept(*this);
+        } else {
+            node.falseExpr->accept(*this);
+        }
+        // result_ is already set by the evaluated branch
     }
 
     void visit(FunctionCallNode& node) override {
@@ -141,6 +159,25 @@ public:
             }
             result_ = Builtins::instance().call(node.name, args, node.location);
             return;
+        }
+
+        // Check if it's a variable holding a function (lambda or function value)
+        if (symbols_.exists(node.name)) {
+            RhoValue maybeFunc = symbols_.lookup(node.name, node.location);
+            if (std::holds_alternative<std::shared_ptr<RhoFunction>>(maybeFunc)) {
+                auto func = std::get<std::shared_ptr<RhoFunction>>(maybeFunc);
+
+                // Evaluate arguments
+                std::vector<RhoValue> args;
+                for (auto& arg : node.arguments) {
+                    arg->accept(*this);
+                    args.push_back(result_);
+                }
+
+                // Call the function value
+                result_ = callLambda(func, args, node.location);
+                return;
+            }
         }
 
         // Check for user-defined functions
@@ -205,6 +242,26 @@ public:
         node.target->accept(*this);
         RhoValue target = result_;
 
+        // Check if this is map access with string key
+        if (std::holds_alternative<std::shared_ptr<RhoMap>>(target) && node.indices.size() == 1) {
+            node.indices[0]->accept(*this);
+            if (std::holds_alternative<std::string>(result_)) {
+                auto map = std::get<std::shared_ptr<RhoMap>>(target);
+                result_ = map->get(std::get<std::string>(result_));
+                return;
+            }
+        }
+
+        // Check if this is array access
+        if (std::holds_alternative<std::shared_ptr<RhoArray>>(target) && node.indices.size() == 1) {
+            node.indices[0]->accept(*this);
+            size_t idx = static_cast<size_t>(toInt(result_));
+            auto arr = std::get<std::shared_ptr<RhoArray>>(target);
+            result_ = arr->get(idx);
+            return;
+        }
+
+        // Otherwise, use numeric indexing (vectors/matrices)
         std::vector<size_t> indices;
         for (auto& idx : node.indices) {
             idx->accept(*this);
@@ -218,19 +275,19 @@ public:
         node.target->accept(*this);
         RhoValue target = result_;
 
-        // Evaluate slice specifications
+        // Evaluate slice specifications - now supporting negative indices
         std::vector<EvaluatedSlice> evalSlices;
         for (auto& slice : node.slices) {
             EvaluatedSlice evalSlice;
 
             if (slice.start.has_value()) {
                 slice.start.value()->accept(*this);
-                evalSlice.start = static_cast<size_t>(toInt(result_));
+                evalSlice.start = toInt(result_);  // Keep as int64_t to support negatives
             }
 
             if (slice.end.has_value()) {
                 slice.end.value()->accept(*this);
-                evalSlice.end = static_cast<size_t>(toInt(result_));
+                evalSlice.end = toInt(result_);  // Keep as int64_t to support negatives
             }
 
             evalSlices.push_back(evalSlice);
@@ -239,19 +296,55 @@ public:
         result_ = applySlicing(target, evalSlices, node.location);
     }
 
+    void visit(LambdaNode& node) override {
+        // Create a closure by capturing the current environment
+        std::unordered_map<std::string, RhoValue> closure;
+
+        // Capture variables from current scope, but avoid circular references
+        // by NOT capturing other functions (which may themselves have closures)
+        auto allSymbols = symbols_.getAllCurrentScopeSymbols();
+        for (const auto& [name, symbol] : allSymbols) {
+            // Only capture non-function values to avoid circular references
+            // Functions will be resolved at call time via the symbol table
+            if (getValueType(symbol.value) != RhoType::Function) {
+                closure[name] = symbol.value;
+            }
+        }
+
+        // Extract parameter names
+        std::vector<std::string> paramNames;
+        for (const auto& param : node.params) {
+            paramNames.push_back(param.name);
+        }
+
+        // Create a non-owning shared_ptr to the lambda body
+        // The AST node is owned by the parent ProgramNode and lives for the entire execution
+        // Using a custom deleter that does nothing to avoid double-free
+        std::shared_ptr<void> bodyPtr(node.body.get(), [](void*){});
+
+        // Create RhoFunction with closure
+        auto func = std::make_shared<RhoFunction>(
+            std::move(paramNames),
+            bodyPtr,
+            node.isExpression,
+            std::move(closure)
+        );
+
+        result_ = func;
+    }
+
     // ========================================================================
     // Statement Visitors
     // ========================================================================
 
     void visit(VarDeclNode& node) override {
         node.initializer->accept(*this);
-        // Type check: ensure initializer type is compatible with declared type
+        // Type check and convert if needed
         RhoType initType = getValueType(result_);
-        if (initType != node.type) {
-            throw TypeError::expectedType(
-                "Variable initialization",
-                node.type, initType);
-        }
+
+        // Convert value to declared type if compatible
+        result_ = convertToType(result_, node.type, initType, node.location);
+
         symbols_.declare(node.name, node.type, result_, node.location);
     }
 
@@ -269,6 +362,28 @@ public:
             node.value->accept(*this);
             RhoValue newValue = result_;
 
+            // Check if this is map assignment with string key
+            if (std::holds_alternative<std::shared_ptr<RhoMap>>(current) && node.indices.size() == 1) {
+                node.indices[0]->accept(*this);
+                if (std::holds_alternative<std::string>(result_)) {
+                    auto map = std::get<std::shared_ptr<RhoMap>>(current);
+                    map->set(std::get<std::string>(result_), newValue);
+                    // No need to reassign, map is modified in place
+                    return;
+                }
+            }
+
+            // Check if this is array assignment
+            if (std::holds_alternative<std::shared_ptr<RhoArray>>(current) && node.indices.size() == 1) {
+                node.indices[0]->accept(*this);
+                size_t idx = static_cast<size_t>(toInt(result_));
+                auto arr = std::get<std::shared_ptr<RhoArray>>(current);
+                arr->set(idx, newValue);
+                // No need to reassign, array is modified in place
+                return;
+            }
+
+            // Otherwise, use numeric indexing (vectors/matrices)
             // Evaluate indices
             std::vector<size_t> indices;
             for (auto& idx : node.indices) {
@@ -418,6 +533,54 @@ public:
         closeResource(resource, node.location);
     }
 
+    void visit(ThrowNode& node) override {
+        // Evaluate the expression to throw
+        node.expression->accept(*this);
+        RhoValue exceptionValue = result_;
+
+        // Throw a UserException with the evaluated value
+        throw UserException(exceptionValue, node.location);
+    }
+
+    void visit(TryCatchNode& node) override {
+        try {
+            // Execute the try block
+            node.tryBody->accept(*this);
+        } catch (const UserException& e) {
+            // User-thrown exception - bind to catch variable
+            ScopeGuard catchGuard(symbols_);
+
+            // Determine the type and value to bind
+            RhoValue exceptionValue;
+            RhoType exceptionType;
+
+            if (e.hasValue()) {
+                exceptionValue = e.value();
+                exceptionType = getValueType(exceptionValue);
+            } else {
+                // If no value, create a string with the error message
+                exceptionValue = std::string(e.what());
+                exceptionType = RhoType::String;
+            }
+
+            // Declare the exception variable in the catch scope
+            symbols_.declare(node.catchClause.exceptionVar, exceptionType, exceptionValue, node.location);
+
+            // Execute the catch block
+            node.catchClause.body->accept(*this);
+        } catch (const RhoError& e) {
+            // Built-in Rhodesia error - convert to string and bind to catch variable
+            ScopeGuard catchGuard(symbols_);
+
+            // Bind the error message as a string
+            std::string errorMsg = e.what();
+            symbols_.declare(node.catchClause.exceptionVar, RhoType::String, errorMsg, node.location);
+
+            // Execute the catch block
+            node.catchClause.body->accept(*this);
+        }
+    }
+
     void visit(IncludeNode& node) override {
         // Load the module
         ProgramNode* moduleAst = moduleLoader_.loadModule(node.moduleName, node.location);
@@ -511,15 +674,82 @@ private:
 
     /**
      * @brief Evaluated slice specification with concrete indices
+     * Uses int64_t to support negative indices (Python-style)
      */
     struct EvaluatedSlice {
-        std::optional<size_t> start;
-        std::optional<size_t> end;
+        std::optional<int64_t> start;
+        std::optional<int64_t> end;
     };
 
     // ========================================================================
     // Helper Functions
     // ========================================================================
+
+    /**
+     * @brief Convert value to target type
+     */
+    RhoValue convertToType(const RhoValue& value, RhoType targetType, RhoType sourceType, SourceLocation loc) {
+        // Same type, no conversion needed
+        if (sourceType == targetType) {
+            return value;
+        }
+
+        // Allow Int (default) to accept all integer types
+        if (targetType == RhoType::Int && (
+            sourceType == RhoType::Int8 || sourceType == RhoType::Int16 ||
+            sourceType == RhoType::Int32 || sourceType == RhoType::UInt8 ||
+            sourceType == RhoType::UInt16 || sourceType == RhoType::UInt32 ||
+            sourceType == RhoType::UInt64 || sourceType == RhoType::Byte)) {
+            // Convert to int64_t
+            return static_cast<int64_t>(toInt(value));
+        }
+
+        // Convert integer literals to specific integer types
+        if (sourceType == RhoType::Int) {
+            int64_t intVal = std::get<int64_t>(value);
+
+            switch (targetType) {
+                case RhoType::Int8:
+                    if (intVal < INT8_MIN || intVal > INT8_MAX)
+                        throw TypeError("Value out of range for int8", loc);
+                    return static_cast<int8_t>(intVal);
+                case RhoType::Int16:
+                    if (intVal < INT16_MIN || intVal > INT16_MAX)
+                        throw TypeError("Value out of range for int16", loc);
+                    return static_cast<int16_t>(intVal);
+                case RhoType::Int32:
+                    if (intVal < INT32_MIN || intVal > INT32_MAX)
+                        throw TypeError("Value out of range for int32", loc);
+                    return static_cast<int32_t>(intVal);
+                case RhoType::UInt8:
+                case RhoType::Byte:
+                    if (intVal < 0 || intVal > UINT8_MAX)
+                        throw TypeError("Value out of range for uint8/byte", loc);
+                    return static_cast<uint8_t>(intVal);
+                case RhoType::UInt16:
+                    if (intVal < 0 || intVal > UINT16_MAX)
+                        throw TypeError("Value out of range for uint16", loc);
+                    return static_cast<uint16_t>(intVal);
+                case RhoType::UInt32:
+                    if (intVal < 0 || intVal > UINT32_MAX)
+                        throw TypeError("Value out of range for uint32", loc);
+                    return static_cast<uint32_t>(intVal);
+                case RhoType::UInt64:
+                    if (intVal < 0)
+                        throw TypeError("Value out of range for uint64", loc);
+                    return static_cast<uint64_t>(intVal);
+                default:
+                    break;
+            }
+        }
+
+        // If no conversion found, check type compatibility
+        if (sourceType != targetType) {
+            throw TypeError::expectedType("Type conversion", targetType, sourceType);
+        }
+
+        return value;
+    }
 
     /**
      * @brief Check if a value is "truthy"
@@ -531,8 +761,10 @@ private:
                 return arg != 0;
             } else if constexpr (std::is_same_v<T, double>) {
                 return arg != 0.0;
+            } else if constexpr (std::is_same_v<T, bool>) {
+                return arg;
             } else {
-                return true;  // vectors/matrices are always truthy
+                return true;  // vectors/matrices/strings are always truthy
             }
         }, value);
     }
@@ -583,9 +815,9 @@ private:
             case BinaryOp::Mod:
                 return applyMod(left, right, loc);
             case BinaryOp::And:
-                return (isTruthy(left) && isTruthy(right)) ? int64_t(1) : int64_t(0);
+                return isTruthy(left) && isTruthy(right);
             case BinaryOp::Or:
-                return (isTruthy(left) || isTruthy(right)) ? int64_t(1) : int64_t(0);
+                return isTruthy(left) || isTruthy(right);
             default:
                 throw TypeError::incompatibleBinaryOp(binaryOpToString(op), leftType, rightType);
         }
@@ -657,7 +889,27 @@ private:
     }
 
     /**
-     * @brief Apply slicing operation
+     * @brief Normalize a slice index (handle negative indices Python-style)
+     * @param idx The index (can be negative)
+     * @param size The size of the dimension
+     * @return Normalized non-negative index
+     */
+    size_t normalizeSliceIndex(int64_t idx, size_t size, SourceLocation loc) {
+        if (idx < 0) {
+            // Negative index: count from end
+            int64_t normalized = static_cast<int64_t>(size) + idx;
+            if (normalized < 0) {
+                throw RuntimeError("Negative slice index " + std::to_string(idx) +
+                                 " out of bounds for size " + std::to_string(size), loc);
+            }
+            return static_cast<size_t>(normalized);
+        } else {
+            return static_cast<size_t>(idx);
+        }
+    }
+
+    /**
+     * @brief Apply slicing operation with support for negative indices
      */
     RhoValue applySlicing(const RhoValue& target, const std::vector<EvaluatedSlice>& slices, SourceLocation loc) {
         return std::visit([&](const auto& arg) -> RhoValue {
@@ -670,9 +922,13 @@ private:
                 const auto& slice = slices[0];
                 size_t vecSize = static_cast<size_t>(arg.size());
 
-                // Determine actual start and end indices
-                size_t start = slice.start.value_or(0);
-                size_t end = slice.end.value_or(vecSize);
+                // Determine actual start and end indices (handle negatives)
+                size_t start = slice.start.has_value()
+                    ? normalizeSliceIndex(slice.start.value(), vecSize, loc)
+                    : 0;
+                size_t end = slice.end.has_value()
+                    ? normalizeSliceIndex(slice.end.value(), vecSize, loc)
+                    : vecSize;
 
                 // Validate bounds
                 if (start >= vecSize) {
@@ -702,13 +958,21 @@ private:
                 size_t numRows = static_cast<size_t>(arg.rows());
                 size_t numCols = static_cast<size_t>(arg.cols());
 
-                // Determine actual start and end indices for rows
-                size_t rowStart = rowSlice.start.value_or(0);
-                size_t rowEnd = rowSlice.end.value_or(numRows);
+                // Determine actual start and end indices for rows (handle negatives)
+                size_t rowStart = rowSlice.start.has_value()
+                    ? normalizeSliceIndex(rowSlice.start.value(), numRows, loc)
+                    : 0;
+                size_t rowEnd = rowSlice.end.has_value()
+                    ? normalizeSliceIndex(rowSlice.end.value(), numRows, loc)
+                    : numRows;
 
-                // Determine actual start and end indices for columns
-                size_t colStart = colSlice.start.value_or(0);
-                size_t colEnd = colSlice.end.value_or(numCols);
+                // Determine actual start and end indices for columns (handle negatives)
+                size_t colStart = colSlice.start.has_value()
+                    ? normalizeSliceIndex(colSlice.start.value(), numCols, loc)
+                    : 0;
+                size_t colEnd = colSlice.end.has_value()
+                    ? normalizeSliceIndex(colSlice.end.value(), numCols, loc)
+                    : numCols;
 
                 // Validate bounds
                 if (rowStart >= numRows) {
@@ -937,21 +1201,33 @@ private:
                 getValueType(left), getValueType(right));
         }
 
+        // Handle bool comparisons specially (only == and != make sense)
+        if (std::holds_alternative<bool>(left) && std::holds_alternative<bool>(right)) {
+            bool l = std::get<bool>(left);
+            bool r = std::get<bool>(right);
+
+            switch (op) {
+                case BinaryOp::Eq: return l == r;
+                case BinaryOp::Ne: return l != r;
+                default:
+                    throw TypeError::incompatibleBinaryOp(binaryOpToString(op),
+                        RhoType::Bool, RhoType::Bool);
+            }
+        }
+
+        // For numeric types, convert to double and compare
         double l = toDouble(left);
         double r = toDouble(right);
 
-        bool result;
         switch (op) {
-            case BinaryOp::Eq: result = (l == r); break;
-            case BinaryOp::Ne: result = (l != r); break;
-            case BinaryOp::Lt: result = (l < r); break;
-            case BinaryOp::Gt: result = (l > r); break;
-            case BinaryOp::Le: result = (l <= r); break;
-            case BinaryOp::Ge: result = (l >= r); break;
-            default: result = false;
+            case BinaryOp::Eq: return l == r;
+            case BinaryOp::Ne: return l != r;
+            case BinaryOp::Lt: return l < r;
+            case BinaryOp::Gt: return l > r;
+            case BinaryOp::Le: return l <= r;
+            case BinaryOp::Ge: return l >= r;
+            default: return false;
         }
-
-        return result ? int64_t(1) : int64_t(0);
     }
 
     /**
@@ -973,6 +1249,64 @@ private:
         } catch (...) {
             // Ignore errors during cleanup
             // We don't want to mask the original exception
+        }
+    }
+
+    /**
+     * @brief Call a lambda/function value
+     * @param func Function object to call
+     * @param args Arguments to pass
+     * @param loc Source location for error reporting
+     * @return Result value
+     */
+    RhoValue callLambda(std::shared_ptr<RhoFunction> func,
+                       const std::vector<RhoValue>& args,
+                       SourceLocation loc) {
+        // Check if it's a native function
+        if (func->isNative()) {
+            return func->callNative(args);
+        }
+
+        // Validate argument count
+        if (args.size() != func->arity()) {
+            throw ArgumentError("<lambda>",
+                "expected " + std::to_string(func->arity()) +
+                " arguments, got " + std::to_string(args.size()), loc);
+        }
+
+        // Create new scope for function execution
+        ScopeGuard funcGuard(symbols_);
+
+        // Restore closure environment (non-function values only)
+        // Functions will be resolved via the existing symbol table
+        for (const auto& [name, value] : func->closure()) {
+            symbols_.declare(name, getValueType(value), value, loc);
+        }
+
+        // Bind parameters
+        const auto& params = func->params();
+        for (size_t i = 0; i < args.size(); ++i) {
+            symbols_.declare(params[i], getValueType(args[i]), args[i], loc);
+        }
+
+        // Get the body and execute it
+        void* bodyPtr = func->body().get();
+
+        if (func->isExpression()) {
+            // Expression lambda: evaluate expression and return result
+            ExprNode* exprNode = static_cast<ExprNode*>(bodyPtr);
+            exprNode->accept(*this);
+            return result_;
+        } else {
+            // Block lambda: execute block, handle return
+            BlockNode* blockNode = static_cast<BlockNode*>(bodyPtr);
+            try {
+                blockNode->accept(*this);
+                // If no return statement, return void (0)
+                return int64_t(0);
+            } catch (const ReturnValue& ret) {
+                return ret.value_;
+            }
         }
     }
 };

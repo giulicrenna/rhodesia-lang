@@ -1,0 +1,29 @@
+// Test block lambdas
+print("Testing block lambdas:")
+
+// Lambda with block body
+function: max = lambda(a, b) {
+    if a > b {
+        return a
+    } else {
+        return b
+    }
+}
+
+print("max(10, 20) = ")
+print(max(10, 20))
+
+print("max(50, 30) = ")
+print(max(50, 30))
+
+// Higher-order function
+fun applyTwice(function: f, int: x) -> int {
+    return f(f(x))
+}
+
+function: addOne = lambda(n) -> n + 1
+
+print("applyTwice(addOne, 5) = ")
+print(applyTwice(addOne, 5))
+
+print("Done!")

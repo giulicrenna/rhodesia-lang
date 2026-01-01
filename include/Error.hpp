@@ -208,6 +208,80 @@ public:
                           " matrix. Valid indices: [0.." + std::to_string(maxRow-1) + ", 0.." +
                           std::to_string(maxCol-1) + "]", loc);
     }
+
+    static RuntimeError emptyVector(const std::string& operation, SourceLocation loc = {}) {
+        return RuntimeError("Cannot perform " + operation + " on empty vector. "
+                          "Ensure the vector has at least one element.", loc);
+    }
+
+    static RuntimeError emptyMatrix(const std::string& operation, SourceLocation loc = {}) {
+        return RuntimeError("Cannot perform " + operation + " on empty matrix. "
+                          "Ensure the matrix has at least one element.", loc);
+    }
+
+    static RuntimeError invalidArgument(const std::string& operation, const std::string& reason, SourceLocation loc = {}) {
+        return RuntimeError(operation + ": " + reason, loc);
+    }
+
+    static RuntimeError fileNotFound(const std::string& filename, SourceLocation loc = {}) {
+        return RuntimeError("File not found: '" + filename + "'. "
+                          "Check that the file exists and the path is correct.", loc);
+    }
+
+    static RuntimeError fileAccessDenied(const std::string& filename, SourceLocation loc = {}) {
+        return RuntimeError("Access denied to file: '" + filename + "'. "
+                          "Check file permissions.", loc);
+    }
+
+    static RuntimeError invalidFileHandle(int64_t handle, SourceLocation loc = {}) {
+        return RuntimeError("Invalid file handle: " + std::to_string(handle) + ". "
+                          "File may have been closed or never opened.", loc);
+    }
+
+    static RuntimeError stackOverflow(const std::string& context, SourceLocation loc = {}) {
+        return RuntimeError("Stack overflow detected in " + context + ". "
+                          "Possible infinite recursion. Check your recursive functions.", loc);
+    }
+
+    static RuntimeError negativeSize(const std::string& operation, int64_t size, SourceLocation loc = {}) {
+        return RuntimeError(operation + ": size cannot be negative (got " + std::to_string(size) + "). "
+                          "Ensure size is a positive number.", loc);
+    }
+
+    static RuntimeError invalidRange(const std::string& operation, double start, double end, SourceLocation loc = {}) {
+        return RuntimeError(operation + ": invalid range [" + std::to_string(start) + ", " +
+                          std::to_string(end) + "]. Start must be less than end.", loc);
+    }
+
+    static RuntimeError keyNotFound(const std::string& key, SourceLocation loc = {}) {
+        return RuntimeError("Key '" + key + "' not found in map. "
+                          "Check that the key exists before accessing it.", loc);
+    }
+
+    static RuntimeError immutableValue(const std::string& name, SourceLocation loc = {}) {
+        return RuntimeError("Cannot modify immutable value '" + name + "'. "
+                          "Declare as mutable if modification is needed.", loc);
+    }
+
+    static RuntimeError nullPointer(const std::string& operation, SourceLocation loc = {}) {
+        return RuntimeError("Null pointer access in " + operation + ". "
+                          "Ensure the value is initialized before use.", loc);
+    }
+
+    static RuntimeError invalidCast(const std::string& fromType, const std::string& toType, SourceLocation loc = {}) {
+        return RuntimeError("Cannot cast from " + fromType + " to " + toType + ". "
+                          "These types are incompatible.", loc);
+    }
+
+    static RuntimeError overflow(const std::string& operation, SourceLocation loc = {}) {
+        return RuntimeError("Numeric overflow in " + operation + ". "
+                          "Result exceeds maximum representable value.", loc);
+    }
+
+    static RuntimeError underflow(const std::string& operation, SourceLocation loc = {}) {
+        return RuntimeError("Numeric underflow in " + operation + ". "
+                          "Result is below minimum representable value.", loc);
+    }
 };
 
 /**
@@ -217,18 +291,36 @@ class ArgumentError : public RuntimeError {
 public:
     ArgumentError(const std::string& func, const std::string& msg, SourceLocation loc = {})
         : RuntimeError(func + "(): " + msg, loc) {}
-    
+
     static ArgumentError wrongCount(const std::string& func, size_t expected, size_t got, SourceLocation loc = {}) {
-        return ArgumentError(func, "expected " + std::to_string(expected) + 
+        return ArgumentError(func, "expected " + std::to_string(expected) +
                             " arguments, got " + std::to_string(got), loc);
     }
-    
-    static ArgumentError wrongType(const std::string& func, size_t argNum, 
+
+    static ArgumentError wrongType(const std::string& func, size_t argNum,
                                    const std::string& expected, const std::string& got,
                                    SourceLocation loc = {}) {
-        return ArgumentError(func, "argument " + std::to_string(argNum) + 
+        return ArgumentError(func, "argument " + std::to_string(argNum) +
                             " must be " + expected + ", got " + got, loc);
     }
+};
+
+/**
+ * @brief User-thrown exception (via throw statement)
+ */
+class UserException : public RhoError {
+public:
+    UserException(const std::string& msg, SourceLocation loc = {})
+        : RhoError("Exception: " + msg, loc) {}
+
+    UserException(const RhoValue& value, SourceLocation loc = {})
+        : RhoError("Exception: " + valueToString(value), loc), value_(value) {}
+
+    const RhoValue& value() const { return value_; }
+    bool hasValue() const { return value_.index() != 0 || std::holds_alternative<int64_t>(value_); }
+
+private:
+    RhoValue value_ = int64_t(0);
 };
 
 // ReturnValue is defined in Evaluator.hpp to avoid circular dependency

@@ -1,0 +1,20 @@
+// Test two closures at same level
+print("Creating two adders:")
+
+fun makeAdder(int: n) -> function {
+    return lambda(a) -> a + n
+}
+
+function: add10 = makeAdder(10)
+print("Created add10")
+
+function: add20 = makeAdder(20)
+print("Created add20")
+
+print("Calling add10(5):")
+print(add10(5))
+
+print("Calling add20(5):")
+print(add20(5))
+
+print("Done!")

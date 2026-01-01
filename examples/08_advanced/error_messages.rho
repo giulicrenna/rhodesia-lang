@@ -1,0 +1,56 @@
+/**
+ * @file test_error_messages.rho
+ * @brief Test improved error messages
+ */
+
+println("=== Testing Improved Error Messages ===")
+println("")
+
+// Test division by zero error message
+println("Test 1: Division by zero")
+try {
+    float64: x = 10.0 / 0.0
+} catch err {
+    println(err)
+}
+println("")
+
+// Test index out of bounds error message
+println("Test 2: Index out of bounds")
+try {
+    vec: v = [1.0, 2.0, 3.0, 4.0, 5.0]
+    println(v[10])
+} catch err {
+    println(err)
+}
+println("")
+
+// Test matrix index out of bounds
+println("Test 3: Matrix index out of bounds")
+try {
+    mat: m = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+    println(m[5, 5])
+} catch err {
+    println(err)
+}
+println("")
+
+// Test undefined variable
+println("Test 4: Undefined variable")
+try {
+    println(nonexistent_var)
+} catch err {
+    println(err)
+}
+println("")
+
+// Test undefined function
+println("Test 5: Undefined function")
+try {
+    nonexistent_function()
+} catch err {
+    println(err)
+}
+println("")
+
+println("=== All error message tests completed! ===")
