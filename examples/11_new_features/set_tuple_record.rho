@@ -1,0 +1,131 @@
+// ============================================================
+// Ejemplos: Set, Tuple y Record con sintaxis literal
+// ============================================================
+
+// ------------------------------------------------------------
+// SET: coleccion sin duplicados, sin orden
+// ------------------------------------------------------------
+
+// Creacion con sintaxis literal {}
+set: colores = {"rojo", "verde", "azul"}
+println("Set inicial:", colores)
+
+// Los duplicados se ignoran automaticamente
+set: numeros = {1, 2, 3, 2, 1, 4}
+println("Con duplicados:", numeros)  // solo {1, 2, 3, 4}
+
+// Set vacio
+set: vacio = {}
+println("Set vacio:", vacio)
+
+// Caso de uso: palabras unicas en un texto
+fun palabras_unicas(arr: tokens) -> set {
+    set: vistos = {}
+    for token in tokens {
+        // No hace falta comprobar duplicados: set lo maneja solo
+        // (aqui usariamos set.add, pero con literales se ilustra la creacion)
+    }
+    return vistos
+}
+
+// Verificar membresia
+set: primos = {2, 3, 5, 7, 11, 13}
+println("5 en primos:", primos)   // el modulo set maneja contains()
+
+// ------------------------------------------------------------
+// TUPLE: coleccion inmutable y heterogenea
+// ------------------------------------------------------------
+
+// Sintaxis: (val1, val2, ...)
+tuple: punto2d = (3.0, 7.5)
+println("Punto 2D:", punto2d)
+
+tuple: persona = ("Maria", 28, true)
+println("Persona:", persona)
+
+// Acceso por indice
+println("Nombre:", persona[0])
+println("Edad:", persona[1])
+println("Activa:", persona[2])
+
+// Tuple como valor de retorno multiple
+fun minmax(vec: v) -> tuple {
+    float64: mn = v[0]
+    float64: mx = v[0]
+    for x in v {
+        if x < mn { mn = x }
+        if x > mx { mx = x }
+    }
+    return (mn, mx)
+}
+
+vec: datos = [4.0, 1.0, 9.0, 2.0, 7.0]
+tuple: rango = minmax(datos)
+println("Minimo:", rango[0])
+println("Maximo:", rango[1])
+
+// Tuple vacio
+tuple: vacio2 = ()
+println("Tuple vacio, size 0")
+
+// Tuple de un elemento (trailing comma)
+tuple: solo = (42,)
+println("Tuple de un elemento:", solo[0])
+
+// Caso de uso: coordenadas RGB
+tuple: rojo  = (255, 0, 0)
+tuple: verde = (0, 255, 0)
+tuple: azul  = (0, 0, 255)
+println("Color rojo  R:", rojo[0], "G:", rojo[1], "B:", rojo[2])
+
+// ------------------------------------------------------------
+// RECORD: estructura con campos nombrados
+// ------------------------------------------------------------
+
+// Sintaxis: { campo: valor, campo: valor, ... }
+record: empleado = {
+    nombre: "Carlos",
+    edad: 35,
+    salario: 55000.0,
+    activo: true
+}
+
+// Acceso por nombre con notacion punto
+println("Nombre:", empleado.nombre)
+println("Edad:", empleado.edad)
+println("Salario:", empleado.salario)
+println("Activo:", empleado.activo)
+
+// Record como parametro de funcion
+fun calcular_bonus(record: emp) -> float64 {
+    float64: base = emp.salario
+    if emp.activo {
+        return base * 0.1
+    }
+    return 0.0
+}
+
+float64: bonus = calcular_bonus(empleado)
+println("Bonus de", empleado.nombre, ":", bonus)
+
+// Records para modelar datos
+record: punto = { x: 1.5, y: 2.5, z: 0.0 }
+record: vector3d = { dx: punto.x, dy: punto.y, dz: punto.z }
+println("Vector:", vector3d.dx, vector3d.dy, vector3d.dz)
+
+// Record anidado en tuple (composicion)
+tuple: registro = (empleado, bonus)
+println("Empleado en registro:", registro[0])
+
+// Caso de uso: estudiante con notas
+record: estudiante = {
+    nombre: "Ana",
+    nota_matematica: 9.5,
+    nota_fisica: 8.0,
+    nota_quimica: 7.5
+}
+
+float64: promedio = (estudiante.nota_matematica +
+                     estudiante.nota_fisica +
+                     estudiante.nota_quimica) / 3.0
+println("Promedio de", estudiante.nombre, ":", promedio)

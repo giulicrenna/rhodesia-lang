@@ -196,6 +196,7 @@ println("Factorial of", n, "is", factorial)
 
 ## Next Steps
 
+- [Match Statement](match.md) - Pattern matching over a single value
 - [Functions](functions.md) - Learn about function definition and calling
-- [Examples](examples/basics.md) - See practical control flow examples
+- [Examples](../examples/basics.md) - See practical control flow examples
 - [Language Syntax](syntax.md) - Complete language reference

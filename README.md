@@ -60,25 +60,33 @@ brew install cmake eigen
 #### Build from Source
 
 ```bash
-git clone https://github.com/yourusername/rhodesia.git
-cd rhodesia
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
+git clone https://github.com/giulicrenna/rhodesia-lang.git
+cd rhodesia-lang
+
+# Configure once
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+# Build (recommended)
+cmake --build build -j$(nproc)
+
+# Or build explicitly with make
+make -C build -j$(nproc)
 ```
 
 ### Running Rhodesia
 
 ```bash
 # Interactive REPL
-./rhodesia
+./build/rhodesia
 
 # Execute a file
-./rhodesia examples/regression.rho
+./build/rhodesia examples/01_basic/hello.rho
 
 # Execute inline code
-./rhodesia -e "println(norm([1, 2, 3]))"
+./build/rhodesia -e "println(norm([1, 2, 3]))"
 ```
+
+For a complete setup guide (including prerequisites and troubleshooting), see [docs/getting-started.md](docs/getting-started.md).
 
 ---
 
@@ -291,7 +299,7 @@ println(n)
 | `string.replace(s, old, new)` | Replace substring | `string.replace("a b", "b", "c")` → `"a c"` |
 | `string.reverse(s)` | Reverse string | `string.reverse("abc")` → `"cba"` |
 | `string.repeat(s, n)` | Repeat string | `string.repeat("Ha", 3)` → `"HaHaHa"` |
-| ... | *See [STANDARD_LIBRARY.md](STANDARD_LIBRARY.md) for complete list* | |
+| ... | *See [docs/standard-library/functions.md](docs/standard-library/functions.md) for complete list* | |
 
 ---
 
@@ -441,10 +449,10 @@ println("Factorial of", n, "is", factorial)
 
 ## Documentation
 
-- **[Standard Library](STANDARD_LIBRARY.md)**: Comprehensive guide to built-in modules (math, stats, numerical, vector, matrix, string)
-- **[Module System](MODULES.md)**: How to create and import custom modules
-- **[String Implementation](STRING_IMPLEMENTATION.md)**: Complete guide to string type and module
-- **[Roadmap](ROADMAP.md)**: Development plan and upcoming features
+- **[Documentation Home](docs/index.md)**: Full documentation index
+- **[Standard Library](docs/standard-library/functions.md)**: Built-in modules and functions
+- **[Modules Examples](docs/examples/modules.md)**: How to organize and import modules
+- **[Getting Started](docs/getting-started.md)**: Installation, build, and first run
 
 ---
 
@@ -465,36 +473,32 @@ Multi-line input is supported automatically when braces are unbalanced.
 ## Project Structure
 
 ```
-rhodesia/
+rhodesia-lang/
 ├── CMakeLists.txt        # Build configuration
-├── README.md             # This file
-├── ROADMAP.md            # Development roadmap
-├── include/
-│   ├── RhoValue.hpp      # Type system (variant-based)
-│   ├── Token.hpp         # Token definitions
-│   ├── Lexer.hpp         # Lexical analyzer
-│   ├── Error.hpp         # Error handling
-│   ├── AST.hpp           # Abstract Syntax Tree
-│   ├── Parser.hpp        # Recursive descent parser
-│   ├── SymbolTable.hpp   # Variable/function storage
-│   ├── Builtins.hpp      # Built-in functions
-│   └── Evaluator.hpp     # AST interpreter
-├── src/
-│   └── main.cpp          # Entry point (REPL + file execution)
-└── examples/
-    ├── regression.rho
-    ├── matrix_demo.rho
-    ├── vector_demo.rho
-    └── control_flow.rho
+├── README.md             # Project overview
+├── include/              # Core interpreter/compiler headers
+├── src/                  # Main C++ implementation
+├── examples/             # Runnable .rho programs by topic
+├── docs/                 # Canonical documentation (GitHub Pages)
+│   ├── index.md
+│   ├── getting-started.md
+│   ├── language/
+│   ├── standard-library/
+│   ├── examples/
+│   ├── tutorials/
+│   ├── api/
+│   ├── troubleshooting/
+│   └── archive/
+│       └── legacy-documentation/  # Historical docs preserved for reference
+├── extension/            # VS Code extension and language tooling
+└── scripts/              # Install/setup scripts
 ```
 
 ---
 
-## Roadmap
+## Current Status
 
-See [ROADMAP.md](ROADMAP.md) for the complete development plan.
-
-### Current Status: Phase 1 (Core Language)
+### Core Language
 
 - [x] Lexer
 - [x] Parser

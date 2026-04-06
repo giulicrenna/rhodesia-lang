@@ -2,7 +2,7 @@
 // Optimization algorithms
 
 // Golden section search for 1D optimization
-fun golden_section_search(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+fun golden_section_search(function: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
     float64: golden_ratio = (sqrt(5.0) - 1.0) / 2.0
     float64: c = b - golden_ratio * (b - a)
     float64: d = a + golden_ratio * (b - a)
@@ -30,7 +30,7 @@ fun golden_section_search(fun: f, float64: a, float64: b, float64: tol, int: max
 }
 
 // Gradient descent for multi-dimensional optimization
-fun gradient_descent(fun: f, fun: grad_f, vec: x0, float64: learning_rate, float64: tol, int: max_iter) -> vec {
+fun gradient_descent(function: f, function: grad_f, vec: x0, float64: learning_rate, float64: tol, int: max_iter) -> vec {
     vec: x = x0
 
     for iter in range(max_iter) {
@@ -40,7 +40,7 @@ fun gradient_descent(fun: f, fun: grad_f, vec: x0, float64: learning_rate, float
         float64: norm_grad = norm(gradient)
         float64: norm_delta = norm(x_new - x)
 
-        if norm_grad < tol || norm_delta < tol {
+        if norm_grad < tol or norm_delta < tol {
             return x_new
         }
 
@@ -51,7 +51,7 @@ fun gradient_descent(fun: f, fun: grad_f, vec: x0, float64: learning_rate, float
 }
 
 // Conjugate gradient method
-fun conjugate_gradient(fun: f, fun: grad_f, vec: x0, float64: tol, int: max_iter) -> vec {
+fun conjugate_gradient(function: f, function: grad_f, vec: x0, float64: tol, int: max_iter) -> vec {
     vec: x = x0
     vec: g = grad_f(x)
     vec: d = -g
@@ -100,7 +100,7 @@ fun conjugate_gradient(fun: f, fun: grad_f, vec: x0, float64: tol, int: max_iter
 }
 
 // Newton's method for optimization
-fun newton_optimization(fun: f, fun: grad_f, fun: hessian_f, vec: x0, float64: tol, int: max_iter) -> vec {
+fun newton_optimization(function: f, function: grad_f, function: hessian_f, vec: x0, float64: tol, int: max_iter) -> vec {
     vec: x = x0
 
     for iter in range(max_iter) {
@@ -139,7 +139,7 @@ fun newton_optimization(fun: f, fun: grad_f, fun: hessian_f, vec: x0, float64: t
 }
 
 // Simplex method (Nelder-Mead) for multi-dimensional optimization
-fun nelder_mead(fun: f, vec: x0, float64: tol, int: max_iter) -> vec {
+fun nelder_mead(function: f, vec: x0, float64: tol, int: max_iter) -> vec {
     int: n = size(x0)
 
     // Initialize simplex
@@ -186,7 +186,7 @@ fun nelder_mead(fun: f, vec: x0, float64: tol, int: max_iter) -> vec {
         for i in range(n + 1) {
             std_dev = std_dev + (f_values[i] - mean_f) * (f_values[i] - mean_f)
         }
-        std_dev = sqrt(std_dev / float64(n + 1))
+        std_dev = sqrt(std_dev / n + 1)
 
         if std_dev < tol {
             return [simplex[0, 0], simplex[0, 1]]  // Return best vertex
@@ -200,7 +200,7 @@ fun nelder_mead(fun: f, vec: x0, float64: tol, int: max_iter) -> vec {
             }
         }
         for j in range(n) {
-            centroid[j] = centroid[j] / float64(n)
+            centroid[j] = centroid[j] / n
         }
 
         // Reflection
@@ -267,7 +267,7 @@ fun nelder_mead(fun: f, vec: x0, float64: tol, int: max_iter) -> vec {
 }
 
 // Line search using backtracking
-fun backtracking_line_search(fun: f, fun: grad_f, vec: x, vec: d, float64: alpha_init, float64: c, float64: tau) -> float64 {
+fun backtracking_line_search(function: f, function: grad_f, vec: x, vec: d, float64: alpha_init, float64: c, float64: tau) -> float64 {
     float64: alpha = alpha_init
     vec: grad = grad_f(x)
     float64: grad_dot_d = dot(grad, d)
@@ -286,7 +286,7 @@ fun backtracking_line_search(fun: f, fun: grad_f, vec: x, vec: d, float64: alpha
 }
 
 // Quasi-Newton BFGS method
-fun bfgs(fun: f, fun: grad_f, vec: x0, float64: tol, int: max_iter) -> vec {
+fun bfgs(function: f, function: grad_f, vec: x0, float64: tol, int: max_iter) -> vec {
     int: n = size(x0)
     vec: x = x0
     vec: grad = grad_f(x)
@@ -327,10 +327,10 @@ fun bfgs(fun: f, fun: grad_f, vec: x0, float64: tol, int: max_iter) -> vec {
 }
 
 // Constrained optimization using penalty method
-fun penalty_method(fun: f, fun: constraint, vec: x0, float64: penalty, float64: tol, int: max_iter) -> vec {
+fun penalty_method(function: f, function: constraint, vec: x0, float64: penalty, float64: tol, int: max_iter) -> vec {
     // Define penalized objective function
     fun penalized_f(vec: x) -> float64 {
-        return f(x) + penalty * constraint(x) * constraint(x)
+        return f(x) + penalty * constrafloor(x) * constrafloor(x)
     }
 
     // Use gradient descent on penalized function
@@ -355,7 +355,7 @@ fun penalty_method(fun: f, fun: constraint, vec: x0, float64: penalty, float64: 
 }
 
 // Simulated annealing
-fun simulated_annealing(fun: f, vec: x0, float64: temp_init, float64: cooling_rate, int: max_iter) -> vec {
+fun simulated_annealing(function: f, vec: x0, float64: temp_init, float64: cooling_rate, int: max_iter) -> vec {
     vec: x_current = x0
     vec: x_best = x0
     float64: f_current = f(x_current)
@@ -399,7 +399,7 @@ fun simulated_annealing(fun: f, vec: x0, float64: temp_init, float64: cooling_ra
 }
 
 // Genetic algorithm (simplified)
-fun genetic_algorithm(fun: fitness, int: population_size, int: generations, float64: mutation_rate) -> vec {
+fun genetic_algorithm(function: fitness, int: population_size, int: generations, float64: mutation_rate) -> vec {
     int: n = 2  // Dimension (simplified for 2D)
 
     // Initialize population
@@ -419,8 +419,8 @@ fun genetic_algorithm(fun: fitness, int: population_size, int: generations, floa
 
         for i in range(population_size) {
             // Tournament selection
-            int: a = int(rand() * float64(population_size))
-            int: b = int(rand() * float64(population_size))
+            int: a = floor(rand() * population_size)
+            int: b = floor(rand() * population_size)
 
             int: winner = a
             if fitness_values[b] > fitness_values[winner] {
@@ -435,8 +435,8 @@ fun genetic_algorithm(fun: fitness, int: population_size, int: generations, floa
 
         // Crossover (single point)
         for i in range(0, population_size, 2) {
-            if i + 1 < population_size && rand() < 0.7 {
-                int: crossover_point = int(rand() * float64(n))
+            if i + 1 < population_size and rand() < 0.7 {
+                int: crossover_point = floor(rand() * n)
 
                 for j in range(crossover_point, n) {
                     float64: temp = new_population[i, j]

@@ -218,6 +218,20 @@ public:
     }
 
     void visit(MemberAccessNode& node) override {
+        // Check if it's a record field access (variable.field)
+        if (node.arguments.empty() && symbols_.exists(node.object)) {
+            RhoValue obj = symbols_.lookup(node.object, node.location);
+            if (std::holds_alternative<std::shared_ptr<RhoRecord>>(obj)) {
+                auto rec = std::get<std::shared_ptr<RhoRecord>>(obj);
+                try {
+                    result_ = rec->getField(node.member);
+                    return;
+                } catch (const std::runtime_error& e) {
+                    throw RuntimeError(e.what(), node.location);
+                }
+            }
+        }
+
         // Check if it's a module constant (e.g., math.PI without arguments)
         if (node.arguments.empty() && Builtins::instance().isModuleConstant(node.object, node.member)) {
             result_ = Builtins::instance().getModuleConstant(node.object, node.member, node.location);
@@ -250,6 +264,19 @@ public:
                 result_ = map->get(std::get<std::string>(result_));
                 return;
             }
+        }
+
+        // Check if this is tuple access
+        if (std::holds_alternative<std::shared_ptr<RhoTuple>>(target) && node.indices.size() == 1) {
+            node.indices[0]->accept(*this);
+            size_t idx = static_cast<size_t>(toInt(result_));
+            auto tup = std::get<std::shared_ptr<RhoTuple>>(target);
+            try {
+                result_ = tup->get(idx);
+            } catch (const std::out_of_range& e) {
+                throw RuntimeError(e.what(), node.location);
+            }
+            return;
         }
 
         // Check if this is array access
@@ -333,6 +360,34 @@ public:
         result_ = func;
     }
 
+    void visit(SetLiteralNode& node) override {
+        auto set = std::make_shared<RhoSet>();
+        for (auto& elem : node.elements) {
+            elem->accept(*this);
+            set->add(result_);
+        }
+        result_ = set;
+    }
+
+    void visit(TupleLiteralNode& node) override {
+        std::vector<RhoValue> elements;
+        elements.reserve(node.elements.size());
+        for (auto& elem : node.elements) {
+            elem->accept(*this);
+            elements.push_back(result_);
+        }
+        result_ = std::make_shared<RhoTuple>(std::move(elements));
+    }
+
+    void visit(RecordLiteralNode& node) override {
+        auto record = std::make_shared<RhoRecord>();
+        for (auto& [key, valueExpr] : node.fields) {
+            valueExpr->accept(*this);
+            record->setField(key, result_);
+        }
+        result_ = record;
+    }
+
     // ========================================================================
     // Statement Visitors
     // ========================================================================
@@ -394,6 +449,44 @@ public:
             // Apply indexed assignment
             result_ = applyIndexedAssignment(current, indices, newValue, node.location);
             symbols_.assign(node.name, result_, node.location);
+        }
+    }
+
+    void visit(TupleDestructureNode& node) override {
+        node.rhs->accept(*this);
+        RhoValue rhs = result_;
+
+        // Unpack tuple
+        if (std::holds_alternative<std::shared_ptr<RhoTuple>>(rhs)) {
+            auto tup = std::get<std::shared_ptr<RhoTuple>>(rhs);
+            if (tup->size() != node.targets.size()) {
+                throw RuntimeError("Tuple size mismatch in destructuring: expected " +
+                    std::to_string(node.targets.size()) + " but got " +
+                    std::to_string(tup->size()), node.location);
+            }
+            for (size_t i = 0; i < node.targets.size(); i++) {
+                RhoValue val = convertToType(tup->get(i), node.targets[i].type,
+                    getValueType(tup->get(i)), node.location);
+                symbols_.declare(node.targets[i].name, node.targets[i].type, val, node.location);
+            }
+        }
+        // Unpack vector (for functions returning vec)
+        else if (std::holds_alternative<Eigen::VectorXd>(rhs)) {
+            const auto& vec = std::get<Eigen::VectorXd>(rhs);
+            if (static_cast<size_t>(vec.size()) != node.targets.size()) {
+                throw RuntimeError("Vector size mismatch in destructuring: expected " +
+                    std::to_string(node.targets.size()) + " but got " +
+                    std::to_string(vec.size()), node.location);
+            }
+            for (size_t i = 0; i < node.targets.size(); i++) {
+                RhoValue elem = vec(static_cast<Eigen::Index>(i));
+                RhoValue val = convertToType(elem, node.targets[i].type,
+                    getValueType(elem), node.location);
+                symbols_.declare(node.targets[i].name, node.targets[i].type, val, node.location);
+            }
+        }
+        else {
+            throw RuntimeError("Cannot destructure non-tuple value", node.location);
         }
     }
 
@@ -581,6 +674,26 @@ public:
         }
     }
 
+    void visit(MatchStmtNode& node) override {
+        node.scrutinee->accept(*this);
+        RhoValue scrutinee = result_;
+
+        for (auto& matchCase : node.cases) {
+            if (!matchCase.pattern) {
+                // Wildcard: always matches
+                matchCase.body->accept(*this);
+                return;
+            }
+
+            matchCase.pattern->accept(*this);
+            if (rhoValuesEqual(scrutinee, result_)) {
+                matchCase.body->accept(*this);
+                return;
+            }
+        }
+        // No case matched — no-op (exhaustive check is user's responsibility)
+    }
+
     void visit(IncludeNode& node) override {
         // Load the module
         ProgramNode* moduleAst = moduleLoader_.loadModule(node.moduleName, node.location);
@@ -749,6 +862,35 @@ private:
         }
 
         return value;
+    }
+
+    /**
+     * @brief Structural equality between two RhoValues (used by match)
+     */
+    bool rhoValuesEqual(const RhoValue& a, const RhoValue& b) const {
+        // Allow int/float cross-type comparison
+        if (std::holds_alternative<int64_t>(a) && std::holds_alternative<double>(b)) {
+            return static_cast<double>(std::get<int64_t>(a)) == std::get<double>(b);
+        }
+        if (std::holds_alternative<double>(a) && std::holds_alternative<int64_t>(b)) {
+            return std::get<double>(a) == static_cast<double>(std::get<int64_t>(b));
+        }
+        if (a.index() != b.index()) return false;
+
+        return std::visit([&b](const auto& arg_a) -> bool {
+            using T = std::decay_t<decltype(arg_a)>;
+            if constexpr (std::is_same_v<T, int64_t>  || std::is_same_v<T, int8_t>   ||
+                          std::is_same_v<T, int16_t>  || std::is_same_v<T, int32_t>  ||
+                          std::is_same_v<T, uint8_t>  || std::is_same_v<T, uint16_t> ||
+                          std::is_same_v<T, uint32_t> || std::is_same_v<T, uint64_t> ||
+                          std::is_same_v<T, double>   || std::is_same_v<T, bool>     ||
+                          std::is_same_v<T, std::string>) {
+                return arg_a == std::get<T>(b);
+            } else if constexpr (std::is_same_v<T, std::shared_ptr<RhoNull>>) {
+                return true;  // null == null
+            }
+            return false;
+        }, a);
     }
 
     /**

@@ -37,16 +37,21 @@ git clone https://github.com/giulicrenna/rhodesia-lang.git
 cd rhodesia-lang
 ```
 
-2. Create build directory and compile:
+2. Configure and compile (recommended):
 ```bash
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+Alternative build command using `make` directly:
+
+```bash
+make -C build -j$(nproc)
 ```
 
 3. Test the installation:
 ```bash
-./rhodesia --version
+./build/rhodesia --version
 ```
 
 ## Your First Program
@@ -73,7 +78,7 @@ println("Mean of vector:", mean(v))
 Run your program:
 
 ```bash
-./rhodesia hello.rho
+./build/rhodesia hello.rho
 ```
 
 ## Interactive Mode
@@ -81,7 +86,7 @@ Run your program:
 Rhodesia also supports an interactive REPL (Read-Eval-Print Loop):
 
 ```bash
-./rhodesia
+./build/rhodesia
 ```
 
 Try these commands:
@@ -100,7 +105,13 @@ Type `exit` or `quit` to leave the REPL.
 You can execute code directly from the command line:
 
 ```bash
-./rhodesia -e "println('Direct execution:', 2 * 21)"
+./build/rhodesia -e "println('Direct execution:', 2 * 21)"
+```
+
+## Cleaning Build Artifacts
+
+```bash
+rm -rf build
 ```
 
 ## Next Steps

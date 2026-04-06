@@ -16,7 +16,7 @@ fun linear_regression(vec: x, vec: y) -> (float64, float64) {
 
     float64: denominator = n * sum_x2 - sum_x * sum_x
     float64: b = (n * sum_xy - sum_x * sum_y) / denominator
-    float64: a = (sum_y - b * sum_x) / float64(n)
+    float64: a = (sum_y - b * sum_x) / n
 
     return (a, b)
 }
@@ -120,14 +120,14 @@ fun logistic_predict(vec: coefficients, vec: x) -> float64 {
 }
 
 // Ridge regression (L2 regularization) for 2 predictors
-fun ridge_regression(mat: X, vec: y, float64: lambda) -> vec {
+fun ridge_regression(mat: X, vec: y, float64: lam) -> vec {
     mat: XT = mat_transpose(X)
     mat: XTX = XT * X
 
     // Add regularization term
     int: p = cols(X)
     for i in range(p) {
-        XTX[i, i] = XTX[i, i] + lambda
+        XTX[i, i] = XTX[i, i] + lam
     }
 
     mat: XTX_inv = inv(XTX)
@@ -137,7 +137,7 @@ fun ridge_regression(mat: X, vec: y, float64: lambda) -> vec {
 }
 
 // Lasso regression (L1 regularization) - simplified coordinate descent
-fun lasso_regression(mat: X, vec: y, float64: lambda, int: max_iter) -> vec {
+fun lasso_regression(mat: X, vec: y, float64: lam, int: max_iter) -> vec {
     int: n = rows(X)
     int: p = cols(X)
     vec: beta = zeros(p)
@@ -151,7 +151,7 @@ fun lasso_regression(mat: X, vec: y, float64: lambda, int: max_iter) -> vec {
         for i in range(n) {
             std_j = std_j + (X[i, j] - means[j]) * (X[i, j] - means[j])
         }
-        std_j = sqrt(std_j / float64(n))
+        std_j = sqrt(std_j / n)
         stds[j] = std_j
 
         if std_j > 0.0 {
@@ -185,8 +185,8 @@ fun lasso_regression(mat: X, vec: y, float64: lambda, int: max_iter) -> vec {
             }
 
             float64: beta_j = 0.0
-            if abs(sum_xj_r) > lambda / 2.0 {
-                beta_j = sign(sum_xj_r) * (abs(sum_xj_r) - lambda / 2.0) / sum_xj2
+            if abs(sum_xj_r) > lam / 2.0 {
+                beta_j = sign(sum_xj_r) * (abs(sum_xj_r) - lam / 2.0) / sum_xj2
             }
 
             beta[j] = beta_j
@@ -225,7 +225,7 @@ fun mse(vec: y_true, vec: y_pred) -> float64 {
         sum_squared = sum_squared + error * error
     }
 
-    return sum_squared / float64(n)
+    return sum_squared / n
 }
 
 // Root Mean Squared Error (RMSE)
@@ -242,7 +242,7 @@ fun mae(vec: y_true, vec: y_pred) -> float64 {
         sum_abs = sum_abs + abs(y_true[i] - y_pred[i])
     }
 
-    return sum_abs / float64(n)
+    return sum_abs / n
 }
 
 // Mean Absolute Percentage Error (MAPE)
@@ -256,7 +256,7 @@ fun mape(vec: y_true, vec: y_pred) -> float64 {
         }
     }
 
-    return sum_ape / float64(n) * 100.0
+    return sum_ape / n * 100.0
 }
 
 // Cross-validation for linear regression (k-fold)
@@ -279,7 +279,7 @@ fun cross_validation_linear(mat: X, vec: y, int: k) -> float64 {
         int: test_idx = 0
 
         for i in range(n) {
-            if i >= start && i < end {
+            if i >= start and i < end {
                 // Test set
                 for j in range(cols(X)) {
                     X_test[test_idx, j] = X[i, j]
@@ -308,5 +308,5 @@ fun cross_validation_linear(mat: X, vec: y, int: k) -> float64 {
         total_mse = total_mse + mse(y_test, y_pred)
     }
 
-    return total_mse / float64(k)
+    return total_mse / k
 }

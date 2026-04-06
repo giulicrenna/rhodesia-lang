@@ -10,7 +10,20 @@ Rhodesia has a static type system with five primitive types designed for numeric
 | `float64` | Double precision float | `double` | `3.14159`, `-2.5` |
 | `vec` | Column vector | `Eigen::VectorXd` | `[1.0, 2.0, 3.0]` |
 | `mat` | Matrix | `Eigen::MatrixXd` | `[[1, 2], [3, 4]]` |
-| `string` | Text string | `std::string` | `"Hello World"` |
+| `str` | Text string | `std::string` | `"Hello World"` |
+| `bool` | Boolean value | `bool` | `true`, `false` |
+
+## Collection Types
+
+| Type | Description | Literal Syntax | Example |
+|------|-------------|----------------|---------|
+| `arr` | Ordered heterogeneous array | — | `arr.create(...)` |
+| `set` | Unordered, no duplicates | `{v1, v2, ...}` | `{1, 2, 3}` |
+| `tuple` | Immutable ordered sequence | `(v1, v2, ...)` | `(1, "ok", true)` |
+| `record` | Named fields structure | `{k: v, ...}` | `{x: 1, y: 2}` |
+| `map` | Key-value store | — | `map.create(...)` |
+
+See [Collections](collections.md) for a full reference on `set`, `tuple`, and `record`.
 
 ## Type Declarations
 
@@ -192,5 +205,6 @@ int: length = size(text)  // 5
 ## Next Steps
 
 - [Language Syntax](syntax.md) - Complete syntax reference
-- [Functions](functions.md) - Learn about function types
-- [Standard Library](standard-library/functions.md) - Built-in functions
+- [Collections](collections.md) - Set, Tuple, and Record types
+- [Match Statement](match.md) - Pattern matching
+- [Standard Library](../standard-library/functions.md) - Built-in functions

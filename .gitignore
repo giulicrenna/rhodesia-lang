@@ -1,8 +1,18 @@
 *.pyc
+__pycache__/
 src/tempCodeRunnerFile.py
+
+# Build outputs
 build/
-.*
-CMakeFiles
-*.cmake
 rhodesia
+
+# CMake generated files/directories
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+Makefile
+
+# VS Code extension dependencies
 extension/node_modules/

@@ -64,6 +64,7 @@ enum class TokenType {
     KwTry,           // try
     KwCatch,         // catch
     KwThrow,         // throw
+    KwMatch,         // match
 
     // Module system
     KwInclude,       // include
@@ -162,6 +163,7 @@ inline std::string tokenTypeToString(TokenType type) {
         {TokenType::KwTry, "try"},
         {TokenType::KwCatch, "catch"},
         {TokenType::KwThrow, "throw"},
+        {TokenType::KwMatch, "match"},
         {TokenType::KwInclude, "include"},
         {TokenType::KwAs, "as"},
         {TokenType::KwAnd, "and"},
@@ -307,6 +309,7 @@ inline const std::unordered_map<std::string, TokenType>& getKeywords() {
         {"try", TokenType::KwTry},
         {"catch", TokenType::KwCatch},
         {"throw", TokenType::KwThrow},
+        {"match", TokenType::KwMatch},
         {"include", TokenType::KwInclude},
         {"as", TokenType::KwAs},
         {"and", TokenType::KwAnd},

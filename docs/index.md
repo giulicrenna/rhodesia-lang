@@ -42,6 +42,8 @@ Learn the syntax, types, and control structures of Rhodesia.
 [**Language Basics**](language/syntax.md) - Variables, types, and expressions
 [**Control Flow**](language/control-flow.md) - If statements, loops, and functions
 [**Type System**](language/types.md) - Understanding Rhodesia's type system
+[**Collections**](language/collections.md) - Set, Tuple, and Record types with literal syntax
+[**Match Statement**](language/match.md) - Pattern matching over a single value
 
 ### Standard Library
 Explore the built-in functions and data structures.
@@ -55,6 +57,7 @@ Practical code examples to learn by doing.
 
 [**Basic Examples**](examples/basics.md) - Hello World and basic operations
 [**Data Structures**](examples/data-structures.md) - Working with vectors and matrices
+[**Collections**](examples/collections.md) - Set, Tuple, Record, and Match examples
 [**Input/Output**](examples/io.md) - File operations and user input
 [**Machine Learning**](examples/machine-learning.md) - Regression, clustering, and more
 [**Modules**](examples/modules.md) - Code organization with modules

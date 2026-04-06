@@ -48,7 +48,7 @@ fun standard_normal_cdf(float64: x) -> float64 {
 
 // Uniform distribution PDF
 fun uniform_pdf(float64: x, float64: a, float64: b) -> float64 {
-    if x < a || x > b {
+    if x < a or x > b {
         return 0.0
     }
     return 1.0 / (b - a)
@@ -82,15 +82,15 @@ fun exponential_cdf(float64: x, float64: rate) -> float64 {
 }
 
 // Poisson distribution PMF (Probability Mass Function)
-fun poisson_pmf(int: k, float64: lambda) -> float64 {
-    return power(lambda, k) * exp(-lambda) / factorial(k)
+fun poisson_pmf(int: k, float64: lam) -> float64 {
+    return power(lam, k) * exp(-lam) / factorial(k)
 }
 
 // Poisson distribution CDF (approximate)
-fun poisson_cdf(int: k, float64: lambda) -> float64 {
+fun poisson_cdf(int: k, float64: lam) -> float64 {
     float64: sum = 0.0
     for i in range(k + 1) {
-        sum = sum + poisson_pmf(i, lambda)
+        sum = sum + poisson_pmf(i, lam)
     }
     return sum
 }
@@ -111,10 +111,10 @@ fun binomial_cdf(int: k, int: n, float64: p) -> float64 {
 
 // Binomial coefficient (n choose k)
 fun binomial_coefficient(int: n, int: k) -> float64 {
-    if k < 0 || k > n {
+    if k < 0 or k > n {
         return 0.0
     }
-    if k == 0 || k == n {
+    if k == 0 or k == n {
         return 1.0
     }
 
@@ -123,7 +123,7 @@ fun binomial_coefficient(int: n, int: k) -> float64 {
     int: smaller_k = min(k, n - k)
 
     for i in range(smaller_k) {
-        result = result * float64(n - i) / float64(i + 1)
+        result = result * n - i / i + 1
     }
 
     return result
@@ -160,7 +160,7 @@ fun gamma_approx(float64: x) -> float64 {
     float64: sum = 0.0
 
     for i in range(8) {
-        sum = sum + p[i] / (z + float64(i) + 1.0)
+        sum = sum + p[i] / (z + i + 1.0)
     }
 
     float64: t = z + g + 0.5
@@ -179,21 +179,21 @@ fun chisquare_pdf(float64: x, int: k) -> float64 {
     if x <= 0.0 {
         return 0.0
     }
-    float64: coeff = 1.0 / (power(2.0, float64(k)/2.0) * gamma_approx(float64(k)/2.0))
-    return coeff * power(x, float64(k)/2.0 - 1.0) * exp(-x / 2.0)
+    float64: coeff = 1.0 / (power(2.0, k/2.0) * gamma_approx(k/2.0))
+    return coeff * power(x, k/2.0 - 1.0) * exp(-x / 2.0)
 }
 
 // Student's t-distribution PDF
 fun student_t_pdf(float64: x, int: df) -> float64 {
-    float64: coeff = gamma_approx((float64(df) + 1.0) / 2.0) /
-                    (sqrt(float64(df) * PI) * gamma_approx(float64(df) / 2.0))
-    return coeff * power(1.0 + x * x / float64(df), -(float64(df) + 1.0) / 2.0)
+    float64: coeff = gamma_approx((df + 1.0) / 2.0) /
+                    (sqrt(df * PI) * gamma_approx(df / 2.0))
+    return coeff * power(1.0 + x * x / df, -(df + 1.0) / 2.0)
 }
 
 // Inverse CDF (quantile function) for standard normal (approximate)
 fun standard_normal_quantile(float64: p) -> float64 {
     // Simple approximation for p in (0, 1)
-    if p <= 0.0 || p >= 1.0 {
+    if p <= 0.0 or p >= 1.0 {
         return 0.0  // Handle edge cases
     }
 
@@ -230,11 +230,11 @@ fun standard_normal_quantile(float64: p) -> float64 {
         if r <= 5.0 {
             r = r - 1.6
             return (((((c[0] * r + c[1]) * r + c[2]) * r + c[3]) * r + c[4]) * r + c[5]) /
-                   (((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1.0)
+                   (((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1.0))
         } else {
             r = r - 5.0
             return (((((c[0] * r + c[1]) * r + c[2]) * r + c[3]) * r + c[4]) * r + c[5]) /
-                   (((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1.0)
+                   (((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1.0))
         }
     }
 }

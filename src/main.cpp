@@ -38,6 +38,8 @@
 #include "Lexer.hpp"
 #include "Parser.hpp"
 #include "Evaluator.hpp"
+#include "Compiler.hpp"
+#include "VM.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -56,10 +58,48 @@ void printUsage(const char* program) {
     std::cout << "  " << program << "              Start REPL (interactive mode)\n";
     std::cout << "  " << program << " <file.rho>   Execute a Rhodesia source file\n";
     std::cout << "  " << program << " -e \"code\"    Execute code from command line\n";
+    std::cout << "  " << program << " --vm <file>  Execute using bytecode VM (faster)\n";
+    std::cout << "  " << program << " --vm -e \"code\" Execute inline code via VM\n";
     std::cout << "  " << program << " -h           Show this help\n";
     std::cout << "\nExamples:\n";
     std::cout << "  " << program << " examples/regression.rho\n";
+    std::cout << "  " << program << " --vm examples/regression.rho\n";
     std::cout << "  " << program << " -e \"println(2 + 2)\"\n";
+}
+
+/**
+ * @brief Execute Rhodesia source code via bytecode VM
+ */
+int executeVM(const std::string& source, bool showResult = false) {
+    try {
+        Lexer lexer(source);
+        auto tokens = lexer.tokenize();
+
+        Parser parser(std::move(tokens));
+        auto program = parser.parse();
+
+        Compiler compiler;
+        auto chunk = compiler.compile(*program);
+
+        VM vm;
+        RhoValue result = vm.run(chunk);
+
+        if (showResult) {
+            RhoType type = getValueType(result);
+            if (type != RhoType::Null && !(type == RhoType::Int && std::get<int64_t>(result) == 0)) {
+                std::cout << valueToString(result) << std::endl;
+            }
+        }
+        return 0;
+    }
+    catch (const RhoError& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
 }
 
 /**
@@ -231,19 +271,37 @@ int main(int argc, char* argv[]) {
     
     if (argc >= 2) {
         std::string arg1 = argv[1];
-        
+
         // Help flag
         if (arg1 == "-h" || arg1 == "--help") {
             printUsage(argv[0]);
             return 0;
         }
-        
+
+        // VM mode
+        if (arg1 == "--vm") {
+            if (argc >= 4 && std::string(argv[2]) == "-e") {
+                return executeVM(argv[3], true);
+            }
+            if (argc >= 3) {
+                try {
+                    std::string source = readFile(argv[2]);
+                    return executeVM(source);
+                } catch (const std::exception& e) {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                    return 1;
+                }
+            }
+            printUsage(argv[0]);
+            return 1;
+        }
+
         // Execute code from command line
         if (arg1 == "-e" && argc >= 3) {
             Evaluator evaluator;
             return execute(argv[2], evaluator, true);
         }
-        
+
         // Execute file
         try {
             std::string source = readFile(arg1);

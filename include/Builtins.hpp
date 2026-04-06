@@ -2755,6 +2755,24 @@ private:
             int result = std::remove(filename->c_str());
             return result == 0 ? int64_t(1) : int64_t(0);
         };
+
+        // Expose math module functions as globals so they can be called without 'math.' prefix
+        for (auto& [name, fn] : modules_["math"]) {
+            if (functions_.find(name) == functions_.end()) {
+                functions_[name] = fn;
+            }
+        }
+        // Also expose vector, matrix module functions as globals
+        for (auto& [name, fn] : modules_["vector"]) {
+            if (functions_.find(name) == functions_.end()) {
+                functions_[name] = fn;
+            }
+        }
+        for (auto& [name, fn] : modules_["matrix"]) {
+            if (functions_.find(name) == functions_.end()) {
+                functions_[name] = fn;
+            }
+        }
     }
 };
 

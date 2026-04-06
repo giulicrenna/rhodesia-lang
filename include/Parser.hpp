@@ -143,6 +143,7 @@ private:
         if (match(TokenType::KwUsing)) return parseUsing();
         if (match(TokenType::KwTry)) return parseTryCatch();
         if (match(TokenType::KwThrow)) return parseThrow();
+        if (match(TokenType::KwMatch)) return parseMatchStmt();
         if (match(TokenType::KwReturn)) return parseReturn();
         if (match(TokenType::KwBreak)) return parseBreak();
         if (match(TokenType::KwContinue)) return parseContinue();
@@ -151,6 +152,17 @@ private:
         // Check for variable declaration: tipo: nombre = ...
         if (isTypeKeyword(peek().type)) {
             return parseVarDecl();
+        }
+
+        // Check for tuple destructuring: (type: name, type: name, ...) = expr
+        if (check(TokenType::LParen)) {
+            size_t savedPos = current_;
+            advance(); // consume '('
+            if (isTypeKeyword(peek().type)) {
+                current_ = savedPos;
+                return parseTupleDestructure();
+            }
+            current_ = savedPos;
         }
 
         // Otherwise, expression or assignment
@@ -260,7 +272,31 @@ private:
         
         return std::make_unique<ExprStmtNode>(std::move(expr), loc);
     }
-    
+
+    /**
+     * @brief Parse tuple destructuring: (type: name, type: name, ...) = expr
+     */
+    StmtPtr parseTupleDestructure() {
+        SourceLocation loc = peek().location;
+        consume(TokenType::LParen, "'(' for tuple destructuring");
+
+        std::vector<TupleDestructureTarget> targets;
+        do {
+            TupleDestructureTarget tgt;
+            tgt.type = parseType();
+            consume(TokenType::Colon, "':' after type in tuple destructuring");
+            Token nameToken = consume(TokenType::Identifier, "variable name in tuple destructuring");
+            tgt.name = nameToken.value;
+            targets.push_back(std::move(tgt));
+        } while (match(TokenType::Comma));
+
+        consume(TokenType::RParen, "')' after tuple destructuring targets");
+        consume(TokenType::Assign, "'=' after tuple destructuring targets");
+
+        ExprPtr rhs = parseExpression();
+        return std::make_unique<TupleDestructureNode>(std::move(targets), std::move(rhs), loc);
+    }
+
     /**
      * @brief Parse function declaration
      */
@@ -290,7 +326,15 @@ private:
         consume(TokenType::Arrow, "'->' before return type");
         
         RhoType returnType = RhoType::Void;
-        if (isTypeKeyword(peek().type) || check(TokenType::KwVoid)) {
+        if (check(TokenType::LParen)) {
+            // Tuple return type: -> (type, type, ...)
+            advance(); // consume '('
+            while (!check(TokenType::RParen) && !isAtEnd()) {
+                advance(); // skip type tokens and commas
+            }
+            consume(TokenType::RParen, "')' after tuple return type");
+            returnType = RhoType::Tuple;
+        } else if (isTypeKeyword(peek().type) || check(TokenType::KwVoid)) {
             returnType = parseType();
         }
         
@@ -447,6 +491,13 @@ private:
 
         Token moduleToken = consume(TokenType::Identifier, "module name after 'include'");
         std::string moduleName = moduleToken.value;
+
+        // Support path-based module names: core/core, statistics/descriptive, etc.
+        while (check(TokenType::Slash)) {
+            advance(); // consume '/'
+            Token part = consume(TokenType::Identifier, "module path segment after '/'");
+            moduleName += "/" + part.value;
+        }
 
         std::vector<ImportSpec> symbols;
 
@@ -744,12 +795,11 @@ private:
                     break;
                 }
             }
-            else if (match(TokenType::LParen)) {
-                // Function call on result (chained)
-                // This handles cases like: getMatrix()(0, 0)
-                SourceLocation loc = previous().location;
-                // For now, disallow - functions are called by name only
-                throw ParseError("Cannot call expression result as function", loc);
+            else if (check(TokenType::LParen)) {
+                // '(' after an expression result - stop here.
+                // Chained calls like getMatrix()(0,0) are not supported.
+                // The '(' belongs to the next statement.
+                break;
             }
             else {
                 break;
@@ -815,13 +865,38 @@ private:
             return std::make_unique<StringLiteralNode>(previous().value, loc);
         }
         
-        // Parenthesized expression
+        // Parenthesized expression or tuple: (expr) or (expr, expr, ...)
         if (match(TokenType::LParen)) {
-            ExprPtr expr = parseExpression();
+            // Empty tuple: ()
+            if (check(TokenType::RParen)) {
+                advance();
+                return std::make_unique<TupleLiteralNode>(std::vector<ExprPtr>{}, loc);
+            }
+
+            ExprPtr first = parseExpression();
+
+            // Comma after first element => tuple
+            if (check(TokenType::Comma)) {
+                std::vector<ExprPtr> elements;
+                elements.push_back(std::move(first));
+                while (match(TokenType::Comma)) {
+                    if (check(TokenType::RParen)) break;  // trailing comma allowed
+                    elements.push_back(parseExpression());
+                }
+                consume(TokenType::RParen, "')' after tuple elements");
+                return std::make_unique<TupleLiteralNode>(std::move(elements), loc);
+            }
+
+            // Single element: just a parenthesized expression
             consume(TokenType::RParen, "')' after expression");
-            return expr;
+            return first;
         }
-        
+
+        // Set or Record literal: {expr, ...} or {key: val, ...}
+        if (match(TokenType::LBrace)) {
+            return parseSetOrRecordLiteral(loc);
+        }
+
         // Vector/Matrix literal
         if (match(TokenType::LBracket)) {
             return parseArrayLiteral(loc);
@@ -904,6 +979,92 @@ private:
 
         consume(TokenType::RParen, "')' after arguments");
         return std::make_unique<FunctionCallNode>(name, std::move(args), loc);
+    }
+
+    /**
+     * @brief Parse set or record literal after '{'
+     * Set:    { expr, expr, ... }
+     * Record: { key: val, key: val, ... }
+     */
+    ExprPtr parseSetOrRecordLiteral(SourceLocation loc) {
+        // Empty set: {}
+        if (check(TokenType::RBrace)) {
+            advance();
+            return std::make_unique<SetLiteralNode>(std::vector<ExprPtr>{}, loc);
+        }
+
+        // Detect record: identifier followed immediately by ':'
+        if (check(TokenType::Identifier) &&
+            current_ + 1 < tokens_.size() &&
+            tokens_[current_ + 1].type == TokenType::Colon) {
+            return parseRecordLiteral(loc);
+        }
+
+        // Otherwise: set literal
+        return parseSetLiteral(loc);
+    }
+
+    /**
+     * @brief Parse set literal elements (already consumed '{')
+     */
+    ExprPtr parseSetLiteral(SourceLocation loc) {
+        std::vector<ExprPtr> elements;
+        if (!check(TokenType::RBrace)) {
+            elements.push_back(parseExpression());
+            while (match(TokenType::Comma)) {
+                if (check(TokenType::RBrace)) break;  // trailing comma
+                elements.push_back(parseExpression());
+            }
+        }
+        consume(TokenType::RBrace, "'}' after set elements");
+        return std::make_unique<SetLiteralNode>(std::move(elements), loc);
+    }
+
+    /**
+     * @brief Parse record literal fields (already consumed '{')
+     */
+    ExprPtr parseRecordLiteral(SourceLocation loc) {
+        std::vector<std::pair<std::string, ExprPtr>> fields;
+        do {
+            Token key = consume(TokenType::Identifier, "field name in record literal");
+            consume(TokenType::Colon, "':' after field name in record literal");
+            ExprPtr value = parseExpression();
+            fields.emplace_back(key.value, std::move(value));
+        } while (match(TokenType::Comma) && !check(TokenType::RBrace));
+        consume(TokenType::RBrace, "'}' after record fields");
+        return std::make_unique<RecordLiteralNode>(std::move(fields), loc);
+    }
+
+    /**
+     * @brief Parse match statement: match expr { pattern -> { body } ... }
+     */
+    StmtPtr parseMatchStmt() {
+        SourceLocation loc = previous().location;
+
+        ExprPtr scrutinee = parseExpression();
+        consume(TokenType::LBrace, "'{' after match expression");
+
+        std::vector<MatchCase> cases;
+        while (!check(TokenType::RBrace) && !isAtEnd()) {
+            SourceLocation caseLoc = peek().location;
+
+            // Wildcard: _
+            ExprPtr pattern = nullptr;
+            if (check(TokenType::Identifier) && peek().value == "_") {
+                advance();  // consume _
+            } else {
+                pattern = parseExpression();
+            }
+
+            consume(TokenType::Arrow, "'->' after match pattern");
+            consume(TokenType::LBrace, "'{' before match arm body");
+            auto body = parseBlockInner();
+
+            cases.push_back(MatchCase{std::move(pattern), std::move(body), caseLoc});
+        }
+
+        consume(TokenType::RBrace, "'}' after match cases");
+        return std::make_unique<MatchStmtNode>(std::move(scrutinee), std::move(cases), loc);
     }
 
     /**

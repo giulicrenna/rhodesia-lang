@@ -111,7 +111,7 @@ fun mat_is_square(mat: m) -> bool {
 
 // Matrix is symmetric (within epsilon)
 fun mat_is_symmetric(mat: m, float64: epsilon) -> bool {
-    if !mat_is_square(m) {
+    if not mat_is_square(m) {
         return false
     }
 
@@ -131,7 +131,7 @@ fun mat_is_symmetric(mat: m, float64: epsilon) -> bool {
 
 // Matrix is diagonal (within epsilon)
 fun mat_is_diagonal(mat: m, float64: epsilon) -> bool {
-    if !mat_is_square(m) {
+    if not mat_is_square(m) {
         return false
     }
 
@@ -152,7 +152,7 @@ fun mat_is_diagonal(mat: m, float64: epsilon) -> bool {
 
 // Matrix is identity (within epsilon)
 fun mat_is_identity(mat: m, float64: epsilon) -> bool {
-    if !mat_is_square(m) {
+    if not mat_is_square(m) {
         return false
     }
 
@@ -231,7 +231,7 @@ fun mat_row_means(mat: m) -> vec {
         for j in range(cols_m) {
             row_sum = row_sum + m[i, j]
         }
-        means[i] = row_sum / float64(cols_m)
+        means[i] = row_sum / cols_m
     }
 
     return means
@@ -248,7 +248,7 @@ fun mat_col_means(mat: m) -> vec {
         for i in range(rows_m) {
             col_sum = col_sum + m[i, j]
         }
-        means[j] = col_sum / float64(rows_m)
+        means[j] = col_sum / rows_m
     }
 
     return means

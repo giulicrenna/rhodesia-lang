@@ -2,7 +2,7 @@
 // Root finding algorithms
 
 // Bisection method for finding roots
-fun bisection(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+fun bisection(function: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
     float64: fa = f(a)
     float64: fb = f(b)
 
@@ -15,7 +15,7 @@ fun bisection(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> fl
         float64: c = (a + b) / 2.0
         float64: fc = f(c)
 
-        if abs(fc) < tol || (b - a) / 2.0 < tol {
+        if abs(fc) < tol or (b - a) / 2.0 < tol {
             return c
         }
 
@@ -32,7 +32,7 @@ fun bisection(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> fl
 }
 
 // Newton-Raphson method for finding roots
-fun newton_raphson(fun: f, fun: df, float64: x0, float64: tol, int: max_iter) -> float64 {
+fun newton_raphson(function: f, function: df, float64: x0, float64: tol, int: max_iter) -> float64 {
     float64: x = x0
 
     for iter in range(max_iter) {
@@ -46,7 +46,7 @@ fun newton_raphson(fun: f, fun: df, float64: x0, float64: tol, int: max_iter) ->
 
         float64: x_new = x - fx / dfx
 
-        if abs(x_new - x) < tol || abs(fx) < tol {
+        if abs(x_new - x) < tol or abs(fx) < tol {
             return x_new
         }
 
@@ -57,7 +57,7 @@ fun newton_raphson(fun: f, fun: df, float64: x0, float64: tol, int: max_iter) ->
 }
 
 // Secant method (approximate Newton without derivative)
-fun secant_method(fun: f, float64: x0, float64: x1, float64: tol, int: max_iter) -> float64 {
+fun secant_method(function: f, float64: x0, float64: x1, float64: tol, int: max_iter) -> float64 {
     float64: x_prev = x0
     float64: x_curr = x1
 
@@ -72,7 +72,7 @@ fun secant_method(fun: f, float64: x0, float64: x1, float64: tol, int: max_iter)
 
         float64: x_next = x_curr - fx_curr * (x_curr - x_prev) / (fx_curr - fx_prev)
 
-        if abs(x_next - x_curr) < tol || abs(fx_curr) < tol {
+        if abs(x_next - x_curr) < tol or abs(fx_curr) < tol {
             return x_next
         }
 
@@ -84,7 +84,7 @@ fun secant_method(fun: f, float64: x0, float64: x1, float64: tol, int: max_iter)
 }
 
 // Fixed-point iteration
-fun fixed_point_iteration(fun: g, float64: x0, float64: tol, int: max_iter) -> float64 {
+fun fixed_point_iteration(function: g, float64: x0, float64: tol, int: max_iter) -> float64 {
     float64: x = x0
 
     for iter in range(max_iter) {
@@ -101,7 +101,7 @@ fun fixed_point_iteration(fun: g, float64: x0, float64: tol, int: max_iter) -> f
 }
 
 // False position (regula falsi) method
-fun false_position(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+fun false_position(function: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
     float64: fa = f(a)
     float64: fb = f(b)
 
@@ -114,7 +114,7 @@ fun false_position(fun: f, float64: a, float64: b, float64: tol, int: max_iter) 
         float64: c = (a * fb - b * fa) / (fb - fa)
         float64: fc = f(c)
 
-        if abs(fc) < tol || abs(b - a) < tol {
+        if abs(fc) < tol or abs(b - a) < tol {
             return c
         }
 
@@ -131,7 +131,7 @@ fun false_position(fun: f, float64: a, float64: b, float64: tol, int: max_iter) 
 }
 
 // Brent's method (combination of bisection, secant, and inverse quadratic interpolation)
-fun brent_method(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+fun brent_method(function: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
     float64: fa = f(a)
     float64: fb = f(b)
 
@@ -157,7 +157,7 @@ fun brent_method(fun: f, float64: a, float64: b, float64: tol, int: max_iter) ->
     float64: d = 0.0
 
     for iter in range(max_iter) {
-        if fa != fc && fb != fc {
+        if fa != fc and fb != fc {
             // Inverse quadratic interpolation
             s = a * fb * fc / ((fa - fb) * (fa - fc)) +
                 b * fa * fc / ((fb - fa) * (fb - fc)) +
@@ -170,9 +170,9 @@ fun brent_method(fun: f, float64: a, float64: b, float64: tol, int: max_iter) ->
         float64: s_tol = 2.0 * tol * abs(b) + 0.5 * tol
         float64: b_tol = 2.0 * tol * abs(b) + 0.5 * tol
 
-        if (abs(s - b) >= s_tol && abs(s - b) >= b_tol) ||
-           (mflag && abs(s - b) >= 0.5 * abs(b - c)) ||
-           (!mflag && abs(s - b) >= 0.5 * abs(c - d)) {
+        if (abs(s - b) >= s_tol and abs(s - b) >= b_tol) or
+           (mflag and abs(s - b) >= 0.5 * abs(b - c)) or
+           (not flag and abs(s - b) >= 0.5 * abs(c - d)) {
             // Bisection step
             s = (a + b) / 2.0
             mflag = true
@@ -267,7 +267,7 @@ fun cubic_roots(float64: a, float64: b, float64: c, float64: d) -> vec {
 }
 
 // Multi-dimensional root finding using Newton's method
-fun multidimensional_newton(fun: F, fun: J, vec: x0, float64: tol, int: max_iter) -> vec {
+fun multidimensional_newton(function: F, function: J, vec: x0, float64: tol, int: max_iter) -> vec {
     int: n = size(x0)
     vec: x = x0
 

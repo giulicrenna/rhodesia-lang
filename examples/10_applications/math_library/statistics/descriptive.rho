@@ -3,7 +3,7 @@
 
 // Mean (average)
 fun mean(vec: data) -> float64 {
-    return sum(data) / float64(size(data))
+    return sum(data) / size(data)
 }
 
 // Variance (population)
@@ -11,7 +11,7 @@ fun variance(vec: data) -> float64 {
     float64: m = mean(data)
     vec: centered = data - m
     vec: squared = centered * centered
-    return sum(squared) / float64(size(data))
+    return sum(squared) / size(data)
 }
 
 // Standard deviation (population)
@@ -27,7 +27,7 @@ fun sample_variance(vec: data) -> float64 {
     float64: m = mean(data)
     vec: centered = data - m
     vec: squared = centered * centered
-    return sum(squared) / float64(size(data) - 1)
+    return sum(squared) / size(data - 1)
 }
 
 // Sample standard deviation
@@ -105,7 +105,7 @@ fun skewness(vec: data) -> float64 {
         sum_cubed = sum_cubed + diff * diff * diff
     }
 
-    return (sum_cubed / float64(n)) / (std * std * std)
+    return (sum_cubed / n) / (std * std * std)
 }
 
 // Kurtosis (measure of "tailedness")
@@ -124,7 +124,7 @@ fun kurtosis(vec: data) -> float64 {
         sum_quad = sum_quad + diff * diff * diff * diff
     }
 
-    return (sum_quad / float64(n)) / (std * std * std * std) - 3.0
+    return (sum_quad / n) / (std * std * std * std) - 3.0
 }
 
 // Coefficient of variation (relative standard deviation)
@@ -143,11 +143,11 @@ fun coefficient_of_variation(vec: data) -> float64 {
 fun percentile(vec: data, float64: p) -> float64 {
     vec: sorted = vec_sort(data)
     int: n = size(sorted)
-    float64: index = p * float64(n - 1)
+    float64: index = p * n - 1
 
-    int: lower_index = int(index)
+    int: lower_index = floor(index)
     int: upper_index = min(lower_index + 1, n - 1)
-    float64: fraction = index - float64(lower_index)
+    float64: fraction = index - lower_index
 
     if lower_index == upper_index {
         return sorted[lower_index]
@@ -176,7 +176,7 @@ fun covariance(vec: x, vec: y) -> float64 {
         sum = sum + (x[i] - mean_x) * (y[i] - mean_y)
     }
 
-    return sum / float64(n)
+    return sum / n
 }
 
 // Correlation coefficient (Pearson)
@@ -185,7 +185,7 @@ fun correlation(vec: x, vec: y) -> float64 {
     float64: std_x = std_dev(x)
     float64: std_y = std_dev(y)
 
-    if std_x == 0.0 || std_y == 0.0 {
+    if std_x == 0.0 or std_y == 0.0 {
         return 0.0
     }
 

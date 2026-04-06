@@ -2,12 +2,12 @@
 // Numerical integration algorithms
 
 // Rectangle rule (left endpoint)
-fun rectangle_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
-    float64: h = (b - a) / float64(n)
+fun rectangle_rule(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
     float64: integral = 0.0
 
     for i in range(n) {
-        float64: x = a + float64(i) * h
+        float64: x = a + i * h
         integral = integral + f(x)
     }
 
@@ -15,12 +15,12 @@ fun rectangle_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
 }
 
 // Rectangle rule (right endpoint)
-fun rectangle_rule_right(fun: f, float64: a, float64: b, int: n) -> float64 {
-    float64: h = (b - a) / float64(n)
+fun rectangle_rule_right(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
     float64: integral = 0.0
 
     for i in range(n) {
-        float64: x = a + float64(i + 1) * h
+        float64: x = a + i + 1 * h
         integral = integral + f(x)
     }
 
@@ -28,12 +28,12 @@ fun rectangle_rule_right(fun: f, float64: a, float64: b, int: n) -> float64 {
 }
 
 // Midpoint rule
-fun midpoint_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
-    float64: h = (b - a) / float64(n)
+fun midpoint_rule(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
     float64: integral = 0.0
 
     for i in range(n) {
-        float64: x = a + (float64(i) + 0.5) * h
+        float64: x = a + (i + 0.5) * h
         integral = integral + f(x)
     }
 
@@ -41,12 +41,12 @@ fun midpoint_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
 }
 
 // Trapezoidal rule
-fun trapezoidal_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
-    float64: h = (b - a) / float64(n)
+fun trapezoidal_rule(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
     float64: integral = (f(a) + f(b)) / 2.0
 
     for i in range(1, n) {
-        float64: x = a + float64(i) * h
+        float64: x = a + i * h
         integral = integral + f(x)
     }
 
@@ -54,16 +54,16 @@ fun trapezoidal_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
 }
 
 // Simpson's rule (n must be even)
-fun simpsons_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
+fun simpsons_rule(function: f, float64: a, float64: b, int: n) -> float64 {
     if n % 2 != 0 {
         n = n + 1  // Make n even
     }
 
-    float64: h = (b - a) / float64(n)
+    float64: h = (b - a) / n
     float64: integral = f(a) + f(b)
 
     for i in range(1, n) {
-        float64: x = a + float64(i) * h
+        float64: x = a + i * h
         if i % 2 == 1 {
             integral = integral + 4.0 * f(x)
         } else {
@@ -75,7 +75,7 @@ fun simpsons_rule(fun: f, float64: a, float64: b, int: n) -> float64 {
 }
 
 // Adaptive quadrature (recursive Simpson's rule)
-fun adaptive_quadrature(fun: f, float64: a, float64: b, float64: tol, int: max_depth, int: depth) -> float64 {
+fun adaptive_quadrature(function: f, float64: a, float64: b, float64: tol, int: max_depth, int: depth) -> float64 {
     float64: c = (a + b) / 2.0
     float64: h = b - a
 
@@ -84,7 +84,7 @@ fun adaptive_quadrature(fun: f, float64: a, float64: b, float64: tol, int: max_d
     float64: S_cb = h/2.0 * (f(c) + 4.0 * f((c + b)/2.0) + f(b)) / 6.0
     float64: S_acb = S_ac + S_cb
 
-    if depth >= max_depth || abs(S_acb - S_ab) < 15.0 * tol {
+    if depth >= max_depth or abs(S_acb - S_ab) < 15.0 * tol {
         return S_acb + (S_acb - S_ab) / 15.0
     }
 
@@ -93,17 +93,17 @@ fun adaptive_quadrature(fun: f, float64: a, float64: b, float64: tol, int: max_d
 }
 
 // Romberg integration
-fun romberg_integration(fun: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+fun romberg_integration(function: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
     mat: R = zeros(max_iter, max_iter)
 
     // First column (trapezoidal rule with different step sizes)
     for i in range(max_iter) {
         int: n = power(2, i)
-        float64: h = (b - a) / float64(n)
+        float64: h = (b - a) / n
         float64: sum = (f(a) + f(b)) / 2.0
 
         for j in range(1, n) {
-            float64: x = a + float64(j) * h
+            float64: x = a + j * h
             sum = sum + f(x)
         }
 
@@ -113,7 +113,7 @@ fun romberg_integration(fun: f, float64: a, float64: b, float64: tol, int: max_i
     // Richardson extrapolation
     for k in range(1, max_iter) {
         for i in range(k, max_iter) {
-            float64: power = power(4.0, float64(k))
+            float64: power = power(4.0, k)
             R[i, k] = (power * R[i, k - 1] - R[i - 1, k - 1]) / (power - 1.0)
 
             if k >= 2 {
@@ -129,7 +129,7 @@ fun romberg_integration(fun: f, float64: a, float64: b, float64: tol, int: max_i
 }
 
 // Gaussian quadrature (2-point)
-fun gaussian_quadrature_2point(fun: f, float64: a, float64: b) -> float64 {
+fun gaussian_quadrature_2pofloor(function: f, float64: a, float64: b) -> float64 {
     float64: c = (b + a) / 2.0
     float64: d = (b - a) / 2.0
 
@@ -140,7 +140,7 @@ fun gaussian_quadrature_2point(fun: f, float64: a, float64: b) -> float64 {
 }
 
 // Gaussian quadrature (3-point)
-fun gaussian_quadrature_3point(fun: f, float64: a, float64: b) -> float64 {
+fun gaussian_quadrature_3pofloor(function: f, float64: a, float64: b) -> float64 {
     float64: c = (b + a) / 2.0
     float64: d = (b - a) / 2.0
 
@@ -156,7 +156,7 @@ fun gaussian_quadrature_3point(fun: f, float64: a, float64: b) -> float64 {
 }
 
 // Monte Carlo integration (1D)
-fun monte_carlo_integration(fun: f, float64: a, float64: b, int: n_samples) -> float64 {
+fun monte_carlo_integration(function: f, float64: a, float64: b, int: n_samples) -> float64 {
     float64: sum = 0.0
     float64: range = b - a
 
@@ -165,11 +165,11 @@ fun monte_carlo_integration(fun: f, float64: a, float64: b, int: n_samples) -> f
         sum = sum + f(x)
     }
 
-    return sum * range / float64(n_samples)
+    return sum * range / n_samples
 }
 
 // Monte Carlo integration (multi-dimensional)
-fun monte_carlo_multidimensional(fun: f, vec: lower_bounds, vec: upper_bounds, int: n_samples) -> float64 {
+fun monte_carlo_multidimensional(function: f, vec: lower_bounds, vec: upper_bounds, int: n_samples) -> float64 {
     int: dim = size(lower_bounds)
     float64: volume = 1.0
 
@@ -187,11 +187,11 @@ fun monte_carlo_multidimensional(fun: f, vec: lower_bounds, vec: upper_bounds, i
         sum = sum + f(x)
     }
 
-    return sum * volume / float64(n_samples)
+    return sum * volume / n_samples
 }
 
 // Double exponential quadrature (tanh-sinh)
-fun tanh_sinh_quadrature(fun: f, float64: a, float64: b, float64: tol, int: max_level) -> float64 {
+fun tanh_sinh_quadrature(function: f, float64: a, float64: b, float64: tol, int: max_level) -> float64 {
     // Transform to [-1, 1] interval
     float64: c = (b + a) / 2.0
     float64: d = (b - a) / 2.0
@@ -205,7 +205,7 @@ fun tanh_sinh_quadrature(fun: f, float64: a, float64: b, float64: tol, int: max_
 }
 
 // Tanh-sinh quadrature on [-1, 1]
-fun tanh_sinh_unit(fun: f, float64: tol, int: max_level) -> float64 {
+fun tanh_sinh_unit(function: f, float64: tol, int: max_level) -> float64 {
     float64: integral = 0.0
     float64: h = 1.0
 
@@ -214,11 +214,11 @@ fun tanh_sinh_unit(fun: f, float64: tol, int: max_level) -> float64 {
         int: n = power(2, level)
 
         for i in range(n + 1) {
-            if i == 0 || i == n {
+            if i == 0 or i == n {
                 continue  // Skip endpoints
             }
 
-            float64: t = float64(i) / float64(n)
+            float64: t = i / n
             float64: theta = PI * sinh(tanh(PI * sinh(t)))
             float64: weight = PI * cosh(t) / (cosh(PI * sinh(t)) * cosh(PI * sinh(t)))
 
@@ -240,18 +240,18 @@ fun tanh_sinh_unit(fun: f, float64: tol, int: max_level) -> float64 {
 }
 
 // Improper integral (infinite limit)
-fun improper_integral(fun: f, float64: a, float64: b, float64: tol) -> float64 {
+fun improper_integral(function: f, float64: a, float64: b, float64: tol) -> float64 {
     // Handle infinite limits by transformation
     float64: result = 0.0
 
-    if b == float64(1)/float64(0) {  // b is infinity
+    if b == 1/0 {  // b is infinity
         // Transform to finite interval using t = 1/x
         fun transformed_f(float64: t) -> float64 {
             float64: x = 1.0 / t
             return f(x) / (t * t)
         }
         result = adaptive_quadrature(transformed_f, 0.0, 1.0, tol, 10, 0)
-    } else if a == float64(-1)/float64(0) {  // a is -infinity
+    } else if a == -1/0 {  // a is -infinity
         // Transform to finite interval using t = 1/x
         fun transformed_f(float64: t) -> float64 {
             float64: x = 1.0 / t
@@ -266,7 +266,7 @@ fun improper_integral(fun: f, float64: a, float64: b, float64: tol) -> float64 {
 }
 
 // Multiple integration using iterative method
-fun multiple_integration(fun: f, vec: lower_bounds, vec: upper_bounds, int: n_points) -> float64 {
+fun multiple_integration(function: f, vec: lower_bounds, vec: upper_bounds, int: n_points) -> float64 {
     int: dim = size(lower_bounds)
 
     if dim == 1 {
@@ -275,10 +275,10 @@ fun multiple_integration(fun: f, vec: lower_bounds, vec: upper_bounds, int: n_po
 
     // Recursive approach (simplified)
     float64: result = 0.0
-    float64: h = (upper_bounds[0] - lower_bounds[0]) / float64(n_points)
+    float64: h = (upper_bounds[0] - lower_bounds[0]) / n_points
 
     for i in range(n_points) {
-        float64: x = lower_bounds[0] + float64(i) * h + h/2.0
+        float64: x = lower_bounds[0] + i * h + h/2.0
 
         // Create new bounds for remaining dimensions
         vec: new_lower = zeros(dim - 1)

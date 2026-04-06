@@ -5,18 +5,18 @@ println("=== Rhodesia Math Library Demo ===")
 println("A comprehensive modular math library for scientific computing")
 println("")
 
-// Import all modules
-include core/core{PI, E, safe_divide, power, clamp, lerp, approx_equal, sign, smoothstep}
-include core/trigonometry{degrees_to_radians, radians_to_degrees, sin_taylor, cos_taylor, tan_approx, asin_approx, atan2_approx}
-include linear_algebra/vectors{vec_distance, vec_project, vec_angle_degrees, vec_normalize_safe, vec_cross_3d, vec_rotate_2d}
-include linear_algebra/matrices{mat_trace, mat_det_3x3, mat_transpose, mat_frobenius_norm, mat_is_symmetric}
-include linear_algebra/decompositions{lu_decompose_3x3, qr_decompose_3x3, mat_eigenvalues_2x2}
-include statistics/descriptive{mean, std_dev, median, correlation, z_score_normalize}
-include statistics/probability{normal_pdf, normal_cdf, binomial_pmf, standard_normal_quantile}
-include statistics/regression{linear_regression, r_squared, polynomial_regression_quadratic}
-include numerical/root_finding{bisection, newton_raphson, quadratic_roots}
-include numerical/optimization{gradient_descent, golden_section_search}
-include numerical/integration{simpsons_rule, adaptive_quadrature, monte_carlo_integration}
+// Import all modules (all symbols, so internal helpers are available)
+include core/core
+include core/trigonometry
+include linear_algebra/vectors
+include linear_algebra/matrices
+include linear_algebra/decompositions
+include statistics/descriptive
+include statistics/probability
+include statistics/regression
+include numerical/root_finding
+include numerical/optimization
+include numerical/integration
 
 println("--- Core Math Functions ---")
 
@@ -264,7 +264,7 @@ println("  Max:", max_value(dataset))
 println("  Range:", range(dataset))
 println("")
 
-println("=== Demo completed successfully! ===")
+println("=== Demo completed successfullynot ===")
 println("")
 println("The Rhodesia Math Library provides a comprehensive set of mathematical")
 println("functions organized into modular components for scientific computing.")

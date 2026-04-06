@@ -418,6 +418,25 @@ public:
 };
 
 /**
+ * @brief Tuple destructuring assignment: (type: name, type: name, ...) = expr
+ */
+struct TupleDestructureTarget {
+    RhoType type;
+    std::string name;
+};
+
+class TupleDestructureNode : public StmtNode {
+public:
+    std::vector<TupleDestructureTarget> targets;
+    ExprPtr rhs;
+
+    TupleDestructureNode(std::vector<TupleDestructureTarget> tgts, ExprPtr r, SourceLocation loc = {})
+        : StmtNode(loc), targets(std::move(tgts)), rhs(std::move(r)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
  * @brief Expression statement: print(x)
  */
 class ExprStmtNode : public StmtNode {
@@ -636,6 +655,85 @@ public:
 };
 
 // ============================================================================
+// New Literal Nodes: Set, Tuple, Record
+// ============================================================================
+
+/**
+ * @brief Set literal: {1, 2, 3}
+ */
+class SetLiteralNode : public ExprNode {
+public:
+    std::vector<ExprPtr> elements;
+
+    explicit SetLiteralNode(std::vector<ExprPtr> elems, SourceLocation loc = {})
+        : ExprNode(loc), elements(std::move(elems)) {
+        inferredType = RhoType::Set;
+    }
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Tuple literal: (1, "hello", 3.14)
+ */
+class TupleLiteralNode : public ExprNode {
+public:
+    std::vector<ExprPtr> elements;
+
+    explicit TupleLiteralNode(std::vector<ExprPtr> elems, SourceLocation loc = {})
+        : ExprNode(loc), elements(std::move(elems)) {
+        inferredType = RhoType::Tuple;
+    }
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Record literal: { name: "Juan", age: 30 }
+ */
+class RecordLiteralNode : public ExprNode {
+public:
+    std::vector<std::pair<std::string, ExprPtr>> fields;
+
+    explicit RecordLiteralNode(std::vector<std::pair<std::string, ExprPtr>> f, SourceLocation loc = {})
+        : ExprNode(loc), fields(std::move(f)) {
+        inferredType = RhoType::Record;
+    }
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+// ============================================================================
+// Match Statement
+// ============================================================================
+
+/**
+ * @brief Single arm in a match statement
+ */
+struct MatchCase {
+    ExprPtr pattern;               // nullptr = wildcard (_)
+    std::unique_ptr<BlockNode> body;
+    SourceLocation location;
+
+    MatchCase(ExprPtr p, std::unique_ptr<BlockNode> b, SourceLocation loc = {})
+        : pattern(std::move(p)), body(std::move(b)), location(loc) {}
+};
+
+/**
+ * @brief Match statement: match expr { pattern -> { body } ... }
+ */
+class MatchStmtNode : public StmtNode {
+public:
+    ExprPtr scrutinee;
+    std::vector<MatchCase> cases;
+
+    MatchStmtNode(ExprPtr s, std::vector<MatchCase> c, SourceLocation loc = {})
+        : StmtNode(loc), scrutinee(std::move(s)), cases(std::move(c)) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+// ============================================================================
 // Program Node (Root)
 // ============================================================================
 
@@ -680,10 +778,14 @@ public:
     virtual void visit(IndexAccessNode& node) = 0;
     virtual void visit(SliceNode& node) = 0;
     virtual void visit(LambdaNode& node) = 0;
-    
+    virtual void visit(SetLiteralNode& node) = 0;
+    virtual void visit(TupleLiteralNode& node) = 0;
+    virtual void visit(RecordLiteralNode& node) = 0;
+
     // Statements
     virtual void visit(VarDeclNode& node) = 0;
     virtual void visit(AssignmentNode& node) = 0;
+    virtual void visit(TupleDestructureNode& node) = 0;
     virtual void visit(ExprStmtNode& node) = 0;
     virtual void visit(ReturnNode& node) = 0;
     virtual void visit(BlockNode& node) = 0;
@@ -697,6 +799,7 @@ public:
     virtual void visit(IncludeNode& node) = 0;
     virtual void visit(ThrowNode& node) = 0;
     virtual void visit(TryCatchNode& node) = 0;
+    virtual void visit(MatchStmtNode& node) = 0;
 
     // Program
     virtual void visit(ProgramNode& node) = 0;
@@ -724,6 +827,7 @@ inline void SliceNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void LambdaNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void VarDeclNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void AssignmentNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void TupleDestructureNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void ExprStmtNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void ReturnNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void BlockNode::accept(ASTVisitor& v) { v.visit(*this); }
@@ -737,6 +841,10 @@ inline void UsingNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void IncludeNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void ThrowNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void TryCatchNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void SetLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void TupleLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void RecordLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void MatchStmtNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void ProgramNode::accept(ASTVisitor& v) { v.visit(*this); }
 
 } // namespace Rhodesia
