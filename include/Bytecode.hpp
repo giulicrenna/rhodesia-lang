@@ -296,12 +296,12 @@ struct Chunk {
  *
  * Supports:
  *   - RangeGenerator  -> lazy integer range (no heap copy)
- *   - int64_t         -> treated as range(0, n)
- *   - Eigen::VectorXd -> element-by-element as double
- *   - RhoArray        -> element-by-element
- *   - RhoSet          -> element-by-element
- *   - RhoTuple        -> element-by-element
- *   - RhoMap          -> keys as std::string values
+ *   - int64_t         -> treated as range(0, n), lazy
+ *   - Eigen::VectorXd -> lazy index-based access (no copy)
+ *   - RhoArray        -> lazy index-based access via shared_ptr
+ *   - RhoTuple        -> lazy index-based access via shared_ptr
+ *   - RhoSet          -> lazy index-based access via shared_ptr
+ *   - RhoMap          -> materialized keys (unordered_map has no index access)
  *
  * Throws RuntimeError for unsupported types.
  */
@@ -312,85 +312,55 @@ public:
      * @throws RuntimeError if the value type is not iterable.
      */
     explicit RhoIterator(const RhoValue& iterable)
-        : isRange_(false), rangeStart_(0), rangeEnd_(0), rangeCurrent_(0), index_(0)
     {
         std::visit([this](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
 
-            // ---- RangeGenerator ----
+            // ---- RangeGenerator (lazy) ----
             if constexpr (std::is_same_v<T, std::shared_ptr<RangeGenerator>>) {
-                if (!arg) {
-                    throw RuntimeError("RhoIterator: null RangeGenerator");
-                }
-                isRange_      = true;
-                rangeStart_   = arg->current();                          // honour current position
-                rangeEnd_     = rangeStart_ + static_cast<int64_t>(arg->size());
-                rangeCurrent_ = rangeStart_;
+                if (!arg) throw RuntimeError("RhoIterator: null RangeGenerator");
+                int64_t start = arg->current();
+                source_ = RangeSource{ start, start + static_cast<int64_t>(arg->size()), start };
             }
 
-            // ---- int64_t treated as range(0, n) ----
+            // ---- int64_t treated as range(0, n) (lazy) ----
             else if constexpr (std::is_same_v<T, int64_t>) {
-                if (arg < 0) {
-                    throw RuntimeError(
-                        "RhoIterator: cannot iterate over negative integer " +
-                        std::to_string(arg));
-                }
-                isRange_      = true;
-                rangeStart_   = 0;
-                rangeEnd_     = arg;
-                rangeCurrent_ = 0;
+                if (arg < 0)
+                    throw RuntimeError("RhoIterator: cannot iterate over negative integer " + std::to_string(arg));
+                source_ = RangeSource{ 0, arg, 0 };
             }
 
-            // ---- Eigen::VectorXd ----
+            // ---- Eigen::VectorXd (lazy, index-based) ----
             else if constexpr (std::is_same_v<T, Eigen::VectorXd>) {
-                items_.reserve(static_cast<size_t>(arg.size()));
-                for (Eigen::Index i = 0; i < arg.size(); ++i) {
-                    items_.emplace_back(arg(i));   // store as double
-                }
+                source_ = VecSource{ arg, 0 };
             }
 
-            // ---- RhoArray ----
+            // ---- RhoArray (lazy, index-based) ----
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoArray>>) {
-                if (!arg) {
-                    throw RuntimeError("RhoIterator: null RhoArray");
-                }
-                items_.reserve(arg->size());
-                for (size_t i = 0; i < arg->size(); ++i) {
-                    items_.push_back(arg->get(i));
-                }
+                if (!arg) throw RuntimeError("RhoIterator: null RhoArray");
+                source_ = ArraySource{ arg, 0 };
             }
 
-            // ---- RhoSet ----
-            else if constexpr (std::is_same_v<T, std::shared_ptr<RhoSet>>) {
-                if (!arg) {
-                    throw RuntimeError("RhoIterator: null RhoSet");
-                }
-                items_.reserve(arg->size());
-                for (const auto& elem : *arg) {
-                    items_.push_back(elem);
-                }
-            }
-
-            // ---- RhoTuple ----
+            // ---- RhoTuple (lazy, index-based) ----
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoTuple>>) {
-                if (!arg) {
-                    throw RuntimeError("RhoIterator: null RhoTuple");
-                }
-                items_.reserve(arg->size());
-                for (size_t i = 0; i < arg->size(); ++i) {
-                    items_.push_back(arg->get(i));
-                }
+                if (!arg) throw RuntimeError("RhoIterator: null RhoTuple");
+                source_ = TupleSource{ arg, 0 };
             }
 
-            // ---- RhoMap -> iterate over keys ----
+            // ---- RhoSet (lazy, index-based via internal vector) ----
+            else if constexpr (std::is_same_v<T, std::shared_ptr<RhoSet>>) {
+                if (!arg) throw RuntimeError("RhoIterator: null RhoSet");
+                source_ = SetSource{ arg, 0 };
+            }
+
+            // ---- RhoMap -> materialize keys (unordered_map has no index access) ----
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoMap>>) {
-                if (!arg) {
-                    throw RuntimeError("RhoIterator: null RhoMap");
-                }
-                items_.reserve(arg->size());
-                for (auto it = arg->begin(); it != arg->end(); ++it) {
-                    items_.emplace_back(it->first);   // key as std::string
-                }
+                if (!arg) throw RuntimeError("RhoIterator: null RhoMap");
+                std::vector<RhoValue> keys;
+                keys.reserve(arg->size());
+                for (auto it = arg->begin(); it != arg->end(); ++it)
+                    keys.emplace_back(it->first);
+                source_ = MaterializedSource{ std::move(keys), 0 };
             }
 
             // ---- Unsupported ----
@@ -407,40 +377,56 @@ public:
     // Iterator protocol
     // -----------------------------------------------------------------------
 
-    /**
-     * @brief Returns true if there are more elements to yield.
-     */
     bool hasNext() const {
-        if (isRange_) {
-            return rangeCurrent_ < rangeEnd_;
-        }
-        return index_ < items_.size();
+        return std::visit([](const auto& s) -> bool {
+            using S = std::decay_t<decltype(s)>;
+            if constexpr (std::is_same_v<S, RangeSource>)
+                return s.current < s.end;
+            else if constexpr (std::is_same_v<S, VecSource>)
+                return s.idx < static_cast<size_t>(s.vec.size());
+            else if constexpr (std::is_same_v<S, ArraySource>)
+                return s.idx < s.arr->size();
+            else if constexpr (std::is_same_v<S, TupleSource>)
+                return s.idx < s.tup->size();
+            else if constexpr (std::is_same_v<S, SetSource>)
+                return s.idx < s.set->size();
+            else // MaterializedSource
+                return s.idx < s.items.size();
+        }, source_);
     }
 
-    /**
-     * @brief Advance the iterator and return the next value.
-     * @throws RuntimeError if the iterator is exhausted.
-     */
     RhoValue next() {
-        if (!hasNext()) {
-            throw RuntimeError("RhoIterator: iterator exhausted");
-        }
-        if (isRange_) {
-            return RhoValue{rangeCurrent_++};   // returns int64_t
-        }
-        return items_[index_++];
+        if (!hasNext()) throw RuntimeError("RhoIterator: iterator exhausted");
+        return std::visit([](auto& s) -> RhoValue {
+            using S = std::decay_t<decltype(s)>;
+            if constexpr (std::is_same_v<S, RangeSource>)
+                return RhoValue{s.current++};
+            else if constexpr (std::is_same_v<S, VecSource>)
+                return RhoValue{s.vec(static_cast<Eigen::Index>(s.idx++))};
+            else if constexpr (std::is_same_v<S, ArraySource>)
+                return s.arr->get(s.idx++);
+            else if constexpr (std::is_same_v<S, TupleSource>)
+                return s.tup->get(s.idx++);
+            else if constexpr (std::is_same_v<S, SetSource>) {
+                // RhoSet wraps a vector internally; iterate via begin()+offset
+                auto it = s.set->begin();
+                std::advance(it, static_cast<std::ptrdiff_t>(s.idx++));
+                return *it;
+            } else { // MaterializedSource
+                return s.items[s.idx++];
+            }
+        }, source_);
     }
 
 private:
-    // Materialized items (used for non-range iterables)
-    std::vector<RhoValue> items_;
-    size_t                index_;
+    struct RangeSource       { int64_t start; int64_t end; int64_t current; };
+    struct VecSource         { Eigen::VectorXd vec; size_t idx; };
+    struct ArraySource       { std::shared_ptr<RhoArray> arr; size_t idx; };
+    struct TupleSource       { std::shared_ptr<RhoTuple> tup; size_t idx; };
+    struct SetSource         { std::shared_ptr<RhoSet>   set; size_t idx; };
+    struct MaterializedSource{ std::vector<RhoValue> items; size_t idx; };
 
-    // Lazy range support
-    bool    isRange_;
-    int64_t rangeStart_;
-    int64_t rangeEnd_;
-    int64_t rangeCurrent_;
+    std::variant<RangeSource, VecSource, ArraySource, TupleSource, SetSource, MaterializedSource> source_;
 };
 
 } // namespace Rhodesia

@@ -344,6 +344,16 @@ private:
 
     // ---- ADD ----
     RhoValue applyAdd(const RhoValue& left, const RhoValue& right) {
+        // Fast path: most common numeric combinations avoid std::visit overhead
+        if (const auto* l = std::get_if<int64_t>(&left)) {
+            if (const auto* r = std::get_if<int64_t>(&right)) return *l + *r;
+            if (const auto* r = std::get_if<double>(&right))  return static_cast<double>(*l) + *r;
+        }
+        if (const auto* l = std::get_if<double>(&left)) {
+            if (const auto* r = std::get_if<double>(&right))  return *l + *r;
+            if (const auto* r = std::get_if<int64_t>(&right)) return *l + static_cast<double>(*r);
+        }
+        // Slow path: handles strings, vectors, matrices, and other types
         return std::visit([](const auto& l, const auto& r) -> RhoValue {
             using L = std::decay_t<decltype(l)>;
             using R = std::decay_t<decltype(r)>;
@@ -379,6 +389,14 @@ private:
 
     // ---- SUB ----
     RhoValue applySub(const RhoValue& left, const RhoValue& right) {
+        if (const auto* l = std::get_if<int64_t>(&left)) {
+            if (const auto* r = std::get_if<int64_t>(&right)) return *l - *r;
+            if (const auto* r = std::get_if<double>(&right))  return static_cast<double>(*l) - *r;
+        }
+        if (const auto* l = std::get_if<double>(&left)) {
+            if (const auto* r = std::get_if<double>(&right))  return *l - *r;
+            if (const auto* r = std::get_if<int64_t>(&right)) return *l - static_cast<double>(*r);
+        }
         return std::visit([](const auto& l, const auto& r) -> RhoValue {
             using L = std::decay_t<decltype(l)>;
             using R = std::decay_t<decltype(r)>;
@@ -405,6 +423,14 @@ private:
 
     // ---- MUL ----
     RhoValue applyMul(const RhoValue& left, const RhoValue& right) {
+        if (const auto* l = std::get_if<int64_t>(&left)) {
+            if (const auto* r = std::get_if<int64_t>(&right)) return *l * *r;
+            if (const auto* r = std::get_if<double>(&right))  return static_cast<double>(*l) * *r;
+        }
+        if (const auto* l = std::get_if<double>(&left)) {
+            if (const auto* r = std::get_if<double>(&right))  return *l * *r;
+            if (const auto* r = std::get_if<int64_t>(&right)) return *l * static_cast<double>(*r);
+        }
         return std::visit([](const auto& l, const auto& r) -> RhoValue {
             using L = std::decay_t<decltype(l)>;
             using R = std::decay_t<decltype(r)>;
@@ -447,6 +473,26 @@ private:
 
     // ---- DIV ----
     RhoValue applyDiv(const RhoValue& left, const RhoValue& right) {
+        if (const auto* l = std::get_if<int64_t>(&left)) {
+            if (const auto* r = std::get_if<int64_t>(&right)) {
+                if (*r == 0) throw VMError("Division by zero");
+                return static_cast<double>(*l) / static_cast<double>(*r);
+            }
+            if (const auto* r = std::get_if<double>(&right)) {
+                if (*r == 0.0) throw VMError("Division by zero");
+                return static_cast<double>(*l) / *r;
+            }
+        }
+        if (const auto* l = std::get_if<double>(&left)) {
+            if (const auto* r = std::get_if<double>(&right)) {
+                if (*r == 0.0) throw VMError("Division by zero");
+                return *l / *r;
+            }
+            if (const auto* r = std::get_if<int64_t>(&right)) {
+                if (*r == 0) throw VMError("Division by zero");
+                return *l / static_cast<double>(*r);
+            }
+        }
         return std::visit([](const auto& l, const auto& r) -> RhoValue {
             using L = std::decay_t<decltype(l)>;
             using R = std::decay_t<decltype(r)>;
@@ -521,7 +567,36 @@ private:
             }
         }
 
-        // numeric
+        // numeric fast path: int vs int (avoids toDouble + std::visit)
+        if (const auto* l = std::get_if<int64_t>(&left)) {
+            if (const auto* r = std::get_if<int64_t>(&right)) {
+                switch (op) {
+                case Opcode::EQ: return *l == *r;
+                case Opcode::NE: return *l != *r;
+                case Opcode::LT: return *l <  *r;
+                case Opcode::GT: return *l >  *r;
+                case Opcode::LE: return *l <= *r;
+                case Opcode::GE: return *l >= *r;
+                default: break;
+                }
+            }
+        }
+        // numeric fast path: double vs double
+        if (const auto* l = std::get_if<double>(&left)) {
+            if (const auto* r = std::get_if<double>(&right)) {
+                switch (op) {
+                case Opcode::EQ: return *l == *r;
+                case Opcode::NE: return *l != *r;
+                case Opcode::LT: return *l <  *r;
+                case Opcode::GT: return *l >  *r;
+                case Opcode::LE: return *l <= *r;
+                case Opcode::GE: return *l >= *r;
+                default: break;
+                }
+            }
+        }
+
+        // numeric slow path: mixed or other scalar types
         if (!isScalar(left) || !isScalar(right))
             throw VMError("Comparison requires scalar operands");
 

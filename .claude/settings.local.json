@@ -52,7 +52,9 @@
       "Bash(/tmp/test_min.rho:*)",
       "Bash(/tmp/test_min2.rho:*)",
       "Bash(/tmp/test_min3.rho:*)",
-      "Bash(/tmp/test_min4.rho:*)"
+      "Bash(/tmp/test_min4.rho:*)",
+      "Bash(find /home/giuli/Documentos/GitHub/rhodesia-lang/src -type f \\\\\\(-name *.cpp -o -name *.hpp -o -name *.h \\\\\\))",
+      "Bash(find /home/giuli/Documentos/GitHub/rhodesia-lang -type f \\\\\\(-name *test* -o -name *measure* -o -name *bench* -o -name *.rho \\\\\\))"
     ],
     "additionalDirectories": [
       "/tmp",

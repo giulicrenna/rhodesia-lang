@@ -29,12 +29,12 @@ fun measure_loop(int: n) -> float64 {
 println("Testing get_tick() precision and measure_loop() performance:")
 println("")
 println("Note: Each benchmark runs 15 times for reliable averaging.")
-println("The 'Average time' is per single loop execution.")
-println("The 'Total time' is for all 15 runs (explains inter-output delays).")
+println("      The 'Average time' is per single loop execution.")
+println("      The 'Total time' is for all 15 runs (explains inter-output delays).")
 println("")
 
 // Test different loop sizes to demonstrate timing precision
-vec: test_sizes = [1000.0, 10000.0, 100000.0, 1000000.0]
+vec: test_sizes = [1000.0, 10000.0, 100000.0, 1000000.0, 10000000.0, 100000000.0]
 float64: suite_start = get_tick()
 
 for size in test_sizes {
