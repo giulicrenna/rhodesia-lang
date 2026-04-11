@@ -1,0 +1,112 @@
+// Módulo datetime en Rhodesia
+// Acceso: datetime.funcion() o via include
+
+println("=== Módulo datetime ===")
+println()
+
+// --------------------------------------------------------
+// Fecha y hora actual
+// --------------------------------------------------------
+println("--- Ahora ---")
+
+record: ahora = datetime.now()
+println("Año:         ", ahora.year)
+println("Mes:         ", ahora.month)
+println("Día:         ", ahora.day)
+println("Hora:        ", ahora.hour)
+println("Minuto:      ", ahora.minute)
+println("Segundo:     ", ahora.second)
+println("Milisegundo: ", ahora.millisecond)
+println()
+
+// Solo fecha
+record: hoy = datetime.today()
+println("Hoy: ", hoy.year, "/", hoy.month, "/", hoy.day)
+
+// Solo hora
+record: hora_actual = datetime.current_time()
+println("Hora actual: ", hora_actual.hour, ":", hora_actual.minute, ":", hora_actual.second)
+println()
+
+// --------------------------------------------------------
+// Formateo
+// --------------------------------------------------------
+println("--- Formateo ---")
+
+record: dt = datetime.now()
+
+str: iso      = datetime.format(dt, "{year}-{month}-{day}T{hour}:{minute}:{second}")
+str: legible  = datetime.format(dt, "{day}/{month}/{year} {hour}:{minute}")
+str: solo_dia = datetime.format(dt, "{year}-{month}-{day}")
+
+println("ISO 8601:   ", iso)
+println("Legible:    ", legible)
+println("Solo fecha: ", solo_dia)
+println()
+
+// --------------------------------------------------------
+// Construcción manual
+// --------------------------------------------------------
+println("--- Construcción manual ---")
+
+record: nacimiento  = datetime.make_date(1990, 6, 15)
+record: evento      = datetime.make(2024, 12, 31, 23, 59, 59)
+record: reunion     = datetime.make_time(14, 30, 0)
+
+str: s1 = datetime.format(nacimiento, "{day}/{month}/{year}")
+str: s2 = datetime.format(evento,     "{year}-{month}-{day} {hour}:{minute}:{second}")
+println("Nacimiento: ", s1)
+println("Evento:     ", s2)
+println("Reunión:    ", reunion.hour, ":", reunion.minute)
+println()
+
+// --------------------------------------------------------
+// Unix timestamp
+// --------------------------------------------------------
+println("--- Timestamps ---")
+
+int: ts_ahora = datetime.timestamp()
+println("Timestamp actual: ", ts_ahora)
+
+record: desde_ts = datetime.from_timestamp(0)
+str: epoca = datetime.format(desde_ts, "{year}-{month}-{day}")
+println("Unix epoch (ts=0): ", epoca)
+
+record: desde_ts2 = datetime.from_timestamp(1000000000)
+str: milbillones = datetime.format(desde_ts2, "{year}-{month}-{day}")
+println("ts=1000000000:     ", milbillones)
+println()
+
+// --------------------------------------------------------
+// Diferencias entre fechas
+// --------------------------------------------------------
+println("--- Diferencias ---")
+
+record: inicio = datetime.make_date(2020, 1, 1)
+record: fin    = datetime.make_date(2026, 4, 11)
+
+float64: dias    = datetime.diff_days(inicio, fin)
+float64: segundos = datetime.diff_seconds(inicio, fin)
+
+println("Días entre 2020-01-01 y 2026-04-11: ", dias)
+println("En segundos: ", segundos)
+println()
+
+// --------------------------------------------------------
+// include datetime{...}: importar al scope local
+// --------------------------------------------------------
+println("--- include datetime ---")
+
+include datetime{now, today, format, make_date, diff_days}
+
+record: d1 = make_date(2025, 3, 1)
+record: d2 = make_date(2025, 6, 1)
+float64: trimestre = diff_days(d1, d2)
+println("Días en el trimestre: ", trimestre)
+
+record: t = today()
+str: fmt_hoy = format(t, "Hoy es {day}/{month}/{year}")
+println(fmt_hoy)
+println()
+
+println("=== Fin módulo datetime ===")

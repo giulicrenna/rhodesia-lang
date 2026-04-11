@@ -198,7 +198,12 @@ enum class BinaryOp {
     Le,       // <=
     Ge,       // >=
     And,      // and
-    Or        // or
+    Or,       // or
+    BitAnd,   // &
+    BitOr,    // |
+    BitXor,   // ^
+    Shl,      // <<
+    Shr       // >>
 };
 
 inline std::string binaryOpToString(BinaryOp op) {
@@ -214,8 +219,13 @@ inline std::string binaryOpToString(BinaryOp op) {
         case BinaryOp::Gt:  return ">";
         case BinaryOp::Le:  return "<=";
         case BinaryOp::Ge:  return ">=";
-        case BinaryOp::And: return "and";
-        case BinaryOp::Or:  return "or";
+        case BinaryOp::And:    return "and";
+        case BinaryOp::Or:     return "or";
+        case BinaryOp::BitAnd: return "&";
+        case BinaryOp::BitOr:  return "|";
+        case BinaryOp::BitXor: return "^";
+        case BinaryOp::Shl:    return "<<";
+        case BinaryOp::Shr:    return ">>";
     }
     return "?";
 }
@@ -240,13 +250,15 @@ public:
  */
 enum class UnaryOp {
     Neg,     // -
-    Not      // not
+    Not,     // not
+    BitNot   // ~
 };
 
 inline std::string unaryOpToString(UnaryOp op) {
     switch (op) {
-        case UnaryOp::Neg: return "-";
-        case UnaryOp::Not: return "not";
+        case UnaryOp::Neg:    return "-";
+        case UnaryOp::Not:    return "not";
+        case UnaryOp::BitNot: return "~";
     }
     return "?";
 }

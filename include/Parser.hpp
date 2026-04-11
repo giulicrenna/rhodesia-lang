@@ -584,17 +584,47 @@ private:
     }
     
     ExprPtr parseAnd() {
-        ExprPtr left = parseEquality();
-        
+        ExprPtr left = parseBitOr();
+
         while (match(TokenType::KwAnd)) {
             SourceLocation loc = previous().location;
-            ExprPtr right = parseEquality();
+            ExprPtr right = parseBitOr();
             left = std::make_unique<BinaryOpNode>(BinaryOp::And, std::move(left), std::move(right), loc);
         }
-        
+
         return left;
     }
-    
+
+    ExprPtr parseBitOr() {
+        ExprPtr left = parseBitXor();
+        while (match(TokenType::Pipe)) {
+            SourceLocation loc = previous().location;
+            ExprPtr right = parseBitXor();
+            left = std::make_unique<BinaryOpNode>(BinaryOp::BitOr, std::move(left), std::move(right), loc);
+        }
+        return left;
+    }
+
+    ExprPtr parseBitXor() {
+        ExprPtr left = parseBitAnd();
+        while (match(TokenType::Caret)) {
+            SourceLocation loc = previous().location;
+            ExprPtr right = parseBitAnd();
+            left = std::make_unique<BinaryOpNode>(BinaryOp::BitXor, std::move(left), std::move(right), loc);
+        }
+        return left;
+    }
+
+    ExprPtr parseBitAnd() {
+        ExprPtr left = parseEquality();
+        while (match(TokenType::Ampersand)) {
+            SourceLocation loc = previous().location;
+            ExprPtr right = parseEquality();
+            left = std::make_unique<BinaryOpNode>(BinaryOp::BitAnd, std::move(left), std::move(right), loc);
+        }
+        return left;
+    }
+
     ExprPtr parseEquality() {
         ExprPtr left = parseComparison();
         
@@ -609,11 +639,11 @@ private:
     }
     
     ExprPtr parseComparison() {
-        ExprPtr left = parseTerm();
-        
+        ExprPtr left = parseShift();
+
         while (match({TokenType::Less, TokenType::Greater, TokenType::LessEqual, TokenType::GreaterEqual})) {
             Token op = previous();
-            ExprPtr right = parseTerm();
+            ExprPtr right = parseShift();
             
             BinaryOp binOp;
             switch (op.type) {
@@ -626,10 +656,21 @@ private:
             
             left = std::make_unique<BinaryOpNode>(binOp, std::move(left), std::move(right), op.location);
         }
-        
+
         return left;
     }
-    
+
+    ExprPtr parseShift() {
+        ExprPtr left = parseTerm();
+        while (match({TokenType::LShift, TokenType::RShift})) {
+            Token op = previous();
+            ExprPtr right = parseTerm();
+            BinaryOp binOp = (op.type == TokenType::LShift) ? BinaryOp::Shl : BinaryOp::Shr;
+            left = std::make_unique<BinaryOpNode>(binOp, std::move(left), std::move(right), op.location);
+        }
+        return left;
+    }
+
     ExprPtr parseTerm() {
         ExprPtr left = parseFactor();
         
@@ -665,18 +706,24 @@ private:
     }
     
     ExprPtr parseUnary() {
+        if (match(TokenType::Tilde)) {
+            SourceLocation loc = previous().location;
+            ExprPtr operand = parseUnary();
+            return std::make_unique<UnaryOpNode>(UnaryOp::BitNot, std::move(operand), loc);
+        }
+
         if (match(TokenType::Minus)) {
             SourceLocation loc = previous().location;
             ExprPtr operand = parseUnary();
             return std::make_unique<UnaryOpNode>(UnaryOp::Neg, std::move(operand), loc);
         }
-        
+
         if (match(TokenType::KwNot)) {
             SourceLocation loc = previous().location;
             ExprPtr operand = parseUnary();
             return std::make_unique<UnaryOpNode>(UnaryOp::Not, std::move(operand), loc);
         }
-        
+
         return parsePostfix();
     }
     

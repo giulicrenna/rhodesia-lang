@@ -132,6 +132,8 @@ public:
             result_ = applyNegation(operand, node.location);
         } else if (node.op == UnaryOp::Not) {
             result_ = !isTruthy(operand);
+        } else if (node.op == UnaryOp::BitNot) {
+            result_ = applyBitNot(operand, node.location);
         }
     }
 
@@ -695,6 +697,12 @@ public:
     }
 
     void visit(IncludeNode& node) override {
+        // Check for built-in modules that don't have .rho files
+        if (node.moduleName == "datetime") {
+            importBuiltinModule("datetime", node.symbols, node.location);
+            return;
+        }
+
         // Load the module
         ProgramNode* moduleAst = moduleLoader_.loadModule(node.moduleName, node.location);
 
@@ -778,6 +786,45 @@ private:
         auto allFunctions = moduleSymbols.getAllFunctions();
         for (const auto& [name, funcSig] : allFunctions) {
             symbols_.declareFunction(name, funcSig.declaration);
+        }
+    }
+
+    /**
+     * @brief Import a built-in module's functions as first-class RhoFunction values
+     */
+    void importBuiltinModule(const std::string& moduleName,
+                             const std::vector<ImportSpec>& symbols,
+                             const SourceLocation& loc) {
+        auto& builtins = Builtins::instance();
+
+        auto importOne = [&](const std::string& funcName, const std::string& importedName) {
+            if (!builtins.isModuleFunction(moduleName, funcName) &&
+                !builtins.isModuleConstant(moduleName, funcName)) {
+                throw RuntimeError("Symbol '" + funcName + "' not found in module '" + moduleName + "'", loc);
+            }
+            if (builtins.isModuleConstant(moduleName, funcName)) {
+                RhoValue val = builtins.getModuleConstant(moduleName, funcName, loc);
+                symbols_.declare(importedName, getValueType(val), val, loc);
+                return;
+            }
+            // Wrap built-in module function as a native RhoFunction
+            auto native = std::make_shared<RhoFunction>(
+                [moduleName, funcName](const std::vector<RhoValue>& args) -> RhoValue {
+                    return Builtins::instance().callModule(moduleName, funcName, args, {});
+                }
+            );
+            symbols_.declare(importedName, RhoType::Function,
+                             std::shared_ptr<RhoFunction>(native), loc);
+        };
+
+        if (symbols.empty()) {
+            throw RuntimeError(
+                "include " + moduleName + ": selective import required (e.g. include " +
+                moduleName + "{now, today})", loc);
+        }
+
+        for (const auto& spec : symbols) {
+            importOne(spec.symbolName, spec.getImportedName());
         }
     }
 
@@ -932,6 +979,87 @@ private:
     }
 
     /**
+     * @brief Apply bitwise NOT operator (~)
+     */
+    RhoValue applyBitNot(const RhoValue& value, SourceLocation loc) {
+        return std::visit([&loc](const auto& arg) -> RhoValue {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, int64_t>)  return ~arg;
+            if constexpr (std::is_same_v<T, int8_t>)   return static_cast<int8_t>(~arg);
+            if constexpr (std::is_same_v<T, int16_t>)  return static_cast<int16_t>(~arg);
+            if constexpr (std::is_same_v<T, int32_t>)  return static_cast<int32_t>(~arg);
+            if constexpr (std::is_same_v<T, uint8_t>)  return static_cast<uint8_t>(~arg);
+            if constexpr (std::is_same_v<T, uint16_t>) return static_cast<uint16_t>(~arg);
+            if constexpr (std::is_same_v<T, uint32_t>) return static_cast<uint32_t>(~arg);
+            if constexpr (std::is_same_v<T, uint64_t>) return ~arg;
+            if constexpr (std::is_same_v<T, bool>)     return !arg;
+            throw TypeError::incompatibleUnaryOp("~", getValueType(arg));
+        }, value);
+    }
+
+    /**
+     * @brief Apply bitwise binary operator
+     */
+    RhoValue applyBitwise(BinaryOp op, const RhoValue& left, const RhoValue& right, SourceLocation loc) {
+        auto toIntVal = [](const RhoValue& v) -> int64_t {
+            return std::visit([](const auto& arg) -> int64_t {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, bool>) return arg ? 1 : 0;
+                if constexpr (std::is_integral_v<T>)   return static_cast<int64_t>(arg);
+                return 0;
+            }, v);
+        };
+
+        RhoType lt = getValueType(left);
+        RhoType rt = getValueType(right);
+
+        auto isIntegral = [](RhoType t) {
+            return t == RhoType::Int   || t == RhoType::Int8  || t == RhoType::Int16  ||
+                   t == RhoType::Int32 || t == RhoType::UInt8 || t == RhoType::UInt16 ||
+                   t == RhoType::UInt32 || t == RhoType::UInt64 || t == RhoType::Byte ||
+                   t == RhoType::Bool;
+        };
+
+        if (!isIntegral(lt) || !isIntegral(rt)) {
+            throw TypeError::incompatibleBinaryOp(binaryOpToString(op), lt, rt);
+        }
+
+        int64_t l = toIntVal(left);
+        int64_t r = toIntVal(right);
+        int64_t result;
+
+        switch (op) {
+            case BinaryOp::BitAnd: result = l & r; break;
+            case BinaryOp::BitOr:  result = l | r; break;
+            case BinaryOp::BitXor: result = l ^ r; break;
+            case BinaryOp::Shl:
+                if (r < 0 || r >= 64) throw RuntimeError("Shift amount out of range", loc);
+                result = l << r; break;
+            case BinaryOp::Shr:
+                if (r < 0 || r >= 64) throw RuntimeError("Shift amount out of range", loc);
+                result = l >> r; break;
+            default: result = 0;
+        }
+
+        // Preserve original type if both sides are the same type
+        if (lt == rt) {
+            return std::visit([&](const auto& arg) -> RhoValue {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, bool>)     return result != 0;
+                if constexpr (std::is_same_v<T, int8_t>)   return static_cast<int8_t>(result);
+                if constexpr (std::is_same_v<T, int16_t>)  return static_cast<int16_t>(result);
+                if constexpr (std::is_same_v<T, int32_t>)  return static_cast<int32_t>(result);
+                if constexpr (std::is_same_v<T, uint8_t>)  return static_cast<uint8_t>(result);
+                if constexpr (std::is_same_v<T, uint16_t>) return static_cast<uint16_t>(result);
+                if constexpr (std::is_same_v<T, uint32_t>) return static_cast<uint32_t>(result);
+                if constexpr (std::is_same_v<T, uint64_t>) return static_cast<uint64_t>(result);
+                return result; // int64_t
+            }, left);
+        }
+        return result; // default: int64_t
+    }
+
+    /**
      * @brief Apply binary operation
      */
     RhoValue applyBinaryOp(BinaryOp op, const RhoValue& left, const RhoValue& right,
@@ -960,6 +1088,16 @@ private:
                 return isTruthy(left) && isTruthy(right);
             case BinaryOp::Or:
                 return isTruthy(left) || isTruthy(right);
+            case BinaryOp::BitAnd:
+                return applyBitwise(op, left, right, loc);
+            case BinaryOp::BitOr:
+                return applyBitwise(op, left, right, loc);
+            case BinaryOp::BitXor:
+                return applyBitwise(op, left, right, loc);
+            case BinaryOp::Shl:
+                return applyBitwise(op, left, right, loc);
+            case BinaryOp::Shr:
+                return applyBitwise(op, left, right, loc);
             default:
                 throw TypeError::incompatibleBinaryOp(binaryOpToString(op), leftType, rightType);
         }

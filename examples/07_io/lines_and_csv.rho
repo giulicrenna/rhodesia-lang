@@ -1,0 +1,108 @@
+// io.lines y io.read_csv en Rhodesia
+
+println("=== IO: lines y CSV ===")
+println()
+
+// Función auxiliar para escribir un archivo
+fun write_file(str: path, str: content) -> void {
+    int: h = io.open(path, "w")
+    io.write(h, content)
+    io.close(h)
+}
+
+// --------------------------------------------------------
+// io.lines: lee todas las líneas de un archivo como arr
+// --------------------------------------------------------
+println("--- io.lines ---")
+
+write_file("poema.txt", "La vida es corta\nEl arte es largo\nOcasión fugaz\nExperiencia engañosa\nJuicio difícil\n")
+
+arr: versos = io.lines("poema.txt")
+
+println("Versos en el poema: ", array.size(versos))
+
+int: n_versos = array.size(versos)
+for i in range(n_versos) {
+    println("  > ", versos[i])
+}
+
+// Acceso por índice
+str: primero = versos[0]
+str: ultimo  = versos[4]
+println("Primero: ", primero)
+println("Último:  ", ultimo)
+
+// io.remove("poema.txt")
+println()
+
+// --------------------------------------------------------
+// Leer línea a línea con file handle
+// --------------------------------------------------------
+println("--- io.readline desde archivo ---")
+
+write_file("numeros.txt", "100\n200\n300\n")
+
+int: handle = io.open("numeros.txt", "r")
+str: l1 = io.readline(handle)
+str: l2 = io.readline(handle)
+str: l3 = io.readline(handle)
+io.close(handle)
+
+println("Línea 1: ", l1)
+println("Línea 2: ", l2)
+println("Línea 3: ", l3)
+
+// io.remove("numeros.txt")
+println()
+
+// --------------------------------------------------------
+// io.read_csv: lee CSV como arr de records
+// --------------------------------------------------------
+println("--- io.read_csv (datos de alumnos) ---")
+
+write_file("alumnos.csv", "nombre,nota,aprobado\nAna,8.5,1\nBruno,4.2,0\nCarla,9.1,1\nDiego,5.0,1\n")
+
+arr: alumnos = io.read_csv("alumnos.csv")
+
+println("Alumnos cargados: ", array.size(alumnos))
+println()
+
+int: n_alumnos = array.size(alumnos)
+for i in range(n_alumnos) {
+    record: alumno = alumnos[i]
+    println("  ", alumno.nombre, " -> nota:", alumno.nota)
+}
+println()
+
+// Calcular promedio de notas
+float64: suma = 0.0
+for i in range(n_alumnos) {
+    record: a = alumnos[i]
+    suma = suma + a.nota
+}
+float64: promedio = suma / n_alumnos
+println("Promedio de notas: ", promedio)
+
+io.remove("alumnos.csv")
+println()
+
+// --------------------------------------------------------
+// io.read_csv: datos numéricos con tipos inferidos automáticamente
+// --------------------------------------------------------
+println("--- io.read_csv (series numéricas) ---")
+
+write_file("mediciones.csv", "x,y,z\n1,1.0,100\n2,4.0,200\n3,9.0,300\n4,16.0,400\n5,25.0,500\n")
+
+arr: mediciones = io.read_csv("mediciones.csv")
+
+println("Mediciones:")
+int: n_med = array.size(mediciones)
+for i in range(n_med) {
+    record: m = mediciones[i]
+    println("  x=", m.x, "  y=", m.y, "  z=", m.z)
+}
+
+io.remove("mediciones.csv")
+println()
+
+println("=== Fin IO lines y CSV ===")

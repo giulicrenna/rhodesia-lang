@@ -83,7 +83,15 @@ enum class TokenType {
     Star,            // *
     Slash,           // /
     Percent,         // %
-    
+
+    // Operators - Bitwise
+    Ampersand,       // &
+    Pipe,            // |
+    Caret,           // ^
+    Tilde,           // ~
+    LShift,          // <<
+    RShift,          // >>
+
     // Operators - Comparison
     Equal,           // ==
     NotEqual,        // !=
@@ -177,6 +185,12 @@ inline std::string tokenTypeToString(TokenType type) {
         {TokenType::Star, "*"},
         {TokenType::Slash, "/"},
         {TokenType::Percent, "%"},
+        {TokenType::Ampersand, "&"},
+        {TokenType::Pipe, "|"},
+        {TokenType::Caret, "^"},
+        {TokenType::Tilde, "~"},
+        {TokenType::LShift, "<<"},
+        {TokenType::RShift, ">>"},
         {TokenType::Equal, "=="},
         {TokenType::NotEqual, "!="},
         {TokenType::Less, "<"},

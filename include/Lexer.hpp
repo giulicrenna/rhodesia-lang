@@ -285,13 +285,20 @@ private:
                 throw LexerError("Unexpected character '!'. Did you mean '!='?", startLoc);
                 
             case '<':
+                if (match('<')) return Token(TokenType::LShift, "<<", startLoc);
                 if (match('=')) return Token(TokenType::LessEqual, "<=", startLoc);
                 return Token(TokenType::Less, "<", startLoc);
-                
+
             case '>':
+                if (match('>')) return Token(TokenType::RShift, ">>", startLoc);
                 if (match('=')) return Token(TokenType::GreaterEqual, ">=", startLoc);
                 return Token(TokenType::Greater, ">", startLoc);
-            
+
+            case '&': return Token(TokenType::Ampersand, "&", startLoc);
+            case '|': return Token(TokenType::Pipe, "|", startLoc);
+            case '^': return Token(TokenType::Caret, "^", startLoc);
+            case '~': return Token(TokenType::Tilde, "~", startLoc);
+
             // String literal
             case '"':
                 return readString(startLoc);

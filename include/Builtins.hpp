@@ -2629,11 +2629,20 @@ private:
             return static_cast<int64_t>(content->length());
         };
 
-        // io.readline(handle) -> str
-        // Read a single line from file
+        // io.readline() -> str (read a line from stdin)
+        // io.readline(handle) -> str (read a line from file handle)
         ioModule["readline"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
-            if (args.size() != 1) {
-                throw ArgumentError::wrongCount("io.readline", 1, args.size(), loc);
+            if (args.size() > 1) {
+                throw ArgumentError("io.readline", "expected 0 or 1 arguments", loc);
+            }
+
+            if (args.empty()) {
+                // Read from stdin
+                std::string line;
+                if (std::getline(std::cin, line)) {
+                    return line;
+                }
+                return std::string("");
             }
 
             int64_t handle = toInt(args[0]);
@@ -2754,6 +2763,295 @@ private:
 
             int result = std::remove(filename->c_str());
             return result == 0 ? int64_t(1) : int64_t(0);
+        };
+
+        // io.lines(path) -> arr
+        // Read all lines from a file as an arr of strings
+        ioModule["lines"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("io.lines", 1, args.size(), loc);
+            }
+            auto* filename = std::get_if<std::string>(&args[0]);
+            if (!filename) {
+                throw ArgumentError("io.lines", "path must be string", loc);
+            }
+            std::ifstream file(*filename);
+            if (!file.is_open()) {
+                throw RuntimeError("io.lines: cannot open file '" + *filename + "'", loc);
+            }
+            auto arr = std::make_shared<RhoArray>();
+            std::string line;
+            while (std::getline(file, line)) {
+                arr->push(line);
+            }
+            return arr;
+        };
+
+        // io.read_csv(path) -> arr of records
+        // Read CSV file; first line is treated as header, returns arr of records
+        ioModule["read_csv"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("io.read_csv", 1, args.size(), loc);
+            }
+            auto* filename = std::get_if<std::string>(&args[0]);
+            if (!filename) {
+                throw ArgumentError("io.read_csv", "path must be string", loc);
+            }
+            std::ifstream file(*filename);
+            if (!file.is_open()) {
+                throw RuntimeError("io.read_csv: cannot open file '" + *filename + "'", loc);
+            }
+
+            // Parse header line
+            std::string headerLine;
+            if (!std::getline(file, headerLine)) {
+                return std::make_shared<RhoArray>(); // empty file
+            }
+
+            std::vector<std::string> headers;
+            {
+                std::stringstream ss(headerLine);
+                std::string col;
+                while (std::getline(ss, col, ',')) {
+                    while (!col.empty() && (col.front() == ' ' || col.front() == '"')) col.erase(col.begin());
+                    while (!col.empty() && (col.back() == ' ' || col.back() == '"')) col.pop_back();
+                    headers.push_back(col);
+                }
+            }
+
+            auto result = std::make_shared<RhoArray>();
+            std::string rowLine;
+            while (std::getline(file, rowLine)) {
+                if (rowLine.empty()) continue;
+                std::vector<std::string> cells;
+                {
+                    std::stringstream ss(rowLine);
+                    std::string cell;
+                    while (std::getline(ss, cell, ',')) {
+                        while (!cell.empty() && (cell.front() == ' ' || cell.front() == '"')) cell.erase(cell.begin());
+                        while (!cell.empty() && (cell.back() == ' ' || cell.back() == '"')) cell.pop_back();
+                        cells.push_back(cell);
+                    }
+                }
+                auto rec = std::make_shared<RhoRecord>();
+                for (size_t i = 0; i < headers.size(); ++i) {
+                    std::string cellVal = (i < cells.size()) ? cells[i] : "";
+                    RhoValue val;
+                    try {
+                        size_t pos;
+                        int64_t ival = std::stoll(cellVal, &pos);
+                        if (pos == cellVal.size()) { val = ival; }
+                        else {
+                            double dval = std::stod(cellVal, &pos);
+                            if (pos == cellVal.size()) { val = dval; }
+                            else { val = cellVal; }
+                        }
+                    } catch (...) {
+                        val = cellVal;
+                    }
+                    rec->setField(headers[i], val);
+                }
+                result->push(rec);
+            }
+            return result;
+        };
+
+        // io.stdin() -> str
+        // Read all of standard input as a string
+        ioModule["stdin"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (!args.empty()) {
+                throw ArgumentError::wrongCount("io.stdin", 0, args.size(), loc);
+            }
+            std::string content((std::istreambuf_iterator<char>(std::cin)),
+                                 std::istreambuf_iterator<char>());
+            return content;
+        };
+
+        // ====================================================================
+        // DateTime Module Functions
+        // ====================================================================
+
+        auto& dtModule = modules_["datetime"];
+
+        // datetime.now() -> record {year, month, day, hour, minute, second, millisecond}
+        dtModule["now"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (!args.empty()) throw ArgumentError::wrongCount("datetime.now", 0, args.size(), loc);
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+            std::tm* tm = std::localtime(&time_t_now);
+            auto rec = std::make_shared<RhoRecord>();
+            rec->setField("year",        static_cast<int64_t>(tm->tm_year + 1900));
+            rec->setField("month",       static_cast<int64_t>(tm->tm_mon + 1));
+            rec->setField("day",         static_cast<int64_t>(tm->tm_mday));
+            rec->setField("hour",        static_cast<int64_t>(tm->tm_hour));
+            rec->setField("minute",      static_cast<int64_t>(tm->tm_min));
+            rec->setField("second",      static_cast<int64_t>(tm->tm_sec));
+            rec->setField("millisecond", static_cast<int64_t>(ms.count()));
+            return rec;
+        };
+
+        // datetime.today() -> record {year, month, day}
+        dtModule["today"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (!args.empty()) throw ArgumentError::wrongCount("datetime.today", 0, args.size(), loc);
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            std::tm* tm = std::localtime(&time_t_now);
+            auto rec = std::make_shared<RhoRecord>();
+            rec->setField("year",  static_cast<int64_t>(tm->tm_year + 1900));
+            rec->setField("month", static_cast<int64_t>(tm->tm_mon + 1));
+            rec->setField("day",   static_cast<int64_t>(tm->tm_mday));
+            return rec;
+        };
+
+        // datetime.current_time() -> record {hour, minute, second, millisecond}
+        dtModule["current_time"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (!args.empty()) throw ArgumentError::wrongCount("datetime.current_time", 0, args.size(), loc);
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+            std::tm* tm = std::localtime(&time_t_now);
+            auto rec = std::make_shared<RhoRecord>();
+            rec->setField("hour",        static_cast<int64_t>(tm->tm_hour));
+            rec->setField("minute",      static_cast<int64_t>(tm->tm_min));
+            rec->setField("second",      static_cast<int64_t>(tm->tm_sec));
+            rec->setField("millisecond", static_cast<int64_t>(ms.count()));
+            return rec;
+        };
+
+        // datetime.make(year, month, day, hour, minute, second) -> record
+        dtModule["make"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 6) throw ArgumentError::wrongCount("datetime.make", 6, args.size(), loc);
+            auto rec = std::make_shared<RhoRecord>();
+            rec->setField("year",        static_cast<int64_t>(toInt(args[0])));
+            rec->setField("month",       static_cast<int64_t>(toInt(args[1])));
+            rec->setField("day",         static_cast<int64_t>(toInt(args[2])));
+            rec->setField("hour",        static_cast<int64_t>(toInt(args[3])));
+            rec->setField("minute",      static_cast<int64_t>(toInt(args[4])));
+            rec->setField("second",      static_cast<int64_t>(toInt(args[5])));
+            rec->setField("millisecond", static_cast<int64_t>(0));
+            return rec;
+        };
+
+        // datetime.make_date(year, month, day) -> record
+        dtModule["make_date"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 3) throw ArgumentError::wrongCount("datetime.make_date", 3, args.size(), loc);
+            auto rec = std::make_shared<RhoRecord>();
+            rec->setField("year",  static_cast<int64_t>(toInt(args[0])));
+            rec->setField("month", static_cast<int64_t>(toInt(args[1])));
+            rec->setField("day",   static_cast<int64_t>(toInt(args[2])));
+            return rec;
+        };
+
+        // datetime.make_time(hour, minute, second, millisecond=0) -> record
+        dtModule["make_time"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() < 3 || args.size() > 4) throw ArgumentError("datetime.make_time", "expected 3 or 4 arguments", loc);
+            auto rec = std::make_shared<RhoRecord>();
+            rec->setField("hour",        static_cast<int64_t>(toInt(args[0])));
+            rec->setField("minute",      static_cast<int64_t>(toInt(args[1])));
+            rec->setField("second",      static_cast<int64_t>(toInt(args[2])));
+            rec->setField("millisecond", args.size() == 4 ? static_cast<int64_t>(toInt(args[3])) : int64_t(0));
+            return rec;
+        };
+
+        // datetime.timestamp() -> int (unix timestamp of now)
+        dtModule["timestamp"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (!args.empty()) throw ArgumentError::wrongCount("datetime.timestamp", 0, args.size(), loc);
+            auto now = std::chrono::system_clock::now();
+            return static_cast<int64_t>(std::chrono::system_clock::to_time_t(now));
+        };
+
+        // datetime.from_timestamp(ts) -> record (datetime from unix timestamp)
+        dtModule["from_timestamp"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) throw ArgumentError::wrongCount("datetime.from_timestamp", 1, args.size(), loc);
+            time_t ts = static_cast<time_t>(toInt(args[0]));
+            std::tm* tm = std::localtime(&ts);
+            auto rec = std::make_shared<RhoRecord>();
+            rec->setField("year",        static_cast<int64_t>(tm->tm_year + 1900));
+            rec->setField("month",       static_cast<int64_t>(tm->tm_mon + 1));
+            rec->setField("day",         static_cast<int64_t>(tm->tm_mday));
+            rec->setField("hour",        static_cast<int64_t>(tm->tm_hour));
+            rec->setField("minute",      static_cast<int64_t>(tm->tm_min));
+            rec->setField("second",      static_cast<int64_t>(tm->tm_sec));
+            rec->setField("millisecond", static_cast<int64_t>(0));
+            return rec;
+        };
+
+        // datetime.format(dt_record, fmt) -> str
+        // fmt tokens: {year}, {month}, {day}, {hour}, {minute}, {second}, {millisecond}
+        dtModule["format"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) throw ArgumentError::wrongCount("datetime.format", 2, args.size(), loc);
+            auto* rec = std::get_if<std::shared_ptr<RhoRecord>>(&args[0]);
+            auto* fmt = std::get_if<std::string>(&args[1]);
+            if (!rec) throw ArgumentError("datetime.format", "first argument must be a datetime record", loc);
+            if (!fmt) throw ArgumentError("datetime.format", "second argument must be a format string", loc);
+
+            std::string result = *fmt;
+            auto replaceToken = [&](const std::string& token, const std::string& field, int width) {
+                try {
+                    int64_t val = toInt((*rec)->getField(field));
+                    std::ostringstream oss;
+                    oss << std::setfill('0') << std::setw(width) << val;
+                    size_t pos;
+                    while ((pos = result.find(token)) != std::string::npos) {
+                        result.replace(pos, token.size(), oss.str());
+                    }
+                } catch (...) {}
+            };
+            replaceToken("{year}",        "year",        4);
+            replaceToken("{month}",       "month",       2);
+            replaceToken("{day}",         "day",         2);
+            replaceToken("{hour}",        "hour",        2);
+            replaceToken("{minute}",      "minute",      2);
+            replaceToken("{second}",      "second",      2);
+            replaceToken("{millisecond}", "millisecond", 3);
+            return result;
+        };
+
+        // datetime.diff_seconds(dt1, dt2) -> float64 (dt2 - dt1 in seconds)
+        dtModule["diff_seconds"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) throw ArgumentError::wrongCount("datetime.diff_seconds", 2, args.size(), loc);
+            auto* r1 = std::get_if<std::shared_ptr<RhoRecord>>(&args[0]);
+            auto* r2 = std::get_if<std::shared_ptr<RhoRecord>>(&args[1]);
+            if (!r1 || !r2) throw ArgumentError("datetime.diff_seconds", "both arguments must be datetime records", loc);
+            auto toTm = [](const std::shared_ptr<RhoRecord>& r) -> std::tm {
+                std::tm t = {};
+                t.tm_year  = static_cast<int>(toInt(r->getField("year"))) - 1900;
+                t.tm_mon   = static_cast<int>(toInt(r->getField("month"))) - 1;
+                t.tm_mday  = static_cast<int>(toInt(r->getField("day")));
+                try { t.tm_hour = static_cast<int>(toInt(r->getField("hour"))); } catch (...) {}
+                try { t.tm_min  = static_cast<int>(toInt(r->getField("minute"))); } catch (...) {}
+                try { t.tm_sec  = static_cast<int>(toInt(r->getField("second"))); } catch (...) {}
+                t.tm_isdst = -1;
+                return t;
+            };
+            std::tm t1 = toTm(*r1);
+            std::tm t2 = toTm(*r2);
+            double diff = std::difftime(std::mktime(&t2), std::mktime(&t1));
+            return diff;
+        };
+
+        // datetime.diff_days(dt1, dt2) -> float64 (dt2 - dt1 in days)
+        dtModule["diff_days"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) throw ArgumentError::wrongCount("datetime.diff_days", 2, args.size(), loc);
+            auto* r1 = std::get_if<std::shared_ptr<RhoRecord>>(&args[0]);
+            auto* r2 = std::get_if<std::shared_ptr<RhoRecord>>(&args[1]);
+            if (!r1 || !r2) throw ArgumentError("datetime.diff_days", "both arguments must be datetime records", loc);
+            auto toTm = [](const std::shared_ptr<RhoRecord>& r) -> std::tm {
+                std::tm t = {};
+                t.tm_year  = static_cast<int>(toInt(r->getField("year"))) - 1900;
+                t.tm_mon   = static_cast<int>(toInt(r->getField("month"))) - 1;
+                t.tm_mday  = static_cast<int>(toInt(r->getField("day")));
+                try { t.tm_hour = static_cast<int>(toInt(r->getField("hour"))); } catch (...) {}
+                try { t.tm_min  = static_cast<int>(toInt(r->getField("minute"))); } catch (...) {}
+                try { t.tm_sec  = static_cast<int>(toInt(r->getField("second"))); } catch (...) {}
+                t.tm_isdst = -1;
+                return t;
+            };
+            std::tm t1 = toTm(*r1);
+            std::tm t2 = toTm(*r2);
+            double diff_sec = std::difftime(std::mktime(&t2), std::mktime(&t1));
+            return diff_sec / 86400.0;
         };
 
         // Expose math module functions as globals so they can be called without 'math.' prefix

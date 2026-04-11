@@ -26,6 +26,7 @@ Estas directivas aplican a toda implementación propuesta por Claude y sus subag
 ## 4) Documentación y ejemplos
 
 - Todo cambio relevante debe reflejarse en documentación (`docs/` o `documentation/`).
+- NO crear comentarios al estilo de CLAUDE, debe ser lo mas humano posible.
 - Incluir ejemplos mínimos reproducibles cuando se agreguen funciones o sintaxis.
 - Evitar divergencias entre README y documentación técnica.
 
