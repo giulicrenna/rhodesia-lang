@@ -1,14 +1,14 @@
-// ============================================================================
-// print_examples.rho - Ejemplos de uso de print y println
-// Demuestra el uso de print/println con cantidad variable de argumentos
-// ============================================================================
+/*
+print_examples.rho - Ejemplos de uso de print y println
+Demuestra el uso de print/println con cantidad variable de argumentos
+*/
 
 println("=== Ejemplos de print y println ===")
 println("")
 
-// ============================================================================
-// 1. PRINT Y PRINTLN BÁSICOS
-// ============================================================================
+/*
+ 1. PRINT Y PRINTLN BÁSICOS
+*/
 println("1. Print y println básicos:")
 println("----------------------------")
 
@@ -27,9 +27,9 @@ println("Valores:", 1, 2, 3, 4, 5)
 
 println("")
 
-// ============================================================================
-// 2. COMBINACIÓN DE TIPOS
-// ============================================================================
+/*
+ 2. COMBINACIÓN DE TIPOS
+*/
 println("2. Combinación de tipos:")
 println("------------------------")
 
@@ -44,9 +44,9 @@ println("Estado activo:", activo)
 
 println("")
 
-// ============================================================================
-// 3. VECTORES Y MATRICES
-// ============================================================================
+/*
+ 3. VECTORES Y MATRICES
+*/
 println("3. Vectores y matrices:")
 println("-----------------------")
 
@@ -64,9 +64,9 @@ println("Vector:", v, "| Suma:", math.sum(v), "| Media:", math.mean(v))
 
 println("")
 
-// ============================================================================
-// 4. OPERACIONES MATEMÁTICAS
-// ============================================================================
+/*
+ 4. OPERACIONES MATEMÁTICAS
+*/
 println("4. Operaciones matemáticas:")
 println("---------------------------")
 
@@ -82,9 +82,9 @@ println("2 * a =", 2.0 * a)
 
 println("")
 
-// ============================================================================
-// 5. RESULTADOS DE FUNCIONES
-// ============================================================================
+/*
+ 5. RESULTADOS DE FUNCIONES
+*/
 println("5. Resultados de funciones:")
 println("---------------------------")
 
@@ -103,9 +103,9 @@ println("Resultado:", 2 + 3, "* 4 =", (2 + 3) * 4)
 
 println("")
 
-// ============================================================================
-// 6. FORMATO DE TABLAS
-// ============================================================================
+/*
+ 6. FORMATO DE TABLAS
+*/
 println("6. Formato de tablas:")
 println("---------------------")
 
@@ -117,9 +117,9 @@ for i in range(1, 6) {
 
 println("")
 
-// ============================================================================
-// 7. DEBUGGING Y TRAZAS
-// ============================================================================
+/*
+ 7. DEBUGGING Y TRAZAS
+*/
 println("7. Debugging y trazas:")
 println("----------------------")
 
@@ -137,9 +137,9 @@ println("Promedio final:", promedio)
 
 println("")
 
-// ============================================================================
-// 8. PRINT SIN NEWLINE (para progreso)
-// ============================================================================
+/*
+ 8. PRINT SIN NEWLINE (para progreso)
+*/
 println("8. Print sin newline (progreso):")
 println("---------------------------------")
 
@@ -151,9 +151,9 @@ println(" ¡Hecho!")
 
 println("")
 
-// ============================================================================
-// 9. STRINGS CON ESPACIOS
-// ============================================================================
+/*
+ 9. STRINGS CON ESPACIOS
+*/
 println("9. Strings y espacios:")
 println("----------------------")
 
@@ -163,11 +163,15 @@ println("Pero", "también", "puedes", "concatenar:", "valor=", 42)
 
 println("")
 
-// ============================================================================
-// 10. COMPARACIONES Y RESULTADOS BOOLEANOS
-// ============================================================================
+/*
+ 10. COMPARACIONES Y RESULTADOS BOOLEANOS
+*/
 println("10. Comparaciones:")
 println("------------------")
+
+/*
+HOla
+*/
 
 int: x = 10
 int: y = 20
@@ -180,9 +184,9 @@ println("x != y:", x != y)
 
 println("")
 
-// ============================================================================
-// 11. OPERADOR TERNARIO CON PRINT
-// ============================================================================
+/*
+ 11. OPERADOR TERNARIO CON PRINT
+*/
 println("11. Operador ternario:")
 println("----------------------")
 
@@ -193,9 +197,9 @@ for i in range(1, 11) {
 
 println("")
 
-// ============================================================================
-// 12. EJEMPLO REAL: REGRESIÓN LINEAL
-// ============================================================================
+/*
+ 12. EJEMPLO REAL: REGRESIÓN LINEAL
+*/
 println("12. Ejemplo real - Regresión lineal:")
 println("-------------------------------------")
 
@@ -220,9 +224,9 @@ println("Predicciones:", y_pred)
 
 println("")
 
-// ============================================================================
-// 13. FORMATO CON MÚLTIPLES LÍNEAS
-// ============================================================================
+/*
+ 13. FORMATO CON MÚLTIPLES LÍNEAS
+*/
 println("13. Formato multilínea:")
 println("-----------------------")
 

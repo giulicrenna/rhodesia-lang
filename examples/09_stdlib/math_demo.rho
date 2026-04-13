@@ -8,9 +8,9 @@ println("  Math Module Demonstration")
 println("========================================")
 println("")
 
-// ============================================================================
-// 1. Creation Functions
-// ============================================================================
+/*
+ 1. Creation Functions
+*/
 println("1. Creation Functions")
 println("---------------------")
 
@@ -27,9 +27,9 @@ println("eye(3):")
 println(m_identity)
 println("")
 
-// ============================================================================
-// 2. Linear Algebra Functions
-// ============================================================================
+/*
+ 2. Linear Algebra Functions
+*/
 println("2. Linear Algebra Functions")
 println("---------------------------")
 
@@ -49,9 +49,9 @@ println("Inverse of A:")
 println(A_inv)
 println("")
 
-// ============================================================================
-// 3. Vector Operations
-// ============================================================================
+/*
+ 3. Vector Operations
+*/
 println("3. Vector Operations")
 println("--------------------")
 
@@ -71,9 +71,9 @@ println("sum(v1): ", sum_v1)
 println("mean(v1): ", mean_v1)
 println("")
 
-// ============================================================================
-// 4. Element-wise Math Functions
-// ============================================================================
+/*
+ 4. Element-wise Math Functions
+*/
 println("4. Element-wise Math Functions")
 println("-------------------------------")
 
@@ -86,9 +86,9 @@ println("sqrt(values): ", sqrt_values)
 println("abs([-1,-2,3,-4]): ", abs_values)
 println("")
 
-// ============================================================================
-// 5. Dimension Information
-// ============================================================================
+/*
+ 5. Dimension Information
+*/
 println("5. Dimension Information")
 println("------------------------")
 

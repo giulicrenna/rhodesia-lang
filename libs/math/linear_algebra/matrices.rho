@@ -1,0 +1,446 @@
+/**
+ * @file matrices.rho
+ * @brief Advanced matrix operations beyond built-in functions
+ */
+
+/**
+ * @brief Matrix trace
+ * @details Calculates the trace of a matrix (sum of diagonal elements)
+ * @param m The input matrix
+ * @return The trace of the matrix (sum of diagonal elements)
+ */
+fun mat_trace(mat: m) -> float64 {
+    int: n = min(rows(m), cols(m))
+    float64: trace = 0.0
+
+    for i in range(n) {
+        trace = trace + m[i, i]
+    }
+
+    return trace
+}
+/**
+ * @brief Matrix determinant (2x2 case)
+ * @details Calculates the determinant of a 2x2 matrix
+ * @details For matrix [[a, b], [c, d]], determinant = ad - bc
+ * @param m The 2x2 input matrix
+ * @return The determinant of the 2x2 matrix
+ */
+fun mat_det_2x2(mat: m) -> float64 {
+    return m[0, 0] * m[1, 1] - m[0, 1] * m[1, 0]
+}
+/**
+ * @brief Matrix determinant (3x3 case)
+ * @details Calculates the determinant of a 3x3 matrix using the rule of Sarrus
+ * @details For matrix [[a, b, c], [d, e, f], [g, h, i]], determinant = a(ei - fh) - b(di - fg) + c(dh - eg)
+ * @param m The 3x3 input matrix
+ * @return The determinant of the 3x3 matrix
+ */
+fun mat_det_3x3(mat: m) -> float64 {
+    float64: a = m[0, 0] * (m[1, 1] * m[2, 2] - m[1, 2] * m[2, 1])
+    float64: b = m[0, 1] * (m[1, 0] * m[2, 2] - m[1, 2] * m[2, 0])
+    float64: c = m[0, 2] * (m[1, 0] * m[2, 1] - m[1, 1] * m[2, 0])
+    return a - b + c
+}
+/**
+ * @brief Matrix transpose
+ * @details Transposes a matrix (swaps rows and columns)
+ * @param m The input matrix
+ * @return The transposed matrix
+ */
+fun mat_transpose(mat: m) -> mat {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    mat: result = zeros(rows_m, cols_m)
+
+    for i in range(rows_m) {
+        for j in range(cols_m) {
+            result[j, i] = m[i, j]
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Matrix element-wise multiplication (Hadamard product)
+ * @details Performs element-wise multiplication of two matrices of the same dimensions
+ * @details Each element (i,j) in the result is the product of elements (i,j) from both matrices
+ * @param a The first input matrix
+ * @param b The second input matrix
+ * @return The Hadamard product of the two matrices
+ */
+fun mat_hadamard(mat: a, mat: b) -> mat {
+    int: rows_a = rows(a)
+    int: cols_a = cols(a)
+    mat: result = zeros(rows_a, cols_a)
+
+    for i in range(rows_a) {
+        for j in range(cols_a) {
+            result[i, j] = a[i, j] * b[i, j]
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Matrix element-wise division
+ * @details Performs element-wise division of two matrices of the same dimensions
+ * @details Each element (i,j) in the result is the division of elements (i,j) from both matrices
+ * @details Uses safe_divide to handle division by zero cases
+ * @param a The dividend matrix
+ * @param b The divisor matrix
+ * @return The element-wise division result
+ */
+fun mat_divide(mat: a, mat: b) -> mat {
+    int: rows_a = rows(a)
+    int: cols_a = cols(a)
+    mat: result = zeros(rows_a, cols_a)
+
+    for i in range(rows_a) {
+        for j in range(cols_a) {
+            result[i, j] = safe_divide(a[i, j], b[i, j])
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Matrix Frobenius norm
+ * @details Calculates the Frobenius norm of a matrix
+ * @details The Frobenius norm is the square root of the sum of squares of all elements
+ * @details Equivalent to treating the matrix as a vector and calculating its Euclidean norm
+ * @param m The input matrix
+ * @return The Frobenius norm of the matrix
+ */
+fun mat_frobenius_norm(mat: m) -> float64 {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    float64: sum_squares = 0.0
+
+    for i in range(rows_m) {
+        for j in range(cols_m) {
+            sum_squares = sum_squares + m[i, j] * m[i, j]
+        }
+    }
+
+    return sqrt(sum_squares)
+}
+/**
+ * @brief Matrix maximum norm
+ * @details Calculates the maximum norm (infinity norm) of a matrix
+ * @details The maximum norm is the maximum absolute value of all elements in the matrix
+ * @param m The input matrix
+ * @return The maximum absolute value in the matrix
+ */
+fun mat_max_norm(mat: m) -> float64 {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    float64: max_val = 0.0
+
+    for i in range(rows_m) {
+        for j in range(cols_m) {
+            float64: abs_val = abs(m[i, j])
+            if abs_val > max_val {
+                max_val = abs_val
+            }
+        }
+    }
+
+    return max_val
+}
+/**
+ * @brief Check if matrix is square
+ * @details Determines if a matrix has the same number of rows and columns
+ * @param m The input matrix
+ * @return true if the matrix is square (rows == cols), false otherwise
+ */
+fun mat_is_square(mat: m) -> bool {
+    return rows(m) == cols(m)
+}
+/**
+ * @brief Check if matrix is symmetric (within epsilon)
+ * @details Determines if a matrix is symmetric within a specified tolerance
+ * @details A matrix is symmetric if m[i,j] == m[j,i] for all i,j
+ * @param m The input matrix
+ * @param epsilon The tolerance for floating point comparison
+ * @return true if the matrix is symmetric within the given epsilon, false otherwise
+ */
+fun mat_is_symmetric(mat: m, float64: epsilon) -> bool {
+    if not mat_is_square(m) {
+        return false
+    }
+
+    int: n = rows(m)
+
+    for i in range(n) {
+        for j in range(i + 1, n) {
+            float64: diff = abs(m[i, j] - m[j, i])
+            if diff > epsilon {
+                return false
+            }
+        }
+    }
+
+    return true
+}
+/**
+ * @brief Check if matrix is diagonal (within epsilon)
+ * @details Determines if a matrix is diagonal within a specified tolerance
+ * @details A matrix is diagonal if all off-diagonal elements are zero (within epsilon)
+ * @param m The input matrix
+ * @param epsilon The tolerance for floating point comparison
+ * @return true if the matrix is diagonal within the given epsilon, false otherwise
+ */
+fun mat_is_diagonal(mat: m, float64: epsilon) -> bool {
+    if not mat_is_square(m) {
+        return false
+    }
+
+    int: n = rows(m)
+
+    for i in range(n) {
+        for j in range(n) {
+            if i != j {
+                if abs(m[i, j]) > epsilon {
+                    return false
+                }
+            }
+        }
+    }
+
+    return true
+}
+/**
+ * @brief Check if matrix is identity (within epsilon)
+ * @details Determines if a matrix is an identity matrix within a specified tolerance
+ * @details An identity matrix has 1s on the diagonal and 0s elsewhere
+ * @param m The input matrix
+ * @param epsilon The tolerance for floating point comparison
+ * @return true if the matrix is an identity matrix within the given epsilon, false otherwise
+ */
+fun mat_is_identity(mat: m, float64: epsilon) -> bool {
+    if not mat_is_square(m) {
+        return false
+    }
+
+    int: n = rows(m)
+
+    for i in range(n) {
+        for j in range(n) {
+            if i == j {
+                if abs(m[i, j] - 1.0) > epsilon {
+                    return false
+                }
+            } else {
+                if abs(m[i, j]) > epsilon {
+                    return false
+                }
+            }
+        }
+    }
+
+    return true
+}
+/**
+ * @brief Matrix outer product of two vectors
+ * @details Computes the outer product of two vectors
+ * @details The outer product of vectors u (m×1) and v (n×1) results in a matrix (m×n)
+ * @details where each element (i,j) = u[i] * v[j]
+ * @param u The first input vector
+ * @param v The second input vector
+ * @return The outer product matrix
+ */
+fun mat_outer_product(vec: u, vec: v) -> mat {
+    int: m = size(u)
+    int: n = size(v)
+    mat: result = zeros(m, n)
+
+    for i in range(m) {
+        for j in range(n) {
+            result[i, j] = u[i] * v[j]
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Matrix element-wise absolute value
+ * @details Computes the absolute value of each element in a matrix
+ * @param m The input matrix
+ * @return A matrix containing the absolute values of each element
+ */
+fun mat_abs(mat: m) -> mat {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    mat: result = zeros(rows_m, cols_m)
+
+    for i in range(rows_m) {
+        for j in range(cols_m) {
+            result[i, j] = abs(m[i, j])
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Matrix element-wise clamp
+ * @details Restricts each element in a matrix to be within a specified range
+ * @details Each element is clamped to [min_val, max_val]
+ * @param m The input matrix
+ * @param min_val The minimum allowed value
+ * @param max_val The maximum allowed value
+ * @return A matrix with all elements clamped to the specified range
+ */
+fun mat_clamp(mat: m, float64: min_val, float64: max_val) -> mat {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    mat: result = zeros(rows_m, cols_m)
+
+    for i in range(rows_m) {
+        for j in range(cols_m) {
+            result[i, j] = clamp(m[i, j], min_val, max_val)
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Matrix row means
+ * @details Calculates the mean (average) of each row in a matrix
+ * @param m The input matrix
+ * @return A vector containing the mean of each row
+ */
+fun mat_row_means(mat: m) -> vec {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    vec: means = zeros(rows_m)
+
+    for i in range(rows_m) {
+        float64: row_sum = 0.0
+        for j in range(cols_m) {
+            row_sum = row_sum + m[i, j]
+        }
+        means[i] = row_sum / cols_m
+    }
+
+    return means
+}
+/**
+ * @brief Matrix column means
+ * @details Calculates the mean (average) of each column in a matrix
+ * @param m The input matrix
+ * @return A vector containing the mean of each column
+ */
+fun mat_col_means(mat: m) -> vec {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    vec: means = zeros(cols_m)
+
+    for j in range(cols_m) {
+        float64: col_sum = 0.0
+        for i in range(rows_m) {
+            col_sum = col_sum + m[i, j]
+        }
+        means[j] = col_sum / rows_m
+    }
+
+    return means
+}
+/**
+ * @brief Matrix row sums
+ * @details Calculates the sum of each row in a matrix
+ * @param m The input matrix
+ * @return A vector containing the sum of each row
+ */
+fun mat_row_sums(mat: m) -> vec {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    vec: sums = zeros(rows_m)
+
+    for i in range(rows_m) {
+        float64: row_sum = 0.0
+        for j in range(cols_m) {
+            row_sum = row_sum + m[i, j]
+        }
+        sums[i] = row_sum
+    }
+
+    return sums
+}
+/**
+ * @brief Matrix column sums
+ * @details Calculates the sum of each column in a matrix
+ * @param m The input matrix
+ * @return A vector containing the sum of each column
+ */
+fun mat_col_sums(mat: m) -> vec {
+    int: rows_m = rows(m)
+    int: cols_m = cols(m)
+    vec: sums = zeros(cols_m)
+
+    for j in range(cols_m) {
+        float64: col_sum = 0.0
+        for i in range(rows_m) {
+            col_sum = col_sum + m[i, j]
+        }
+        sums[j] = col_sum
+    }
+
+    return sums
+}
+/**
+ * @brief Matrix diagonal extraction
+ * @details Extracts the diagonal elements from a matrix
+ * @details Returns a vector containing elements m[0,0], m[1,1], ..., m[n-1,n-1]
+ * @param m The input matrix
+ * @return A vector containing the diagonal elements
+ */
+fun mat_diagonal(mat: m) -> vec {
+    int: n = min(rows(m), cols(m))
+    vec: diag = zeros(n)
+
+    for i in range(n) {
+        diag[i] = m[i, i]
+    }
+
+    return diag
+}
+/**
+ * @brief Matrix from diagonal vector
+ * @details Creates a diagonal matrix from a vector
+ * @details The resulting matrix has the vector elements on the diagonal and zeros elsewhere
+ * @param diag The input vector
+ * @return A diagonal matrix with the vector elements on the diagonal
+ */
+fun mat_from_diagonal(vec: diag) -> mat {
+    int: n = size(diag)
+    mat: result = zeros(n, n)
+
+    for i in range(n) {
+        result[i, i] = diag[i]
+    }
+
+    return result
+}
+/**
+ * @brief Matrix block extraction
+ * @details Extracts a submatrix (block) from a larger matrix
+ * @details The block starts at (start_row, start_col) and has dimensions (block_rows, block_cols)
+ * @param m The input matrix
+ * @param start_row The starting row index for the block
+ * @param start_col The starting column index for the block
+ * @param block_rows The number of rows in the block
+ * @param block_cols The number of columns in the block
+ * @return The extracted submatrix (block)
+ */
+fun mat_block(mat: m, int: start_row, int: start_col, int: block_rows, int: block_cols) -> mat {
+    mat: block = zeros(block_rows, block_cols)
+
+    for i in range(block_rows) {
+        for j in range(block_cols) {
+            block[i, j] = m[start_row + i, start_col + j]
+        }
+    }
+
+    return block
+}

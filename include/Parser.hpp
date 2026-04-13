@@ -746,33 +746,47 @@ private:
             }
             else if (match(TokenType::Dot)) {
                 // Member access: expr.member or module.function(args)
-                // For now, we only support simple identifiers before the dot
                 SourceLocation loc = previous().location;
-
-                // Get the object/module name from expr
-                auto* ident = dynamic_cast<IdentifierNode*>(expr.get());
-                if (!ident) {
-                    throw ParseError("Member access requires an identifier before '.'", loc);
-                }
 
                 // Parse member name
                 Token memberToken = consume(TokenType::Identifier, "member name after '.'");
                 std::string member = memberToken.value;
 
-                // Check if it's a function call (has parentheses)
-                if (match(TokenType::LParen)) {
-                    std::vector<ExprPtr> args;
-                    if (!check(TokenType::RParen)) {
-                        args.push_back(parseExpression());
-                        while (match(TokenType::Comma)) {
+                auto* ident = dynamic_cast<IdentifierNode*>(expr.get());
+                if (ident) {
+                    // Simple identifier.member — MemberAccessNode (modules + records)
+                    if (match(TokenType::LParen)) {
+                        std::vector<ExprPtr> args;
+                        if (!check(TokenType::RParen)) {
                             args.push_back(parseExpression());
+                            while (match(TokenType::Comma)) {
+                                args.push_back(parseExpression());
+                            }
                         }
+                        consume(TokenType::RParen, "')' after arguments");
+                        expr = std::make_unique<MemberAccessNode>(
+                            ident->name, member, std::move(args), loc, /*isCalled=*/true);
+                    } else {
+                        expr = std::make_unique<MemberAccessNode>(
+                            ident->name, member, std::vector<ExprPtr>{}, loc, /*isCalled=*/false);
                     }
-                    consume(TokenType::RParen, "')' after arguments");
-                    expr = std::make_unique<MemberAccessNode>(ident->name, member, std::move(args), loc);
                 } else {
-                    // Member access without call (e.g., math.PI for constants)
-                    expr = std::make_unique<MemberAccessNode>(ident->name, member, std::vector<ExprPtr>{}, loc);
+                    // Chained access: expr.field or expr.field(args)  (e.g. a.b.c, a.b.c())
+                    if (match(TokenType::LParen)) {
+                        std::vector<ExprPtr> args;
+                        if (!check(TokenType::RParen)) {
+                            args.push_back(parseExpression());
+                            while (match(TokenType::Comma)) {
+                                args.push_back(parseExpression());
+                            }
+                        }
+                        consume(TokenType::RParen, "')' after arguments");
+                        expr = std::make_unique<ChainedMemberAccessNode>(
+                            std::move(expr), member, std::move(args), loc, /*isCalled=*/true);
+                    } else {
+                        expr = std::make_unique<ChainedMemberAccessNode>(
+                            std::move(expr), member, std::vector<ExprPtr>{}, loc, /*isCalled=*/false);
+                    }
                 }
             }
             else if (check(TokenType::Less)) {

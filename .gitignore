@@ -1,3 +1,4 @@
+.claude
 *.pyc
 __pycache__/
 src/tempCodeRunnerFile.py
@@ -16,3 +17,4 @@ Makefile
 
 # VS Code extension dependencies
 extension/node_modules/
+comment.py

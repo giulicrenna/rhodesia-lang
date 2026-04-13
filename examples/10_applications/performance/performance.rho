@@ -8,9 +8,9 @@ println("  Performance Measurement Benchmark")
 println("========================================")
 println("")
 
-// ============================================================================
-// MEASUREMENT FUNCTION
-// ============================================================================
+/*
+ MEASUREMENT FUNCTION
+*/
 
 fun measure_loop(int: n) -> float64 {
     float64: start = get_tick()
@@ -22,9 +22,9 @@ fun measure_loop(int: n) -> float64 {
     return(end - start)
 }
 
-// ============================================================================
-// BENCHMARK EXECUTION
-// ============================================================================
+/*
+ BENCHMARK EXECUTION
+*/
 
 println("Testing get_tick() precision and measure_loop() performance:")
 println("")
@@ -34,7 +34,7 @@ println("      The 'Total time' is for all 15 runs (explains inter-output delays
 println("")
 
 // Test different loop sizes to demonstrate timing precision
-vec: test_sizes = [1000.0, 10000.0, 100000.0, 1000000.0, 10000000.0, 100000000.0]
+vec: test_sizes = [1000.0, 10000.0, 100000.0, 1000000.0]
 float64: suite_start = get_tick()
 
 for size in test_sizes {
@@ -60,9 +60,9 @@ println("Note: get_tick() provides high-precision monotonic timestamps")
 println("suitable for performance measurement in the microsecond range.")
 println("")
 
-// ============================================================================
-// BASIC TIMING TEST
-// ============================================================================
+/*
+ BASIC TIMING TEST
+*/
 
 println("Basic timing test - measuring a simple delay:")
 println("")

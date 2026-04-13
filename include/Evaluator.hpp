@@ -220,22 +220,35 @@ public:
     }
 
     void visit(MemberAccessNode& node) override {
-        // Check if it's a record field access (variable.field)
-        if (node.arguments.empty() && symbols_.exists(node.object)) {
+        // Check if it's a record field access or method call (variable.field / variable.fn())
+        if (symbols_.exists(node.object)) {
             RhoValue obj = symbols_.lookup(node.object, node.location);
             if (std::holds_alternative<std::shared_ptr<RhoRecord>>(obj)) {
                 auto rec = std::get<std::shared_ptr<RhoRecord>>(obj);
+                RhoValue fieldVal;
                 try {
-                    result_ = rec->getField(node.member);
-                    return;
+                    fieldVal = rec->getField(node.member);
                 } catch (const std::runtime_error& e) {
                     throw RuntimeError(e.what(), node.location);
                 }
+                // If called with () and the field is a function, invoke it
+                if (node.isCalled && std::holds_alternative<std::shared_ptr<RhoFunction>>(fieldVal)) {
+                    auto func = std::get<std::shared_ptr<RhoFunction>>(fieldVal);
+                    std::vector<RhoValue> args;
+                    for (auto& arg : node.arguments) {
+                        arg->accept(*this);
+                        args.push_back(result_);
+                    }
+                    result_ = callLambda(func, args, node.location);
+                } else {
+                    result_ = fieldVal;
+                }
+                return;
             }
         }
 
         // Check if it's a module constant (e.g., math.PI without arguments)
-        if (node.arguments.empty() && Builtins::instance().isModuleConstant(node.object, node.member)) {
+        if (!node.isCalled && Builtins::instance().isModuleConstant(node.object, node.member)) {
             result_ = Builtins::instance().getModuleConstant(node.object, node.member, node.location);
             return;
         }
@@ -252,6 +265,35 @@ public:
         }
 
         throw RuntimeError("Unknown module or member: " + node.object + "." + node.member, node.location);
+    }
+
+    void visit(ChainedMemberAccessNode& node) override {
+        node.object->accept(*this);
+        RhoValue obj = result_;
+        if (!std::holds_alternative<std::shared_ptr<RhoRecord>>(obj)) {
+            throw RuntimeError("Chained member access '." + node.field +
+                               "' applied to non-record value (type: " +
+                               typeToString(getValueType(obj)) + ")", node.location);
+        }
+        auto rec = std::get<std::shared_ptr<RhoRecord>>(obj);
+        RhoValue fieldVal;
+        try {
+            fieldVal = rec->getField(node.field);
+        } catch (const std::runtime_error& e) {
+            throw RuntimeError(e.what(), node.location);
+        }
+        // If called with () and the field is a function, invoke it
+        if (node.isCalled && std::holds_alternative<std::shared_ptr<RhoFunction>>(fieldVal)) {
+            auto func = std::get<std::shared_ptr<RhoFunction>>(fieldVal);
+            std::vector<RhoValue> args;
+            for (auto& arg : node.arguments) {
+                arg->accept(*this);
+                args.push_back(result_);
+            }
+            result_ = callLambda(func, args, node.location);
+        } else {
+            result_ = fieldVal;
+        }
     }
 
     void visit(IndexAccessNode& node) override {
@@ -400,7 +442,14 @@ public:
         RhoType initType = getValueType(result_);
 
         // Convert value to declared type if compatible
-        result_ = convertToType(result_, node.type, initType, node.location);
+        try {
+            result_ = convertToType(result_, node.type, initType, node.location);
+        } catch (const TypeError& e) {
+            throw TypeError("In declaration of '" + node.name + "': " +
+                            typeToString(initType) + " cannot be assigned to " +
+                            typeToString(node.type) + getTypeConversionHint(node.type, initType),
+                            node.location);
+        }
 
         symbols_.declare(node.name, node.type, result_, node.location);
     }
@@ -514,6 +563,19 @@ public:
 
     void visit(FunctionDeclNode& node) override {
         symbols_.declareFunction(node.name, &node);
+        // Also expose as a first-class function value so it can be stored in records,
+        // passed as arguments, or referenced by name.
+        std::vector<std::string> paramNames;
+        for (const auto& param : node.params) paramNames.push_back(param.name);
+        std::shared_ptr<void> bodyPtr(node.body.get(), [](void*){});
+        auto funcVal = std::make_shared<RhoFunction>(
+            std::move(paramNames), bodyPtr, /*isExpression=*/false,
+            /*closure=*/std::unordered_map<std::string, RhoValue>{});
+        // Declare as a variable value; skip silently if already declared in this scope
+        // (e.g., re-include or redeclaration) since functions_ already tracks it.
+        if (!symbols_.existsInCurrentScope(node.name)) {
+            symbols_.declare(node.name, RhoType::Function, funcVal, node.location);
+        }
     }
 
     void visit(ForLoopNode& node) override {
@@ -845,6 +907,16 @@ private:
     // Helper Functions
     // ========================================================================
 
+    static std::string getTypeConversionHint(RhoType target, RhoType source) {
+        if (target == RhoType::Int && source == RhoType::Float64) {
+            return " (use int(...) to truncate explicitly)";
+        }
+        if (target == RhoType::Float64 && source == RhoType::Int) {
+            return " (use float64(...) to convert explicitly)";
+        }
+        return "";
+    }
+
     /**
      * @brief Convert value to target type
      */
@@ -905,7 +977,15 @@ private:
 
         // If no conversion found, check type compatibility
         if (sourceType != targetType) {
-            throw TypeError::expectedType("Type conversion", targetType, sourceType);
+            std::string hint;
+            // Suggest explicit cast for common numeric mismatches
+            if (targetType == RhoType::Int && sourceType == RhoType::Float64) {
+                hint = " (use int(...) to truncate explicitly)";
+            } else if (targetType == RhoType::Float64 && sourceType == RhoType::Int) {
+                hint = " (use float64(...) to convert explicitly)";
+            }
+            throw TypeError("Cannot assign " + typeToString(sourceType) +
+                            " to " + typeToString(targetType) + " variable" + hint, loc);
         }
 
         return value;
@@ -1476,6 +1556,21 @@ private:
 
     RhoValue applyComparison(BinaryOp op, const RhoValue& left, const RhoValue& right,
                              SourceLocation loc) {
+        // String comparison: == and != (and lexicographic <, <=, >, >=)
+        if (std::holds_alternative<std::string>(left) && std::holds_alternative<std::string>(right)) {
+            const std::string& l = std::get<std::string>(left);
+            const std::string& r = std::get<std::string>(right);
+            switch (op) {
+                case BinaryOp::Eq: return l == r;
+                case BinaryOp::Ne: return l != r;
+                case BinaryOp::Lt: return l <  r;
+                case BinaryOp::Le: return l <= r;
+                case BinaryOp::Gt: return l >  r;
+                case BinaryOp::Ge: return l >= r;
+                default: return false;
+            }
+        }
+
         if (!isScalar(left) || !isScalar(right)) {
             throw TypeError::incompatibleBinaryOp(binaryOpToString(op),
                 getValueType(left), getValueType(right));

@@ -10,6 +10,7 @@ This page documents the functions available in Rhodesia's standard library modul
 - [Statistical Functions](#statistical-functions)
 - [Utility Functions](#utility-functions)
 - [Input/Output Functions](#inputoutput-functions)
+- [Network Functions](#network-functions-net-module)
 
 ## Mathematical Functions (math module)
 
@@ -281,9 +282,65 @@ println("Inverse of A:")
 println(math.inv(A))
 ```
 
+## Network Functions (`net` module)
+
+TCP socket primitives and an HTTP/1.1 client.  No external dependencies — uses POSIX sockets.
+HTTPS is not supported (no TLS).
+
+For the full reference see [Net Module](net.md).
+
+### Socket API
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `net.socket` | `(host: str, port: int) -> int` | Create a TCP socket handle (not connected yet) |
+| `net.connect` | `(handle: int) -> bool` | Connect the socket to its stored host:port |
+| `net.send` | `(handle: int, data: str) -> int` | Write data; returns bytes sent or -1 |
+| `net.recv` | `(handle: int, size: int) -> str` | Read up to size bytes |
+| `net.recv_all` | `(handle: int) -> str` | Read until the remote side closes |
+| `net.close` | `(handle: int) -> bool` | Close and release the handle |
+| `net.listen` | `(port: int [, backlog: int]) -> int` | Create a server socket |
+| `net.accept` | `(handle: int) -> int` | Block until a client connects; return client handle |
+| `net.peer` | `(handle: int) -> record` | Remote `{host: str, port: int}` |
+
+### HTTP API
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `net.http_get` | `(url: str) -> record` | HTTP GET request |
+| `net.http_post` | `(url: str [, body: str]) -> record` | HTTP POST request |
+| `net.http_request` | `(method, url [, body [, headers]]) -> record` | Generic HTTP request |
+
+Response record fields: `status: int`, `status_text: str`, `body: str`, `headers: map`.
+
+### Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `net.DEFAULT_PORT_HTTP` | `80` | Default HTTP port |
+| `net.DEFAULT_TIMEOUT` | `30` | Suggested timeout in seconds |
+
+### Example
+
+```rhodesia
+// HTTP GET
+record: resp = net.http_get("http://httpbin.org/get")
+println("Status:", resp.status)
+println("Body:", string.slice(resp.body, 0, 200))
+
+// Raw TCP socket
+int: sock = net.socket("example.com", 80)
+bool: ok   = net.connect(sock)
+int: sent  = net.send(sock, "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n")
+str: reply = net.recv_all(sock)
+net.close(sock)
+println(reply)
+```
+
 ## Next Steps
 
+- [Net Module](net.md) - Full TCP socket and HTTP reference
 - [Vector/Matrix Methods](vectors-matrices.md) - Learn about vector/matrix operations
 - [Built-in Functions](builtins.md) - Explore core built-in functions
-- [Examples](examples/basics.md) - See practical usage examples
-- [Language Syntax](language/syntax.md) - Understand Rhodesia syntax
+- [Examples](../examples/basics.md) - See practical usage examples
+- [Language Syntax](../language/syntax.md) - Understand Rhodesia syntax

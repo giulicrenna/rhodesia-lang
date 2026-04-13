@@ -1,0 +1,180 @@
+/**
+ * @file core.rho
+ * @brief Core mathematical functions and constants
+ */
+/**
+ * @brief Mathematical constant π (pi)
+ * @details The ratio of a circle's circumference to its diameter
+ */
+float64: PI = 3.141592653589793
+
+/**
+ * @brief Mathematical constant e (Euler's number)
+ * @details The base of the natural logarithm
+ */
+float64: E = 2.718281828459045
+
+/**
+ * @brief Golden ratio constant φ (phi)
+ * @details The ratio where the sum of quantities to the larger quantity equals the ratio of the larger to the smaller
+ */
+float64: PHI = 1.618033988749895
+
+/**
+ * @brief Square root of 2
+ * @details √2 ≈ 1.414213562373095
+ */
+float64: SQRT_2 = 1.414213562373095
+
+/**
+ * @brief Square root of 3
+ * @details √3 ≈ 1.732050807568877
+ */
+float64: SQRT_3 = 1.732050807568877
+/**
+ * @brief Safe division with error handling
+ * @details Performs division while handling cases where the divisor is very close to zero
+ * @param a The dividend
+ * @param b The divisor
+ * @return The result of a / b, or a large value if b is very close to zero
+ */
+fun safe_divide(float64: a, float64: b) -> float64 {
+    float64: epsilon = 0.000001
+    float64: abs_b = abs(b)
+    if abs_b <= epsilon {
+        println("Warning: Division by very small number")
+        return a / epsilon  // Return large value instead of infinity
+    }
+    return a / b
+}
+/**
+ * @brief Power function with integer exponent
+ * @details Calculates base raised to the power of exponent using iterative multiplication
+ * @param base The base number
+ * @param exponent The integer exponent (can be negative)
+ * @return base^exponent
+ */
+fun power(float64: base, int: exponent) -> float64 {
+    float64: result = 1.0
+    int: abs_exp = abs(exponent)
+
+    for i in range(abs_exp) {
+        result = result * base
+    }
+
+    if exponent < 0 {
+        return 1.0 / result
+    }
+    return result
+}
+/**
+ * @brief Vector absolute value
+ * @details Calculates the absolute value of each element in a vector
+ * @param v The input vector
+ * @return A vector containing the absolute values of each element
+ */
+fun vec_abs(vec: v) -> vec {
+    int: n = size(v)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = abs(v[i])
+    }
+
+    return result
+}
+/**
+ * @brief Clamp value to range
+ * @details Restricts a value to be within a specified minimum and maximum range
+ * @param value The value to clamp
+ * @param min_val The minimum allowed value
+ * @param max_val The maximum allowed value
+ * @return The clamped value (min_val if value < min_val, max_val if value > max_val, otherwise value)
+ */
+fun clamp(float64: value, float64: min_val, float64: max_val) -> float64 {
+    if value < min_val {
+        return min_val
+    }
+    if value > max_val {
+        return max_val
+    }
+    return value
+}
+/**
+ * @brief Linear interpolation (lerp)
+ * @details Interpolates between two values a and b based on parameter t
+ * @param a The start value
+ * @param b The end value
+ * @param t The interpolation factor (0.0 = a, 1.0 = b, values between 0 and 1 give intermediate results)
+ * @return The interpolated value between a and b
+ */
+fun lerp(float64: a, float64: b, float64: t) -> float64 {
+    return a + t * (b - a)
+}
+/**
+ * @brief Map value from one range to another
+ * @details Maps a value from one range [from_min, from_max] to another range [to_min, to_max]
+ * @param value The value to map
+ * @param from_min The minimum of the source range
+ * @param from_max The maximum of the source range
+ * @param to_min The minimum of the target range
+ * @param to_max The maximum of the target range
+ * @return The mapped value in the target range
+ */
+fun map_range(float64: value, float64: from_min, float64: from_max, float64: to_min, float64: to_max) -> float64 {
+    float64: t = (value - from_min) / (from_max - from_min)
+    return lerp(to_min, to_max, t)
+}
+/**
+ * @brief Check if two floating point numbers are approximately equal
+ * @details Compares two floating point numbers within a specified tolerance
+ * @param a The first number to compare
+ * @param b The second number to compare
+ * @param epsilon The tolerance for comparison
+ * @return true if the absolute difference between a and b is less than or equal to epsilon, false otherwise
+ */
+fun approx_equal(float64: a, float64: b, float64: epsilon) -> bool {
+    float64: diff = abs(a - b)
+    return diff <= epsilon
+}
+/**
+ * @brief Sign function
+ * @details Returns the sign of a number: 1.0 for positive, -1.0 for negative, 0.0 for zero
+ * @param x The input number
+ * @return 1.0 if x > 0.0, -1.0 if x < 0.0, 0.0 if x == 0.0
+ */
+fun sign(float64: x) -> float64 {
+    if x > 0.0 {
+        return 1.0
+    }
+    if x < 0.0 {
+        return -1.0
+    }
+    return 0.0
+}
+/**
+ * @brief Step function
+ * @details Returns 1.0 if x is greater than or equal to threshold, otherwise returns 0.0
+ * @param x The input value
+ * @param threshold The threshold value
+ * @return 1.0 if x >= threshold, 0.0 otherwise
+ */
+fun step(float64: x, float64: threshold) -> float64 {
+    if x >= threshold {
+        return 1.0
+    }
+    return 0.0
+}
+/**
+ * @brief Smoothstep function
+ * @details Provides smooth interpolation between 0.0 and 1.0 based on input x
+ * @details Uses Hermite interpolation for smooth transitions
+ * @param x The input value to interpolate
+ * @param edge0 The lower edge of the interpolation range
+ * @param edge1 The upper edge of the interpolation range
+ * @return 0.0 if x <= edge0, 1.0 if x >= edge1, smooth interpolation between 0.0 and 1.0 otherwise
+ */
+fun smoothstep(float64: x, float64: edge0, float64: edge1) -> float64 {
+    float64: t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0)
+    return t * t * (3.0 - 2.0 * t)
+}

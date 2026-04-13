@@ -1,0 +1,405 @@
+/**
+ * @file descriptive.rho
+ * @brief Descriptive statistics functions
+ */
+/**
+ * @brief Mean (average)
+ * @details Calculates the arithmetic mean of a dataset
+ * @details Formula: sum(data) / n where n is the number of elements
+ * @param data The input vector of data values
+ * @return The arithmetic mean of the data
+ */
+fun mean(vec: data) -> float64 {
+    return sum(data) / size(data)
+}
+/**
+ * @brief Variance (population)
+ * @details Calculates the population variance of a dataset
+ * @details Formula: sum((x_i - μ)²) / n where μ is the mean
+ * @details Measures the spread of data around the mean
+ * @param data The input vector of data values
+ * @return The population variance of the data
+ */
+fun variance(vec: data) -> float64 {
+    float64: m = mean(data)
+    vec: centered = data - m
+    vec: squared = centered * squared
+    return sum(squared) / size(data)
+}
+/**
+ * @brief Standard deviation (population)
+ * @details Calculates the population standard deviation of a dataset
+ * @details Formula: sqrt(variance(data))
+ * @details Measures the spread of data in the same units as the data
+ * @param data The input vector of data values
+ * @return The population standard deviation of the data
+ */
+fun std_dev(vec: data) -> float64 {
+    return sqrt(variance(data))
+}
+/**
+ * @brief Sample variance (unbiased estimator)
+ * @details Calculates the sample variance (unbiased estimator)
+ * @details Formula: sum((x_i - x̄)²) / (n - 1) where x̄ is the sample mean
+ * @details Uses n-1 in denominator for unbiased estimation of population variance
+ * @param data The input vector of data values
+ * @return The sample variance of the data
+ */
+fun sample_variance(vec: data) -> float64 {
+    if size(data) <= 1 {
+        return 0.0
+    }
+    float64: m = mean(data)
+    vec: centered = data - m
+    vec: squared = centered * squared
+    return sum(squared) / size(data - 1)
+}
+/**
+ * @brief Sample standard deviation
+ * @details Calculates the sample standard deviation
+ * @details Formula: sqrt(sample_variance(data))
+ * @details Measures the spread of sample data in the same units as the data
+ * @param data The input vector of data values
+ * @return The sample standard deviation of the data
+ */
+fun sample_std_dev(vec: data) -> float64 {
+    return sqrt(sample_variance(data))
+}
+/**
+ * @brief Median
+ * @details Calculates the median (middle value) of a dataset
+ * @details For odd n: middle value; for even n: average of two middle values
+ * @details Robust measure of central tendency (less affected by outliers)
+ * @param data The input vector of data values
+ * @return The median of the data
+ */
+fun median(vec: data) -> float64 {
+    vec: sorted = vec_sort(data)
+    int: n = size(sorted)
+
+    if n % 2 == 1 {
+        return sorted[n / 2]
+    } else {
+        return (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+    }
+}
+/**
+ * @brief Mode (most frequent value)
+ * @details Finds the mode (most frequently occurring value) in a dataset
+ * @details Returns the first value with maximum frequency if multiple modes exist
+ * @details Useful for categorical or discrete data
+ * @param data The input vector of data values
+ * @return The mode of the data
+ */
+fun mode(vec: data) -> float64 {
+    int: n = size(data)
+    float64: current_mode = data[0]
+    int: max_count = 1
+
+    for i in range(n) {
+        int: count = 1
+        for j in range(i + 1, n) {
+            if data[i] == data[j] {
+                count = count + 1
+            }
+        }
+
+        if count > max_count {
+            max_count = count
+            current_mode = data[i]
+        }
+    }
+
+    return current_mode
+}
+/**
+ * @brief Range (max - min)
+ * @details Calculates the range of a dataset
+ * @details Formula: max(data) - min(data)
+ * @details Simple measure of spread (sensitive to outliers)
+ * @param data The input vector of data values
+ * @return The range of the data
+ */
+fun range(vec: data) -> float64 {
+    return max_value(data) - min_value(data)
+}
+/**
+ * @brief Interquartile range (IQR)
+ * @details Calculates the interquartile range (Q3 - Q1)
+ * @details Measures spread of middle 50% of data
+ * @details Robust measure of spread (less affected by outliers)
+ * @param data The input vector of data values
+ * @return The interquartile range of the data
+ */
+fun iqr(vec: data) -> float64 {
+    vec: sorted = vec_sort(data)
+    int: n = size(sorted)
+
+    int: q1_index = n / 4
+    int: q3_index = 3 * n / 4
+
+    float64: q1 = sorted[q1_index]
+    float64: q3 = sorted[q3_index]
+
+    return q3 - q1
+}
+/**
+ * @brief Skewness (measure of asymmetry)
+ * @details Calculates the skewness of a dataset
+ * @details Measures asymmetry of the distribution
+ * @details Positive: right-skewed; Negative: left-skewed; Zero: symmetric
+ * @param data The input vector of data values
+ * @return The skewness of the data
+ */
+fun skewness(vec: data) -> float64 {
+    float64: m = mean(data)
+    float64: std = std_dev(data)
+    int: n = size(data)
+
+    if std == 0.0 {
+        return 0.0
+    }
+
+    float64: sum_cubed = 0.0
+    for i in range(n) {
+        float64: diff = data[i] - m
+        sum_cubed = sum_cubed + diff * diff * diff
+    }
+
+    return (sum_cubed / n) / (std * std * std)
+}
+/**
+ * @brief Kurtosis (measure of "tailedness")
+ * @details Calculates the excess kurtosis of a dataset
+ * @details Measures "tailedness" of the distribution
+ * @details Positive: heavy tails; Negative: light tails; Zero: normal distribution
+ * @param data The input vector of data values
+ * @return The excess kurtosis of the data
+ */
+fun kurtosis(vec: data) -> float64 {
+    float64: m = mean(data)
+    float64: std = std_dev(data)
+    int: n = size(data)
+
+    if std == 0.0 {
+        return 0.0
+    }
+
+    float64: sum_quad = 0.0
+    for i in range(n) {
+        float64: diff = data[i] - m
+        sum_quad = sum_quad + diff * diff * diff * diff
+    }
+
+    return (sum_quad / n) / (std * std * std * std) - 3.0
+}
+/**
+ * @brief Coefficient of variation (relative standard deviation)
+ * @details Calculates the coefficient of variation
+ * @details Formula: std_dev / mean
+ * @details Measures relative variability (useful for comparing different scales)
+ * @param data The input vector of data values
+ * @return The coefficient of variation of the data
+ */
+fun coefficient_of_variation(vec: data) -> float64 {
+    float64: m = mean(data)
+    float64: std = std_dev(data)
+
+    if m == 0.0 {
+        return 0.0
+    }
+
+    return std / m
+}
+/**
+ * @brief Percentile calculation
+ * @details Calculates the p-th percentile of a dataset
+ * @details Uses linear interpolation between nearest ranks
+ * @param data The input vector of data values
+ * @param p The percentile to calculate (0-1, e.g., 0.25 for 25th percentile)
+ * @return The p-th percentile of the data
+ */
+fun percentile(vec: data, float64: p) -> float64 {
+    vec: sorted = vec_sort(data)
+    int: n = size(sorted)
+    float64: index = p * n - 1
+
+    int: lower_index = floor(index)
+    int: upper_index = min(lower_index + 1, n - 1)
+    float64: fraction = index - lower_index
+
+    if lower_index == upper_index {
+        return sorted[lower_index]
+    }
+
+    return sorted[lower_index] + fraction * (sorted[upper_index] - sorted[lower_index])
+}
+/**
+ * @brief Quartiles
+ * @details Calculates the first, second, and third quartiles
+ * @details Returns Q1 (25th percentile), Q2 (median), Q3 (75th percentile)
+ * @param data The input vector of data values
+ * @return A vector containing the three quartiles
+ */
+fun quartiles(vec: data) -> vec {
+    return [
+        percentile(data, 0.25),
+        percentile(data, 0.50),
+        percentile(data, 0.75)
+    ]
+}
+/**
+ * @brief Covariance between two vectors
+ * @details Calculates the covariance between two datasets
+ * @details Measures how two variables change together
+ * @details Positive: variables increase together; Negative: variables move oppositely
+ * @param x The first input vector of data values
+ * @param y The second input vector of data values
+ * @return The covariance between the two datasets
+ */
+fun covariance(vec: x, vec: y) -> float64 {
+    int: n = size(x)
+    float64: mean_x = mean(x)
+    float64: mean_y = mean(y)
+
+    float64: sum = 0.0
+    for i in range(n) {
+        sum = sum + (x[i] - mean_x) * (y[i] - mean_y)
+    }
+
+    return sum / n
+}
+/**
+ * @brief Correlation coefficient (Pearson)
+ * @details Calculates the Pearson correlation coefficient
+ * @details Measures linear relationship between two variables
+ * @details Range: -1 (perfect negative) to 1 (perfect positive), 0 (no linear relationship)
+ * @param x The first input vector of data values
+ * @param y The second input vector of data values
+ * @return The Pearson correlation coefficient
+ */
+fun correlation(vec: x, vec: y) -> float64 {
+    float64: cov = covariance(x, y)
+    float64: std_x = std_dev(x)
+    float64: std_y = std_dev(y)
+
+    if std_x == 0.0 or std_y == 0.0 {
+        return 0.0
+    }
+
+    return cov / (std_x * std_y)
+}
+/**
+ * @brief Z-score normalization
+ * @details Normalizes data using z-score standardization
+ * @details Formula: (x - mean) / std_dev
+ * @details Results in mean=0, std_dev=1 (standard normal distribution)
+ * @param data The input vector of data values
+ * @return The z-score normalized vector
+ */
+fun z_score_normalize(vec: data) -> vec {
+    float64: m = mean(data)
+    float64: std = std_dev(data)
+    int: n = size(data)
+    vec: normalized = zeros(n)
+
+    if std == 0.0 {
+        return normalized  // Return zeros if std dev is 0
+    }
+
+    for i in range(n) {
+        normalized[i] = (data[i] - m) / std
+    }
+
+    return normalized
+}
+/**
+ * @brief Min-max normalization (scaling to [0, 1] range)
+ * @details Normalizes data to range [0, 1]
+ * @details Formula: (x - min) / (max - min)
+ * @details Preserves relationships between values
+ * @param data The input vector of data values
+ * @return The min-max normalized vector
+ */
+fun min_max_normalize(vec: data) -> vec {
+    float64: min_val = min_value(data)
+    float64: max_val = max_value(data)
+    float64: range_val = max_val - min_val
+    int: n = size(data)
+    vec: normalized = zeros(n)
+
+    if range_val == 0.0 {
+        return normalized  // Return zeros if range is 0
+    }
+
+    for i in range(n) {
+        normalized[i] = (data[i] - min_val) / range_val
+    }
+
+    return normalized
+}
+/**
+ * @brief Helper function: sort vector (simple bubble sort)
+ * @details Sorts a vector in ascending order using bubble sort
+ * @details Used by other statistical functions that require sorted data
+ * @param data The input vector to sort
+ * @return The sorted vector
+ */
+fun vec_sort(vec: data) -> vec {
+    int: n = size(data)
+    vec: sorted = zeros(n)
+
+    // Copy data
+    for i in range(n) {
+        sorted[i] = data[i]
+    }
+
+    // Bubble sort
+    for i in range(n) {
+        for j in range(i + 1, n) {
+            if sorted[i] > sorted[j] {
+                float64: temp = sorted[i]
+                sorted[i] = sorted[j]
+                sorted[j] = temp
+            }
+        }
+    }
+
+    return sorted
+}
+/**
+ * @brief Helper function: find minimum value
+ * @details Finds the minimum value in a vector
+ * @param data The input vector of data values
+ * @return The minimum value in the vector
+ */
+fun min_value(vec: data) -> float64 {
+    float64: min_val = data[0]
+    int: n = size(data)
+
+    for i in range(1, n) {
+        if data[i] < min_val {
+            min_val = data[i]
+        }
+    }
+
+    return min_val
+}
+/**
+ * @brief Helper function: find maximum value
+ * @details Finds the maximum value in a vector
+ * @param data The input vector of data values
+ * @return The maximum value in the vector
+ */
+fun max_value(vec: data) -> float64 {
+    float64: max_val = data[0]
+    int: n = size(data)
+
+    for i in range(1, n) {
+        if data[i] > max_val {
+            max_val = data[i]
+        }
+    }
+
+    return max_val
+}

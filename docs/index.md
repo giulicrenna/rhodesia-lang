@@ -51,6 +51,7 @@ Explore the built-in functions and data structures.
 [**Functions**](standard-library/functions.md) - Built-in mathematical and utility functions
 [**Vectors & Matrices**](standard-library/vectors-matrices.md) - Vector and matrix operations
 [**Built-ins**](standard-library/builtins.md) - Core built-in functions
+[**Net Module**](standard-library/net.md) - TCP sockets and HTTP/1.1 client
 
 ### Examples
 Practical code examples to learn by doing.
@@ -108,6 +109,7 @@ println(C)
 - **Clean Syntax**: Easy to read and write
 - **Type Safety**: Static typing with automatic type inference
 - **Vectorized Operations**: Efficient array operations
+- **Networking**: Built-in `net` module — TCP sockets and HTTP/1.1 client, zero extra dependencies
 - **Extensible**: Easy to add new functions and modules
 
 ## Community

@@ -6,17 +6,17 @@ println("║  Demostración Completa del Módulo IO  ║")
 println("╚════════════════════════════════════════╝")
 println()
 
-// ============================================
-// 1. Entrada Interactiva
-// ============================================
+/*
+ 1. Entrada Interactiva
+*/
 println("=== 1. Entrada por Terminal ===")
 str: usuario = io.input("¿Cuál es tu nombre? ")
 println("¡Bienvenido,", usuario, "!")
 println()
 
-// ============================================
-// 2. Escritura Básica de Archivos
-// ============================================
+/*
+ 2. Escritura Básica de Archivos
+*/
 println("=== 2. Escritura de Archivos ===")
 
 int: file1 = io.open("demo_datos.txt", "w")
@@ -32,9 +32,9 @@ io.close(file1)
 println("✓ Archivo 'demo_datos.txt' creado exitosamente")
 println()
 
-// ============================================
-// 3. Lectura Completa de Archivos
-// ============================================
+/*
+ 3. Lectura Completa de Archivos
+*/
 println("=== 3. Lectura de Archivos ===")
 
 if io.exists("demo_datos.txt") {
@@ -49,9 +49,9 @@ if io.exists("demo_datos.txt") {
 }
 println()
 
-// ============================================
-// 4. Lectura Línea por Línea
-// ============================================
+/*
+ 4. Lectura Línea por Línea
+*/
 println("=== 4. Lectura Línea por Línea ===")
 
 int: file_lines = io.open("demo_datos.txt", "r")
@@ -68,9 +68,9 @@ io.close(file_lines)
 println("Total de líneas leídas:", contador)
 println()
 
-// ============================================
-// 5. Append (Añadir Contenido)
-// ============================================
+/*
+ 5. Append (Añadir Contenido)
+*/
 println("=== 5. Añadir Contenido (Append) ===")
 
 int: file_append = io.open("demo_datos.txt", "a")
@@ -81,9 +81,9 @@ io.close(file_append)
 println("✓ Contenido añadido al archivo")
 println()
 
-// ============================================
-// 6. Navegación con Seek y Tell
-// ============================================
+/*
+ 6. Navegación con Seek y Tell
+*/
 println("=== 6. Navegación con Seek/Tell ===")
 
 int: file_nav = io.open("demo_datos.txt", "r")
@@ -112,9 +112,9 @@ println("Posición al final del archivo:", pos_final)
 io.close(file_nav)
 println()
 
-// ============================================
-// 7. Modo Lectura/Escritura (r+)
-// ============================================
+/*
+ 7. Modo Lectura/Escritura (r+)
+*/
 println("=== 7. Modo Lectura/Escritura ===")
 
 int: file_rw = io.open("demo_rw.txt", "w")
@@ -143,9 +143,9 @@ println(todo_contenido)
 io.close(file_rw2)
 println()
 
-// ============================================
-// 8. Lectura Parcial de Bytes
-// ============================================
+/*
+ 8. Lectura Parcial de Bytes
+*/
 println("=== 8. Lectura Parcial ===")
 
 int: file_partial = io.open("demo_datos.txt", "r")
@@ -158,9 +158,9 @@ println("...")
 io.close(file_partial)
 println()
 
-// ============================================
-// 9. Utilidades: exists y remove
-// ============================================
+/*
+ 9. Utilidades: exists y remove
+*/
 println("=== 9. Funciones Utilitarias ===")
 
 // Verificar existencia
@@ -179,9 +179,9 @@ int: existe3 = io.exists("demo_datos.txt")
 println("✓ Archivos eliminados (demo_datos.txt existe:", existe3, ")")
 println()
 
-// ============================================
-// 10. Sistema de Log Completo
-// ============================================
+/*
+ 10. Sistema de Log Completo
+*/
 println("=== 10. Sistema de Log ===")
 
 str: log_file = "app.log"

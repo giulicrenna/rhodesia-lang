@@ -1,0 +1,321 @@
+// regression.rho
+// Regression analysis functions
+
+// Simple linear regression: y = a + b*x
+fun linear_regression(vec: x, vec: y) -> (float64, float64) {
+    int: n = size(x)
+    float64: sum_x = sum(x)
+    float64: sum_y = sum(y)
+    float64: sum_xy = 0.0
+    float64: sum_x2 = 0.0
+
+    for i in range(n) {
+        sum_xy = sum_xy + x[i] * y[i]
+        sum_x2 = sum_x2 + x[i] * x[i]
+    }
+
+    float64: denominator = n * sum_x2 - sum_x * sum_x
+    float64: b = (n * sum_xy - sum_x * sum_y) / denominator
+    float64: a = (sum_y - b * sum_x) / n
+
+    return (a, b)
+}
+
+// Linear regression prediction
+fun linear_regression_predict(vec: x, vec: y, float64: x_new) -> float64 {
+    (float64: a, float64: b) = linear_regression(x, y)
+    return a + b * x_new
+}
+
+// Coefficient of determination (R-squared)
+fun r_squared(vec: x, vec: y) -> float64 {
+    float64: y_mean = mean(y)
+    float64: ss_total = 0.0
+    float64: ss_res = 0.0
+
+    int: n = size(x)
+    for i in range(n) {
+        float64: y_pred = linear_regression_predict(x, y, x[i])
+        ss_total = ss_total + (y[i] - y_mean) * (y[i] - y_mean)
+        ss_res = ss_res + (y[i] - y_pred) * (y[i] - y_pred)
+    }
+
+    if ss_total == 0.0 {
+        return 1.0  // Perfect fit if no variance
+    }
+
+    return 1.0 - ss_res / ss_total
+}
+
+// Multiple linear regression using normal equations (for 2 predictors)
+fun multiple_regression_2d(mat: X, vec: y) -> vec {
+    // X should be n x 2 matrix (including intercept column)
+    // y should be n x 1 vector
+    // Returns [b0, b1, b2] coefficients
+
+    mat: XT = mat_transpose(X)
+    mat: XTX = XT * X
+    mat: XTX_inv = inv(XTX)
+    mat: XTy = XT * y
+
+    return XTX_inv * XTy
+}
+
+// Polynomial regression (quadratic)
+fun polynomial_regression_quadratic(vec: x, vec: y) -> (float64, float64, float64) {
+    int: n = size(x)
+
+    // Create design matrix: [1, x, x^2]
+    mat: X = zeros(n, 3)
+    for i in range(n) {
+        X[i, 0] = 1.0
+        X[i, 1] = x[i]
+        X[i, 2] = x[i] * x[i]
+    }
+
+    vec: coefficients = multiple_regression_2d(X, y)
+
+    return (coefficients[0], coefficients[1], coefficients[2])
+}
+
+// Polynomial regression prediction (quadratic)
+fun polynomial_regression_predict(vec: x, vec: y, float64: x_new) -> float64 {
+    (float64: a, float64: b, float64: c) = polynomial_regression_quadratic(x, y)
+    return a + b * x_new + c * x_new * x_new
+}
+
+// Weighted linear regression
+fun weighted_linear_regression(vec: x, vec: y, vec: weights) -> (float64, float64) {
+    int: n = size(x)
+    float64: sum_w = sum(weights)
+    float64: sum_wx = 0.0
+    float64: sum_wy = 0.0
+    float64: sum_wxy = 0.0
+    float64: sum_wx2 = 0.0
+
+    for i in range(n) {
+        float64: w = weights[i]
+        sum_wx = sum_wx + w * x[i]
+        sum_wy = sum_wy + w * y[i]
+        sum_wxy = sum_wxy + w * x[i] * y[i]
+        sum_wx2 = sum_wx2 + w * x[i] * x[i]
+    }
+
+    float64: denominator = sum_w * sum_wx2 - sum_wx * sum_wx
+    float64: b = (sum_w * sum_wxy - sum_wx * sum_wy) / denominator
+    float64: a = (sum_wy - b * sum_wx) / sum_w
+
+    return (a, b)
+}
+
+// Logistic regression (simplified version)
+fun logistic_function(float64: z) -> float64 {
+    return 1.0 / (1.0 + exp(-z))
+}
+
+// Logistic regression prediction (for pre-trained coefficients)
+fun logistic_predict(vec: coefficients, vec: x) -> float64 {
+    float64: z = dot(coefficients, x)
+    return logistic_function(z)
+}
+
+// Ridge regression (L2 regularization) for 2 predictors
+fun ridge_regression(mat: X, vec: y, float64: lam) -> vec {
+    mat: XT = mat_transpose(X)
+    mat: XTX = XT * X
+
+    // Add regularization term
+    int: p = cols(X)
+    for i in range(p) {
+        XTX[i, i] = XTX[i, i] + lam
+    }
+
+    mat: XTX_inv = inv(XTX)
+    mat: XTy = XT * y
+
+    return XTX_inv * XTy
+}
+
+// Lasso regression (L1 regularization) - simplified coordinate descent
+fun lasso_regression(mat: X, vec: y, float64: lam, int: max_iter) -> vec {
+    int: n = rows(X)
+    int: p = cols(X)
+    vec: beta = zeros(p)
+
+    // Standardize X
+    vec: means = mat_col_means(X)
+    vec: stds = zeros(p)
+
+    for j in range(p) {
+        float64: std_j = 0.0
+        for i in range(n) {
+            std_j = std_j + (X[i, j] - means[j]) * (X[i, j] - means[j])
+        }
+        std_j = sqrt(std_j / n)
+        stds[j] = std_j
+
+        if std_j > 0.0 {
+            for i in range(n) {
+                X[i, j] = (X[i, j] - means[j]) / std_j
+            }
+        }
+    }
+
+    // Coordinate descent
+    for iter in range(max_iter) {
+        for j in range(p) {
+            if stds[j] == 0.0 {
+                continue
+            }
+
+            vec: r = y
+            for k in range(p) {
+                if k != j {
+                    for i in range(n) {
+                        r[i] = r[i] - X[i, k] * beta[k]
+                    }
+                }
+            }
+
+            float64: sum_xj_r = 0.0
+            float64: sum_xj2 = 0.0
+            for i in range(n) {
+                sum_xj_r = sum_xj_r + X[i, j] * r[i]
+                sum_xj2 = sum_xj2 + X[i, j] * X[i, j]
+            }
+
+            float64: beta_j = 0.0
+            if abs(sum_xj_r) > lam / 2.0 {
+                beta_j = sign(sum_xj_r) * (abs(sum_xj_r) - lam / 2.0) / sum_xj2
+            }
+
+            beta[j] = beta_j
+        }
+    }
+
+    // Unstandardize coefficients
+    for j in range(p) {
+        if stds[j] > 0.0 {
+            beta[j] = beta[j] / stds[j]
+        }
+    }
+
+    // Adjust intercept
+    float64: intercept = mean(y)
+    for j in range(p) {
+        intercept = intercept - beta[j] * means[j]
+    }
+
+    vec: final_beta = zeros(p + 1)
+    final_beta[0] = intercept
+    for j in range(p) {
+        final_beta[j + 1] = beta[j]
+    }
+
+    return final_beta
+}
+
+// Mean Squared Error (MSE)
+fun mse(vec: y_true, vec: y_pred) -> float64 {
+    int: n = size(y_true)
+    float64: sum_squared = 0.0
+
+    for i in range(n) {
+        float64: error = y_true[i] - y_pred[i]
+        sum_squared = sum_squared + error * error
+    }
+
+    return sum_squared / n
+}
+
+// Root Mean Squared Error (RMSE)
+fun rmse(vec: y_true, vec: y_pred) -> float64 {
+    return sqrt(mse(y_true, y_pred))
+}
+
+// Mean Absolute Error (MAE)
+fun mae(vec: y_true, vec: y_pred) -> float64 {
+    int: n = size(y_true)
+    float64: sum_abs = 0.0
+
+    for i in range(n) {
+        sum_abs = sum_abs + abs(y_true[i] - y_pred[i])
+    }
+
+    return sum_abs / n
+}
+
+// Mean Absolute Percentage Error (MAPE)
+fun mape(vec: y_true, vec: y_pred) -> float64 {
+    int: n = size(y_true)
+    float64: sum_ape = 0.0
+
+    for i in range(n) {
+        if y_true[i] != 0.0 {
+            sum_ape = sum_ape + abs((y_true[i] - y_pred[i]) / y_true[i])
+        }
+    }
+
+    return sum_ape / n * 100.0
+}
+
+/**
+ * @brief Cross-validation for linear regression (k-fold)
+ * @details Performs k-fold cross-validation for linear regression
+ * @details Splits data into k folds, trains on k-1 folds, tests on 1 fold
+ * @details Returns average MSE across all folds
+ * @param X The design matrix (n x p)
+ * @param y The dependent variable vector (n x 1)
+ * @param k The number of folds for cross-validation
+ * @return The average mean squared error across all folds
+ */
+fun cross_validation_linear(mat: X, vec: y, int: k) -> float64 {
+    int: n = rows(X)
+    int: fold_size = n / k
+    float64: total_mse = 0.0
+
+    for fold in range(k) {
+        int: start = fold * fold_size
+        int: end = min(start + fold_size, n)
+
+        // Create training and test sets
+        mat: X_train = zeros(n - fold_size, cols(X))
+        vec: y_train = zeros(n - fold_size)
+        mat: X_test = zeros(end - start, cols(X))
+        vec: y_test = zeros(end - start)
+
+        int: train_idx = 0
+        int: test_idx = 0
+
+        for i in range(n) {
+            if i >= start and i < end {
+                // Test set
+                for j in range(cols(X)) {
+                    X_test[test_idx, j] = X[i, j]
+                }
+                y_test[test_idx] = y[i]
+                test_idx = test_idx + 1
+            } else {
+                // Training set
+                for j in range(cols(X)) {
+                    X_train[train_idx, j] = X[i, j]
+                }
+                y_train[train_idx] = y[i]
+                train_idx = train_idx + 1
+            }
+        }
+
+        // Train model
+        vec: coefficients = multiple_regression_2d(X_train, y_train)
+
+        // Predict and calculate MSE
+        vec: y_pred = zeros(size(y_test))
+        for i in range(size(y_test)) {
+            y_pred[i] = dot(coefficients, [X_test[i, 0], X_test[i, 1]])
+        }
+
+        total_mse = total_mse + mse(y_test, y_pred)
+    }
+
+    return total_mse / k
+}

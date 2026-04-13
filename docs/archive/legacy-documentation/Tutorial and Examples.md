@@ -736,18 +736,18 @@ fun raiz_segura(float64: x) -> float64 {
 ## Capítulo 10: Proyecto Final - Análisis de Datos Completo
 
 ```rhodesia
-// ============================================================================
-// Proyecto Final: Análisis Estadístico Completo
-// ============================================================================
+/*
+ Proyecto Final: Análisis Estadístico Completo
+*/
 
 println("==========================================")
 println("  Análisis Estadístico Completo en Rhodesia")
 println("==========================================")
 println("")
 
-// ============================================================================
-// 1. GENERACIÓN DE DATOS
-// ============================================================================
+/*
+ 1. GENERACIÓN DE DATOS
+*/
 
 fun generar_datos_normales(int: n, float64: media, float64: std) -> vec {
     // Generación simple usando transformación de uniformes
@@ -774,9 +774,9 @@ println("Muestra 1 - Media:", mean(muestra1), "Std:", sqrt(mean((muestra1 - mean
 println("Muestra 2 - Media:", mean(muestra2), "Std:", sqrt(mean((muestra2 - mean(muestra2))*(muestra2 - mean(muestra2)))))
 println("")
 
-// ============================================================================
-// 2. ESTADÍSTICOS DESCRIPTIVOS
-// ============================================================================
+/*
+ 2. ESTADÍSTICOS DESCRIPTIVOS
+*/
 
 fun estadisticos_descriptivos(vec: datos) -> vec {
     float64: media = mean(datos)
@@ -804,9 +804,9 @@ println("  Q1:", stats1[2], "Mediana:", stats1[3], "Q3:", stats1[4])
 println("  Mín:", stats1[5], "Máx:", stats1[6])
 println("")
 
-// ============================================================================
-// 3. PRUEBA T DE STUDENT
-// ============================================================================
+/*
+ 3. PRUEBA T DE STUDENT
+*/
 
 fun prueba_t(vec: a, vec: b) -> vec {
     float64: media_a = mean(a)
@@ -840,9 +840,9 @@ println("  grados libertad:", t_test[1])
 println("  p-valor aproximado: significativo si |t| > 2")
 println("")
 
-// ============================================================================
-// 4. REGRESIÓN LINEAL MÚLTIPLE
-// ============================================================================
+/*
+ 4. REGRESIÓN LINEAL MÚLTIPLE
+*/
 
 fun regresion_multiple(mat: X, vec: y) -> vec {
     mat: Xt = transpose(X)
@@ -889,9 +889,9 @@ println("  Coef x2:", coef[2], "(real: 1.5)")
 println("  R²:", r_cuadrado(y_reg, y_pred))
 println("")
 
-// ============================================================================
-// 5. ANÁLISIS DE COMPONENTES PRINCIPALES (PCA)
-// ============================================================================
+/*
+ 5. ANÁLISIS DE COMPONENTES PRINCIPALES (PCA)
+*/
 
 fun pca(mat: datos, int: n_componentes) -> mat {
     int: n = rows(datos)

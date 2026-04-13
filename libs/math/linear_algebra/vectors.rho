@@ -1,0 +1,337 @@
+/**
+ * @file vectors.rho
+ * @brief Advanced vector operations beyond built-in functions
+ */
+/**
+ * @brief Vector magnitude (norm)
+ * @details Calculates the magnitude (Euclidean norm) of a vector
+ * @details The magnitude is the square root of the sum of squares of all elements
+ * @param v The input vector
+ * @return The magnitude of the vector
+ */
+fun vec_magnitude(vec: v) -> float64 {
+    return norm(v)
+}
+/**
+ * @brief Vector distance between two vectors
+ * @details Calculates the Euclidean distance between two vectors
+ * @details The distance is the magnitude of the difference vector
+ * @param a The first vector
+ * @param b The second vector
+ * @return The Euclidean distance between the two vectors
+ */
+fun vec_distance(vec: a, vec: b) -> float64 {
+    return norm(a - b)
+}
+/**
+ * @brief Vector projection of a onto b
+ * @details Calculates the projection of vector a onto vector b
+ * @details The projection is the component of a in the direction of b
+ * @param a The vector to project
+ * @param b The vector to project onto
+ * @return The projection of a onto b
+ */
+fun vec_project(vec: a, vec: b) -> vec {
+    float64: dot_ab = dot(a, b)
+    float64: dot_bb = dot(b, b)
+    float64: scalar = dot_ab / dot_bb
+    return scalar * b
+}
+/**
+ * @brief Vector rejection (component of a perpendicular to b)
+ * @details Calculates the rejection of vector a from vector b
+ * @details The rejection is the component of a perpendicular to b
+ * @param a The vector to reject
+ * @param b The vector to reject from
+ * @return The rejection of a from b
+ */
+fun vec_reject(vec: a, vec: b) -> vec {
+    return a - vec_project(a, b)
+}
+/**
+ * @brief Vector angle between two vectors in radians
+ * @details Calculates the angle between two vectors in radians
+ * @details Uses the dot product formula: cos(θ) = (a·b) / (|a||b|)
+ * @param a The first vector
+ * @param b The second vector
+ * @return The angle between the two vectors in radians
+ */
+fun vec_angle_radians(vec: a, vec: b) -> float64 {
+    float64: dot_ab = dot(a, b)
+    float64: mag_a = norm(a)
+    float64: mag_b = norm(b)
+    float64: cos_theta = dot_ab / (mag_a * mag_b)
+    return acos_approx(cos_theta)
+}
+/**
+ * @brief Vector angle between two vectors in degrees
+ * @details Calculates the angle between two vectors in degrees
+ * @details Converts the radian result from vec_angle_radians to degrees
+ * @param a The first vector
+ * @param b The second vector
+ * @return The angle between the two vectors in degrees
+ */
+fun vec_angle_degrees(vec: a, vec: b) -> float64 {
+    return radians_to_degrees(vec_angle_radians(a, b))
+}
+/**
+ * @brief Check if two vectors are parallel (within epsilon)
+ * @details Determines if two vectors are parallel within a specified tolerance
+ * @details For 2D vectors, checks if the cross product magnitude is near zero
+ * @param a The first vector
+ * @param b The second vector
+ * @param epsilon The tolerance for floating point comparison
+ * @return true if the vectors are parallel within the given epsilon, false otherwise
+ */
+fun vec_is_parallel(vec: a, vec: b, float64: epsilon) -> bool {
+    vec: cross_ab = vec_cross_2d(a, b)  // For 2D vectors
+    float64: cross_mag = norm(cross_ab)
+    return cross_mag <= epsilon
+}
+/**
+ * @brief Check if two vectors are orthogonal (within epsilon)
+ * @details Determines if two vectors are orthogonal (perpendicular) within a specified tolerance
+ * @details Two vectors are orthogonal if their dot product is zero (within epsilon)
+ * @param a The first vector
+ * @param b The second vector
+ * @param epsilon The tolerance for floating point comparison
+ * @return true if the vectors are orthogonal within the given epsilon, false otherwise
+ */
+fun vec_is_orthogonal(vec: a, vec: b, float64: epsilon) -> bool {
+    float64: dot_ab = dot(a, b)
+    return abs(dot_ab) <= epsilon
+}
+/**
+ * @brief Normalize vector with epsilon check
+ * @details Normalizes a vector to unit length with safety check for very small magnitudes
+ * @details Returns the original vector if magnitude is too small to avoid division by zero
+ * @param v The input vector
+ * @param epsilon The threshold below which the vector is considered too small to normalize
+ * @return The normalized vector, or the original vector if magnitude <= epsilon
+ */
+fun vec_normalize_safe(vec: v, float64: epsilon) -> vec {
+    float64: mag = norm(v)
+    if mag <= epsilon {
+        return v  // Return original if magnitude is too small
+    }
+    return v / mag
+}
+/**
+ * @brief Vector cross product (2D case, returns scalar)
+ * @details Calculates the 2D cross product of two vectors
+ * @details Returns a scalar representing the magnitude of the 3D cross product in the z-direction
+ * @details For 2D vectors [x1, y1] and [x2, y2], returns x1*y2 - y1*x2
+ * @param a The first 2D vector
+ * @param b The second 2D vector
+ * @return The scalar cross product value
+ */
+fun vec_cross_2d(vec: a, vec: b) -> float64 {
+    return a[0] * b[1] - a[1] * b[0]
+}
+/**
+ * @brief Vector cross product (3D case, returns vector)
+ * @details Calculates the 3D cross product of two vectors
+ * @details Returns a vector perpendicular to both input vectors
+ * @details For vectors [x1, y1, z1] and [x2, y2, z2], returns [y1*z2 - z1*y2, z1*x2 - x1*z2, x1*y2 - y1*x2]
+ * @param a The first 3D vector
+ * @param b The second 3D vector
+ * @return The cross product vector
+ */
+fun vec_cross_3d(vec: a, vec: b) -> vec {
+    float64: x = a[1] * b[2] - a[2] * b[1]
+    float64: y = a[2] * b[0] - a[0] * b[2]
+    float64: z = a[0] * b[1] - a[1] * b[0]
+    return [x, y, z]
+}
+/**
+ * @brief Vector reflection over a normal vector
+ * @details Calculates the reflection of a vector over a surface with given normal
+ * @details Uses the formula: reflection = v - 2(v·n)n where n is the normalized normal
+ * @param v The input vector to reflect
+ * @param normal The surface normal vector
+ * @return The reflected vector
+ */
+fun vec_reflect(vec: v, vec: normal) -> vec {
+    vec: n = vec_normalize_safe(normal, 0.000001)
+    float64: dot_vn = dot(v, n)
+    return v - 2.0 * dot_vn * n
+}
+/**
+ * @brief Vector rotation in 2D (angle in radians)
+ * @details Rotates a 2D vector by a specified angle
+ * @details Uses the rotation matrix: [cos(θ) -sin(θ); sin(θ) cos(θ)]
+ * @param v The input 2D vector
+ * @param angle The rotation angle in radians
+ * @return The rotated 2D vector
+ */
+fun vec_rotate_2d(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: x = v[0] * cos_theta - v[1] * sin_theta
+    float64: y = v[0] * sin_theta + v[1] * cos_theta
+    return [x, y]
+}
+/**
+ * @brief Vector rotation in 3D around X axis
+ * @details Rotates a 3D vector around the X axis by a specified angle
+ * @details Uses the X-axis rotation matrix: [1 0 0; 0 cos(θ) -sin(θ); 0 sin(θ) cos(θ)]
+ * @param v The input 3D vector
+ * @param angle The rotation angle in radians
+ * @return The rotated 3D vector
+ */
+fun vec_rotate_x(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: y = v[1] * cos_theta - v[2] * sin_theta
+    float64: z = v[1] * sin_theta + v[2] * cos_theta
+    return [v[0], y, z]
+}
+/**
+ * @brief Vector rotation in 3D around Y axis
+ * @details Rotates a 3D vector around the Y axis by a specified angle
+ * @details Uses the Y-axis rotation matrix: [cos(θ) 0 sin(θ); 0 1 0; -sin(θ) 0 cos(θ)]
+ * @param v The input 3D vector
+ * @param angle The rotation angle in radians
+ * @return The rotated 3D vector
+ */
+fun vec_rotate_y(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: x = v[0] * cos_theta + v[2] * sin_theta
+    float64: z = -v[0] * sin_theta + v[2] * cos_theta
+    return [x, v[1], z]
+}
+/**
+ * @brief Vector rotation in 3D around Z axis
+ * @details Rotates a 3D vector around the Z axis by a specified angle
+ * @details Uses the Z-axis rotation matrix: [cos(θ) -sin(θ) 0; sin(θ) cos(θ) 0; 0 0 1]
+ * @param v The input 3D vector
+ * @param angle The rotation angle in radians
+ * @return The rotated 3D vector
+ */
+fun vec_rotate_z(vec: v, float64: angle) -> vec {
+    float64: cos_theta = cos_taylor(angle, 10)
+    float64: sin_theta = sin_taylor(angle, 10)
+    float64: x = v[0] * cos_theta - v[1] * sin_theta
+    float64: y = v[0] * sin_theta + v[1] * cos_theta
+    return [x, y, v[2]]
+}
+/**
+ * @brief Vector component-wise multiplication (Hadamard product)
+ * @details Performs element-wise multiplication of two vectors of the same length
+ * @details Each element i in the result is the product of elements i from both vectors
+ * @param a The first input vector
+ * @param b The second input vector
+ * @return The Hadamard product of the two vectors
+ */
+fun vec_hadamard(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = a[i] * b[i]
+    }
+
+    return result
+}
+/**
+ * @brief Vector component-wise division
+ * @details Performs element-wise division of two vectors of the same length
+ * @details Each element i in the result is the division of elements i from both vectors
+ * @details Uses safe_divide to handle division by zero cases
+ * @param a The dividend vector
+ * @param b The divisor vector
+ * @return The element-wise division result
+ */
+fun vec_divide(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = safe_divide(a[i], b[i])
+    }
+
+    return result
+}
+/**
+ * @brief Vector minimum (component-wise)
+ * @details Computes the component-wise minimum of two vectors
+ * @details Each element i in the result is the minimum of elements i from both vectors
+ * @param a The first input vector
+ * @param b The second input vector
+ * @return A vector containing the minimum of each component
+ */
+fun vec_min(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        if a[i] < b[i] {
+            result[i] = a[i]
+        } else {
+            result[i] = b[i]
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Vector maximum (component-wise)
+ * @details Computes the component-wise maximum of two vectors
+ * @details Each element i in the result is the maximum of elements i from both vectors
+ * @param a The first input vector
+ * @param b The second input vector
+ * @return A vector containing the maximum of each component
+ */
+fun vec_max(vec: a, vec: b) -> vec {
+    int: n = size(a)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        if a[i] > b[i] {
+            result[i] = a[i]
+        } else {
+            result[i] = b[i]
+        }
+    }
+
+    return result
+}
+/**
+ * @brief Vector clamp (component-wise)
+ * @details Restricts each element in a vector to be within a specified range
+ * @details Each element is clamped to [min_val, max_val]
+ * @param v The input vector
+ * @param min_val The minimum allowed value
+ * @param max_val The maximum allowed value
+ * @return A vector with all elements clamped to the specified range
+ */
+fun vec_clamp(vec: v, float64: min_val, float64: max_val) -> vec {
+    int: n = size(v)
+    vec: result = zeros(n)
+
+    for i in range(n) {
+        result[i] = clamp(v[i], min_val, max_val)
+    }
+
+    return result
+}
+/**
+ * @brief Vector dot product with weights
+ * @details Computes the weighted dot product of two vectors
+ * @details Each element's contribution is multiplied by a corresponding weight
+ * @param a The first input vector
+ * @param b The second input vector
+ * @param weights The weight vector
+ * @return The weighted dot product of the two vectors
+ */
+fun vec_weighted_dot(vec: a, vec: b, vec: weights) -> float64 {
+    int: n = size(a)
+    float64: result = 0.0
+
+    for i in range(n) {
+        result = result + a[i] * b[i] * weights[i]
+    }
+
+    return result
+}

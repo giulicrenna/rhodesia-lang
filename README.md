@@ -32,6 +32,8 @@
   - **Statistics Module**: Descriptive statistics, correlation, moments, normalization
   - **Numerical Module**: Integration, differentiation, polynomial fitting, equation solving
   - **String Module**: Text manipulation, search, transformation, validation
+  - **Net Module**: TCP sockets and HTTP/1.1 client (`net.http_get`, `net.socket`, …)
+- **Networking**: Built-in `net` module for TCP sockets and HTTP requests (no dependencies)
 - **Clean Syntax**: Intuitive declaration syntax: `type: name = value`
 - **Module System**: Import and organize code with selective imports and aliases
 - **User-defined Functions**: First-class functions with type annotations
@@ -288,6 +290,22 @@ println(n)
 | `print(...)` | Print without newline |
 | `println(...)` | Print with newline |
 
+#### Network Functions (`net` module)
+| Function | Description |
+|----------|-------------|
+| `net.socket(host, port)` | Create a TCP socket handle |
+| `net.connect(handle)` | Connect to host:port → `bool` |
+| `net.send(handle, data)` | Send data → bytes sent |
+| `net.recv(handle, size)` | Receive up to N bytes → `str` |
+| `net.recv_all(handle)` | Receive until EOF → `str` |
+| `net.close(handle)` | Close socket → `bool` |
+| `net.listen(port)` | Create server socket → handle |
+| `net.accept(handle)` | Accept connection → client handle |
+| `net.peer(handle)` | Remote address → `record{host, port}` |
+| `net.http_get(url)` | HTTP GET → `record{status, body, headers}` |
+| `net.http_post(url, body)` | HTTP POST → `record{status, body, headers}` |
+| `net.http_request(method, url, body, headers)` | Generic HTTP → `record` |
+
 #### String Functions
 | Function | Description | Example |
 |----------|-------------|---------|
@@ -451,6 +469,7 @@ println("Factorial of", n, "is", factorial)
 
 - **[Documentation Home](docs/index.md)**: Full documentation index
 - **[Standard Library](docs/standard-library/functions.md)**: Built-in modules and functions
+- **[Net Module](docs/standard-library/net.md)**: TCP sockets and HTTP client reference
 - **[Modules Examples](docs/examples/modules.md)**: How to organize and import modules
 - **[Getting Started](docs/getting-started.md)**: Installation, build, and first run
 
@@ -515,6 +534,9 @@ rhodesia-lang/
 - [ ] File I/O (`load_csv`, `save_csv`)
 - [ ] Random number generation
 - [ ] Statistical functions
+- [ ] HTTPS support (TLS via OpenSSL)
+- [ ] WebSocket module
+- [ ] DNS resolution utilities
 
 ---
 

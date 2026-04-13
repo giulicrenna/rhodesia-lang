@@ -1,6 +1,6 @@
-// ============================================================================
-// Rhodesia Statistics Module Demo
-// ============================================================================
+/*
+ Rhodesia Statistics Module Demo
+*/
 // Demonstrates the statistics module functions: mean, std, var, cov
 //
 // Usage: ./rhodesia examples/statistics_demo.rho
@@ -9,9 +9,9 @@ println("==============================================")
 println("  Rhodesia Statistics Module Demo")
 println("==============================================\n")
 
-// ============================================================================
-// 1. Basic Statistics on Vectors
-// ============================================================================
+/*
+ 1. Basic Statistics on Vectors
+*/
 
 println("1. Basic Statistics on Vectors")
 println("-------------------------------")
@@ -30,9 +30,9 @@ println("Standard Deviation:", std_dev)
 
 println("")
 
-// ============================================================================
-// 2. Statistics on Matrices
-// ============================================================================
+/*
+ 2. Statistics on Matrices
+*/
 
 println("2. Statistics on Matrices")
 println("--------------------------")
@@ -54,9 +54,9 @@ println("Standard Deviation of all elements:", mat_std)
 
 println("")
 
-// ============================================================================
-// 3. Covariance between two vectors
-// ============================================================================
+/*
+ 3. Covariance between two vectors
+*/
 
 println("3. Covariance between two vectors")
 println("----------------------------------")
@@ -76,9 +76,9 @@ println("Correlation coefficient:", correlation)
 
 println("")
 
-// ============================================================================
-// 4. Real-world example: Temperature data analysis
-// ============================================================================
+/*
+ 4. Real-world example: Temperature data analysis
+*/
 
 println("4. Temperature Data Analysis")
 println("-----------------------------")
@@ -103,9 +103,9 @@ println("Expected range (±2σ):", min_temp, "°C to", max_temp, "°C")
 
 println("")
 
-// ============================================================================
-// 5. Stock Market Returns Analysis
-// ============================================================================
+/*
+ 5. Stock Market Returns Analysis
+*/
 
 println("5. Stock Market Returns Analysis")
 println("---------------------------------")
@@ -141,9 +141,9 @@ println("  Stock B:", sharpe_b)
 
 println("")
 
-// ============================================================================
-// 6. Z-score calculation (standardization)
-// ============================================================================
+/*
+ 6. Z-score calculation (standardization)
+*/
 
 println("6. Z-score Standardization")
 println("---------------------------")
@@ -165,9 +165,9 @@ println("(Indicates how many std deviations from the mean)")
 
 println("")
 
-// ============================================================================
-// 7. Statistical comparison of two datasets
-// ============================================================================
+/*
+ 7. Statistical comparison of two datasets
+*/
 
 println("7. Comparing Two Datasets")
 println("--------------------------")

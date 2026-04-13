@@ -4,9 +4,9 @@ println("║   Demostración de Bloques Using      ║")
 println("╚═══════════════════════════════════════╝")
 println()
 
-// ============================================
-// 1. Using básico - La forma recomendada
-// ============================================
+/*
+ 1. Using básico - La forma recomendada
+*/
 println("=== 1. Using Básico ===")
 
 using io.open("demo_using.txt", "w") as file {
@@ -20,9 +20,9 @@ using io.open("demo_using.txt", "w") as file {
 println("✓ Archivo cerrado automáticamente")
 println()
 
-// ============================================
-// 2. Lectura con using
-// ============================================
+/*
+ 2. Lectura con using
+*/
 println("=== 2. Lectura con Using ===")
 
 using io.open("demo_using.txt", "r") as file_read {
@@ -34,9 +34,9 @@ using io.open("demo_using.txt", "r") as file_read {
 println("✓ Archivo cerrado después de leer")
 println()
 
-// ============================================
-// 3. Using anidado - Copiar archivo
-// ============================================
+/*
+ 3. Using anidado - Copiar archivo
+*/
 println("=== 3. Using Anidado (Copiar) ===")
 
 using io.open("demo_using.txt", "r") as input {
@@ -52,9 +52,9 @@ using io.open("demo_using.txt", "r") as input {
 println("✓ Ambos archivos cerrados automáticamente")
 println()
 
-// ============================================
-// 4. Lectura línea por línea
-// ============================================
+/*
+ 4. Lectura línea por línea
+*/
 println("=== 4. Lectura Línea por Línea ===")
 
 int: contador = 0
@@ -70,9 +70,9 @@ using io.open("demo_using.txt", "r") as file_lines {
 println("✓ Total de líneas:", contador)
 println()
 
-// ============================================
-// 5. Append con using
-// ============================================
+/*
+ 5. Append con using
+*/
 println("=== 5. Append con Using ===")
 
 using io.open("demo_using.txt", "a") as file_append {
@@ -89,9 +89,9 @@ using io.open("demo_using.txt", "r") as file_verify {
 }
 println()
 
-// ============================================
-// 6. Navegación con seek/tell
-// ============================================
+/*
+ 6. Navegación con seek/tell
+*/
 println("=== 6. Navegación con Seek/Tell ===")
 
 using io.open("demo_using.txt", "r") as file_nav {
@@ -112,9 +112,9 @@ using io.open("demo_using.txt", "r") as file_nav {
 println("✓ Archivo cerrado después de navegar")
 println()
 
-// ============================================
-// 7. Procesamiento - Convertir a mayúsculas
-// ============================================
+/*
+ 7. Procesamiento - Convertir a mayúsculas
+*/
 println("=== 7. Procesamiento de Archivo ===")
 
 using io.open("demo_using.txt", "r") as input_file {
@@ -141,9 +141,9 @@ using io.open("demo_upper.txt", "r") as file_result {
 }
 println()
 
-// ============================================
-// 8. Modo lectura/escritura (r+)
-// ============================================
+/*
+ 8. Modo lectura/escritura (r+)
+*/
 println("=== 8. Modo Lectura/Escritura ===")
 
 using io.open("demo_rw.txt", "w+") as file_rw {
@@ -169,9 +169,9 @@ using io.open("demo_rw.txt", "w+") as file_rw {
 println("✓ Archivo r+ cerrado")
 println()
 
-// ============================================
-// 9. Comparación: Manual vs Using
-// ============================================
+/*
+ 9. Comparación: Manual vs Using
+*/
 println("=== 9. Comparación Manual vs Using ===")
 
 // Forma manual (no recomendada)
@@ -189,9 +189,9 @@ using io.open("demo_using_way.txt", "w") as file_using_way {
 println("✓ Archivo using cerrado automáticamente")
 println()
 
-// ============================================
-// 10. Limpieza
-// ============================================
+/*
+ 10. Limpieza
+*/
 println("=== 10. Limpieza ===")
 
 io.remove("demo_using.txt")

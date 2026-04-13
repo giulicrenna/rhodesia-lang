@@ -277,14 +277,29 @@ public:
         std::string fullName = node.object + "." + node.member;
 
         if (node.arguments.empty()) {
-            // Could be a module constant or a record field access
-            // Heuristic: if object is a known module (accessible as global), treat
-            // it as a module constant; otherwise compile as record member access.
-            // We always emit LOAD_MODULE_CONST for "module.member" style accesses
-            // with no arguments because member access on a local record would go
-            // through IndexAccessNode or a dedicated node in the AST.
-            int nameIdx = chunk().addName(fullName);
-            chunk().emit(Opcode::LOAD_MODULE_CONST, nameIdx);
+            // If the object is a known built-in module, emit LOAD_MODULE_CONST.
+            // Otherwise, treat it as a record field access: load the variable
+            // and emit MEMBER_GET.
+            if (Builtins::instance().isModule(node.object)) {
+                int nameIdx = chunk().addName(fullName);
+                chunk().emit(Opcode::LOAD_MODULE_CONST, nameIdx);
+            } else {
+                // Record field access: load the record variable, then get field
+                int localIdx = resolveLocal(current_, node.object);
+                if (localIdx != -1) {
+                    chunk().emit(Opcode::LOAD_LOCAL, localIdx);
+                } else {
+                    int upvalIdx = resolveUpvalue(current_, node.object);
+                    if (upvalIdx != -1) {
+                        chunk().emit(Opcode::LOAD_UPVALUE, upvalIdx);
+                    } else {
+                        int nameIdx = chunk().addName(node.object);
+                        chunk().emit(Opcode::LOAD_GLOBAL, nameIdx);
+                    }
+                }
+                int fieldIdx = chunk().addName(node.member);
+                chunk().emit(Opcode::MEMBER_GET, fieldIdx);
+            }
         } else {
             // Module function call: object.member(args...)
             for (auto& arg : node.arguments) {
@@ -296,6 +311,12 @@ public:
             chunk().emit(Opcode::CALL_MODULE, nameIdx);
             chunk().emit(Opcode::NOP, argc); // argc encoded as operand of NOP sentinel
         }
+    }
+
+    void visit(ChainedMemberAccessNode& node) override {
+        node.object->accept(*this);               // push record onto stack
+        int nameIdx = chunk().addName(node.field);
+        chunk().emit(Opcode::MEMBER_GET, nameIdx); // pop + push field value
     }
 
     void visit(IndexAccessNode& node) override {

@@ -54,7 +54,19 @@
       "Bash(/tmp/test_min3.rho:*)",
       "Bash(/tmp/test_min4.rho:*)",
       "Bash(find /home/giuli/Documentos/GitHub/rhodesia-lang/src -type f \\\\\\(-name *.cpp -o -name *.hpp -o -name *.h \\\\\\))",
-      "Bash(find /home/giuli/Documentos/GitHub/rhodesia-lang -type f \\\\\\(-name *test* -o -name *measure* -o -name *bench* -o -name *.rho \\\\\\))"
+      "Bash(find /home/giuli/Documentos/GitHub/rhodesia-lang -type f \\\\\\(-name *test* -o -name *measure* -o -name *bench* -o -name *.rho \\\\\\))",
+      "Bash(1 echo 'int: x = to_int\\(\"\"\"\"42\"\"\"\"\\):*)",
+      "Bash(1 echo 'int: x = parse_int\\(\"\"\"\"42\"\"\"\"\\):*)",
+      "Bash(1 echo 'str: s = \"\"\"\"9000\"\"\"\":*)",
+      "Bash(1 echo 'bool: a = true:*)",
+      "Bash(1 echo 'bool: ok = false:*)",
+      "Bash(printf \"localhost\\\\n5000\\\\n\")",
+      "Bash(printf \"5001\\\\n5\\\\n\")",
+      "Bash(node -e ':*)",
+      "Bash(wc -l /home/giuli/Documentos/GitHub/rhodesia-lang/extension/server/*.js /home/giuli/Documentos/GitHub/rhodesia-lang/extension/out/server/*.js)",
+      "Bash(npm list:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git stash:*)"
     ],
     "additionalDirectories": [
       "/tmp",

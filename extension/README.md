@@ -71,6 +71,15 @@ npm install
 npm run compile
 ```
 
+### Install
+
+```bash
+# Fast command
+cd extension/ && npm install && npm run compile && cd .. && rm -rf ~/.vscode/extensions/rhodesia-vscode/ && cp -r extension ~/.vscode/extensions/rhodesia-vscode
+#
+cp -r extension ~/.vscode/extensions/rhodesia-vscode
+```
+
 ### Test
 ```bash
 # Run the test file

@@ -6,9 +6,9 @@
 println("=== K-means Clustering with Rhodesia ===")
 println("")
 
-// ============================================================================
-// 1. DATA GENERATION - Create synthetic 2D data points
-// ============================================================================
+/*
+ 1. DATA GENERATION - Create synthetic 2D data points
+*/
 println("1. Data Generation")
 println("-----------------")
 
@@ -69,9 +69,9 @@ print(n_features)
 println(" features")
 println("")
 
-// ============================================================================
-// 2. K-MEANS ALGORITHM
-// ============================================================================
+/*
+ 2. K-MEANS ALGORITHM
+*/
 println("2. K-means Clustering")
 println("---------------------")
 
@@ -204,9 +204,9 @@ fun has_converged(mat: old_centroids, mat: new_centroids, float64: tol) -> bool 
     return total_change < tol
 }
 
-// ============================================================================
-// 3. RUN K-MEANS
-// ============================================================================
+/*
+ 3. RUN K-MEANS
+*/
 println("3. Running K-means")
 println("------------------")
 
@@ -249,9 +249,9 @@ print(iter)
 println(" iterations")
 println("")
 
-// ============================================================================
-// 4. RESULTS
-// ============================================================================
+/*
+ 4. RESULTS
+*/
 println("4. Clustering Results")
 println("--------------------")
 
@@ -276,9 +276,9 @@ for i in range(n_samples) {
 }
 println("")
 
-// ============================================================================
-// 5. EVALUATION
-// ============================================================================
+/*
+ 5. EVALUATION
+*/
 println("5. Cluster Evaluation")
 println("--------------------")
 
@@ -316,9 +316,9 @@ print("Average distance to centroid: ")
 println(avg_dist)
 println("")
 
-// ============================================================================
-// 6. VISUALIZATION PREPARATION
-// ============================================================================
+/*
+ 6. VISUALIZATION PREPARATION
+*/
 println("6. Visualization Data")
 println("--------------------")
 

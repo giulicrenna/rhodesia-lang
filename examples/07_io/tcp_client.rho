@@ -1,0 +1,78 @@
+// Cliente TCP conversacional por línea de comandos
+//
+// Uso:
+//   rhodesia examples/07_io/tcp_client.rho
+//
+// Pide host y puerto al iniciar, luego entra en un bucle donde
+// cada línea escrita se envía al servidor y la respuesta se imprime.
+// Escribe "exit" o deja la línea vacía para cerrar la conexión.
+
+println("=== Cliente TCP conversacional ===")
+println()
+
+str: host = io.input("Host: ")
+str: port_str = io.input("Puerto: ")
+
+// Validar que el host no esté vacío
+if string.isempty(host) {
+    println("Error: el host no puede estar vacío.")
+} else {
+
+    // Validar que el puerto sea un número en rango válido
+    int: puerto = string.to_int(port_str)
+
+    if puerto < 1 or puerto > 65535 {
+        println("Error: el puerto debe estar entre 1 y 65535.")
+    } else {
+
+        println()
+        print("Conectando a ", host, ":", puerto, " (timeout 5s) ... ")
+
+        int: sock = net.socket(host, puerto)
+        bool: ok = net.connect(sock, 5)
+
+        if not ok {
+            println("ERROR")
+            println("No se pudo conectar a ", host, ":", puerto)
+            net.close(sock)
+        } else {
+            println("OK")
+
+            // Timeout de 10s en recv para no bloquear indefinidamente
+            net.set_timeout(sock, 10)
+
+            println("Escribe mensajes (\"exit\" o línea vacía para salir).")
+            println()
+
+            bool: activo = true
+
+            while activo {
+                str: linea = io.input("> ")
+
+                if linea == "exit" or linea == "quit" or linea == "" {
+                    activo = false
+                } else {
+                    int: enviados = net.send(sock, string.concat(linea,  "\n"))
+
+                    if enviados < 0 {
+                        println("[error: no se pudo enviar]")
+                        activo = false
+                    } else {
+                        str: respuesta = net.recv(sock, 4096)
+
+                        if respuesta == "" {
+                            println("[servidor cerró la conexión o timeout]")
+                            activo = false
+                        } else {
+                            print(respuesta)
+                        }
+                    }
+                }
+            }
+
+            net.close(sock)
+            println()
+            println("Conexión cerrada.")
+        }
+    }
+}

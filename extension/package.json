@@ -4,7 +4,7 @@
   "description": "Comprehensive language support for Rhodesia (.rho files) including syntax highlighting, intelligent autocomplete, linting, hover documentation, and code navigation",
   "version": "0.1.0",
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.79.0"
   },
   "categories": [
     "Languages",
@@ -20,12 +20,8 @@
     "linear algebra",
     "scientific computing"
   ],
-  "activationEvents": [
-    "onLanguage:rhodesia",
-    "onCommand:rhodesia.showInfo"
-  ],
   "main": "./extension.js",
-  "icon": "images/RHODESIA.png",
+  "icon": "lang_icon.png",
   "contributes": {
     "languages": [
       {
@@ -37,7 +33,11 @@
         "extensions": [
           ".rho"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./lang_icon.png",
+          "dark": "./lang_icon.png"
+        }
       }
     ],
     "grammars": [

@@ -1,0 +1,239 @@
+/**
+ * @file trigonometry.rho
+ * @brief Trigonometric functions and angle conversions
+ */
+/**
+ * @brief Convert degrees to radians
+ * @details Converts an angle from degrees to radians
+ * @param degrees The angle in degrees
+ * @return The angle in radians
+ */
+fun degrees_to_radians(float64: degrees) -> float64 {
+    return degrees * PI / 180.0
+}
+/**
+ * @brief Convert radians to degrees
+ * @details Converts an angle from radians to degrees
+ * @param radians The angle in radians
+ * @return The angle in degrees
+ */
+fun radians_to_degrees(float64: radians) -> float64 {
+    return radians * 180.0 / PI
+}
+/**
+ * @brief Wrap angle to [0, 2π) range
+ * @details Normalizes an angle to be within the range [0, 2π)
+ * @param angle The input angle in radians
+ * @return The normalized angle in the range [0, 2π)
+ */
+fun wrap_angle(float64: angle) -> float64 {
+    float64: two_pi = 2.0 * PI
+    float64: result = angle % two_pi
+    if result < 0.0 {
+        result = result + two_pi
+    }
+    return result
+}
+/**
+ * @brief Wrap angle to [-π, π] range
+ * @details Normalizes an angle to be within the symmetric range [-π, π]
+ * @param angle The input angle in radians
+ * @return The normalized angle in the range [-π, π]
+ */
+fun wrap_angle_symmetric(float64: angle) -> float64 {
+    float64: result = wrap_angle(angle)
+    if result > PI {
+        result = result - 2.0 * PI
+    }
+    return result
+}
+/**
+ * @brief Calculate sine using Taylor series approximation
+ * @details Computes the sine of an angle using Taylor series expansion
+ * @details The series is: sin(x) = x - x³/3! + x⁵/5! - x⁷/7! + ...
+ * @param x The angle in radians
+ * @param terms The number of terms to use in the Taylor series approximation
+ * @return The approximate sine value
+ */
+fun sin_taylor(float64: x, int: terms) -> float64 {
+    float64: result = 0.0
+    float64: x_wrapped = wrap_angle(x)
+
+    for n in range(terms) {
+        int: sign = 1
+        if n % 2 == 1 {
+            sign = -1
+        }
+        float64: term = sign * power(x_wrapped, 2 * n + 1) / factorial(2 * n + 1)
+        result = result + term
+    }
+
+    return result
+}
+/**
+ * @brief Calculate cosine using Taylor series approximation
+ * @details Computes the cosine of an angle using Taylor series expansion
+ * @details The series is: cos(x) = 1 - x²/2! + x⁴/4! - x⁶/6! + ...
+ * @param x The angle in radians
+ * @param terms The number of terms to use in the Taylor series approximation
+ * @return The approximate cosine value
+ */
+fun cos_taylor(float64: x, int: terms) -> float64 {
+    float64: result = 0.0
+    float64: x_wrapped = wrap_angle(x)
+
+    for n in range(terms) {
+        int: sign = 1
+        if n % 2 == 1 {
+            sign = -1
+        }
+        float64: term = sign * power(x_wrapped, 2 * n) / factorial(2 * n)
+        result = result + term
+    }
+
+    return result
+}
+/**
+ * @brief Calculate tangent as sin/cos
+ * @details Computes the tangent of an angle using the ratio of sine to cosine
+ * @details Uses Taylor series approximations for both sine and cosine
+ * @param x The angle in radians
+ * @return The approximate tangent value
+ */
+fun tan_approx(float64: x) -> float64 {
+    return sin_taylor(x, 10) / cos_taylor(x, 10)
+}
+/**
+ * @brief Calculate arcsine using approximation
+ * @details Computes the inverse sine (arcsine) of a value using a polynomial approximation
+ * @details Uses different approximations for |x| <= 0.5 and |x| > 0.5 for better accuracy
+ * @param x The input value (must be in the range [-1, 1])
+ * @return The angle in radians whose sine is x
+ */
+fun asin_approx(float64: x) -> float64 {
+    // Simple approximation for arcsine
+    float64: abs_x = abs(x)
+    float64: result = 0.0
+
+    if abs_x <= 0.5 {
+        result = x + (x * x * x) / 6.0 + (3.0 * x * x * x * x * x) / 40.0
+    } else {
+        float64: sqrt_val = sqrt(1.0 - x * x)
+        result = PI/2.0 - sqrt_val * (1.0 - (x * x) / 6.0 - (3.0 * x * x * x * x) / 80.0)
+    }
+
+    if x < 0.0 {
+        result = -result
+    }
+
+    return result
+}
+/**
+ * @brief Calculate arccosine using arcsine
+ * @details Computes the inverse cosine (arccosine) of a value using the arcsine function
+ * @details Uses the identity: arccos(x) = π/2 - arcsin(x)
+ * @param x The input value (must be in the range [-1, 1])
+ * @return The angle in radians whose cosine is x
+ */
+fun acos_approx(float64: x) -> float64 {
+    return PI/2.0 - asin_approx(x)
+}
+/**
+ * @brief Calculate arctangent using approximation
+ * @details Computes the inverse tangent (arctangent) of a value using a polynomial approximation
+ * @details Uses different approximations for |x| < 1 and |x| >= 1 for better accuracy
+ * @param x The input value
+ * @return The angle in radians whose tangent is x
+ */
+fun atan_approx(float64: x) -> float64 {
+    float64: abs_x = abs(x)
+    float64: result = 0.0
+
+    if abs_x < 1.0 {
+        result = x - (x * x * x) / 3.0 + (x * x * x * x * x) / 5.0 - (x * x * x * x * x * x * x) / 7.0
+    } else {
+        result = PI/2.0 - 1.0/x + 1.0/(3.0 * x * x * x) - 1.0/(5.0 * x * x * x * x * x)
+    }
+
+    if x < 0.0 {
+        result = -result
+    }
+
+    return result
+}
+/**
+ * @brief Calculate arctangent of y/x with correct quadrant
+ * @details Computes the four-quadrant inverse tangent (arctangent) of y/x
+ * @details Determines the correct quadrant based on the signs of x and y
+ * @param y The y-coordinate
+ * @param x The x-coordinate
+ * @return The angle in radians in the correct quadrant
+ */
+fun atan2_approx(float64: y, float64: x) -> float64 {
+    if x > 0.0 {
+        return atan_approx(y / x)
+    }
+    if x < 0.0 {
+        if y >= 0.0 {
+            return atan_approx(y / x) + PI
+        } else {
+            return atan_approx(y / x) - PI
+        }
+    }
+    // x == 0
+    if y > 0.0 {
+        return PI / 2.0
+    }
+    if y < 0.0 {
+        return -PI / 2.0
+    }
+    return 0.0  // undefined
+}
+/**
+ * @brief Helper function: factorial
+ * @details Calculates the factorial of a non-negative integer
+ * @details Used for Taylor series expansions in trigonometric functions
+ * @param n The non-negative integer to calculate factorial for
+ * @return n! (n factorial)
+ */
+fun factorial(int: n) -> float64 {
+    if n <= 1 {
+        return 1.0
+    }
+    float64: result = 1.0
+    for i in range(2, n + 1) {
+        result = result * i
+    }
+    return result
+}
+/**
+ * @brief Calculate hyperbolic sine
+ * @details Computes the hyperbolic sine of a value using the exponential function
+ * @details sinh(x) = (e^x - e^(-x)) / 2
+ * @param x The input value
+ * @return The hyperbolic sine of x
+ */
+fun sinh_approx(float64: x) -> float64 {
+    return (exp(x) - exp(-x)) / 2.0
+}
+/**
+ * @brief Calculate hyperbolic cosine
+ * @details Computes the hyperbolic cosine of a value using the exponential function
+ * @details cosh(x) = (e^x + e^(-x)) / 2
+ * @param x The input value
+ * @return The hyperbolic cosine of x
+ */
+fun cosh_approx(float64: x) -> float64 {
+    return (exp(x) + exp(-x)) / 2.0
+}
+/**
+ * @brief Calculate hyperbolic tangent
+ * @details Computes the hyperbolic tangent of a value using the exponential function
+ * @details tanh(x) = (e^(2x) - 1) / (e^(2x) + 1)
+ * @param x The input value
+ * @return The hyperbolic tangent of x
+ */
+fun tanh_approx(float64: x) -> float64 {
+    float64: exp_2x = exp(2.0 * x)
+    return (exp_2x - 1.0) / (exp_2x + 1.0)
+}

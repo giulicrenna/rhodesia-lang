@@ -1,0 +1,208 @@
+/*
+ estructuras.rho
+ Ejemplos de estructuras (record) en Rhodesia:
+   - Definicion y acceso a campos
+   - Records como parametros y retorno de funciones
+   - Records anidados
+   - Colecciones de records
+   - Patron: record + match
+   - Patron: record como estado mutable
+*/
+
+
+// ============================================================
+// 1. DEFINICION BASICA
+// ============================================================
+println("=== 1. Definicion basica ===")
+
+record: persona = {
+    nombre: "Laura",
+    edad:   32,
+    activa: true
+}
+
+println("Nombre:", persona.nombre)
+println("Edad:  ", persona.edad)
+println("Activa:", persona.activa)
+println("")
+
+// ============================================================
+// 2. RECORD COMO PARAMETRO DE FUNCION
+// ============================================================
+println("=== 2. Record como parametro ===")
+
+fun saludar(record: p) -> str {
+    return string.concat("Hola, ", p.nombre, "!")
+}
+
+fun es_mayor_de_edad(record: p) -> bool {
+    return p.edad >= 18
+}
+
+println(saludar(persona))
+println("Mayor de edad:", es_mayor_de_edad(persona))
+println("")
+
+// ============================================================
+// 3. RECORD COMO VALOR DE RETORNO
+// ============================================================
+println("=== 3. Record como retorno ===")
+
+fun crear_punto(float64: x, float64: y) -> record {
+    return { x: x, y: y }
+}
+
+fun distancia(record: a, record: b) -> float64 {
+    float64: dx = a.x - b.x
+    float64: dy = a.y - b.y
+    return math.sqrt(dx * dx + dy * dy)
+}
+
+record: p1 = crear_punto(0.0, 0.0)
+record: p2 = crear_punto(3.0, 4.0)
+println("P1:", p1.x, p1.y)
+println("P2:", p2.x, p2.y)
+println("Distancia:", distancia(p1, p2))   // 5.0
+println("")
+
+// ============================================================
+// 4. RECORDS ANIDADOS
+// ============================================================
+println("=== 4. Records anidados ===")
+
+record: direccion = {
+    calle:   "Av. Siempre Viva",
+    numero:  742,
+    ciudad:  "Springfield"
+}
+
+record: empleado = {
+    nombre:    "Homero",
+    cargo:     "Tecnico de Seguridad",
+    salario:   25000.0,
+    dir:       direccion
+}
+
+println("Empleado:", empleado.nombre)
+println("Cargo:   ", empleado.cargo)
+println("Ciudad:  ", empleado.dir.ciudad)
+println("Calle:   ", empleado.dir.calle, empleado.dir.numero)
+println("")
+
+// ============================================================
+// 5. COLECCION DE RECORDS (vector de records)
+// ============================================================
+println("=== 5. Coleccion de records ===")
+
+record: prod1 = { nombre: "Manzana", precio: 1.20, stock: 100 }
+record: prod2 = { nombre: "Naranja", precio: 0.80, stock: 250 }
+record: prod3 = { nombre: "Platano", precio: 0.50, stock:  80 }
+record: prod4 = { nombre: "Pera",    precio: 1.50, stock:  40 }
+
+println("Catalogo de productos:")
+println(" ", prod1.nombre, "-> $", prod1.precio, "(stock:", prod1.stock, ")")
+println(" ", prod2.nombre, "-> $", prod2.precio, "(stock:", prod2.stock, ")")
+println(" ", prod3.nombre, "-> $", prod3.precio, "(stock:", prod3.stock, ")")
+println(" ", prod4.nombre, "-> $", prod4.precio, "(stock:", prod4.stock, ")")
+
+// Buscar el producto mas barato comparando manualmente
+record: barato = prod1
+if prod2.precio < barato.precio { barato = prod2 }
+if prod3.precio < barato.precio { barato = prod3 }
+if prod4.precio < barato.precio { barato = prod4 }
+
+println("Mas barato:", barato.nombre, "a $", barato.precio)
+println("")
+
+// ============================================================
+// 6. RECORD + MATCH (despacho por tipo)
+// ============================================================
+println("=== 6. Record + match ===")
+
+fun area(record: figura) -> float64 {
+    match figura.tipo {
+        "circulo"    -> { return 3.14159265 * figura.r * figura.r }
+        "rectangulo" -> { return figura.w * figura.h }
+        "triangulo"  -> { return 0.5 * figura.b * figura.h }
+        _ -> {
+            println("Figura desconocida:", figura.tipo)
+            return 0.0
+        }
+    }
+    return 0.0
+}
+
+record: circulo    = { tipo: "circulo",    r: 5.0 }
+record: rect       = { tipo: "rectangulo", w: 4.0, h: 6.0 }
+record: triangulo  = { tipo: "triangulo",  b: 3.0, h: 8.0 }
+
+println("Area circulo    (r=5)     :", area(circulo))
+println("Area rectangulo (4x6)    :", area(rect))
+println("Area triangulo  (b=3,h=8):", area(triangulo))
+println("")
+
+// ============================================================
+// 7. RECORD COMO ESTADO MUTABLE (contador)
+// ============================================================
+println("=== 7. Record como estado ===")
+
+record: contador = { valor: 0, paso: 1 }
+
+fun incrementar(record: c) -> record {
+    return { valor: c.valor + c.paso, paso: c.paso }
+}
+
+fun reset_contador(record: c) -> record {
+    return { valor: 0, paso: c.paso }
+}
+
+contador = incrementar(contador)
+contador = incrementar(contador)
+contador = incrementar(contador)
+println("Tras 3 incrementos:", contador.valor)   // 3
+
+contador = reset_contador(contador)
+println("Tras reset:        ", contador.valor)   // 0
+
+record: contador2 = { valor: 0, paso: 5 }
+contador2 = incrementar(contador2)
+contador2 = incrementar(contador2)
+println("Paso 5, tras 2 incrementos:", contador2.valor)  // 10
+println("")
+
+// ============================================================
+// 8. COMPOSICION: record + tuple + funcion
+// ============================================================
+println("=== 8. Composicion record + tuple ===")
+
+fun estadisticas(vec: nums) -> record {
+    float64: suma  = 0.0
+    float64: mn    = nums[0]
+    float64: mx    = nums[0]
+    int:     total = math.size(nums)
+
+    for x in nums {
+        suma = suma + x
+        if x < mn { mn = x }
+        if x > mx { mx = x }
+    }
+
+    float64: media = suma / total
+    return {
+        minimo: mn,
+        maximo: mx,
+        media:  media,
+        suma:   suma,
+        n:      total
+    }
+}
+
+vec: datos = [4.0, 7.0, 2.0, 9.0, 1.0, 5.0, 8.0, 3.0, 6.0]
+record: resumen = estadisticas(datos)
+
+println("Estadisticas:")
+println("  N:      ", resumen.n)
+println("  Suma:   ", resumen.suma)
+println("  Minimo: ", resumen.minimo)
+println("  Maximo: ", resumen.maximo)
+println("  Media:  ", resumen.media)

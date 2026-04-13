@@ -52,6 +52,9 @@ target_link_libraries(rhodesia PRIVATE
     Eigen3::Eigen
 )
 
+# BSD sockets are part of glibc on Linux; no extra library needed.
+# On some exotic targets (e.g. MinGW) you would add -lws2_32 here.
+
 # ============================================================================
 # Installation
 # ============================================================================

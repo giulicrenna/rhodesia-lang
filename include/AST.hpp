@@ -20,9 +20,9 @@ namespace Rhodesia {
 // Forward declarations
 class ASTVisitor;
 
-// ============================================================================
-// Base Classes
-// ============================================================================
+/*
+ Base Classes
+*/
 
 /**
  * @brief Base class for all AST nodes
@@ -68,9 +68,9 @@ protected:
 
 using StmtPtr = std::unique_ptr<StmtNode>;
 
-// ============================================================================
-// Expression Nodes
-// ============================================================================
+/*
+ Expression Nodes
+*/
 
 /**
  * @brief Integer literal: 42
@@ -311,12 +311,35 @@ public:
  */
 class MemberAccessNode : public ExprNode {
 public:
-    std::string object;      // "math"
-    std::string member;      // "zeros"
+    std::string object;              // "math" or record variable name
+    std::string member;              // "zeros" or field name
     std::vector<ExprPtr> arguments;  // Function arguments if it's a call
+    bool isCalled = false;           // true when () was present (rec.fn() vs rec.fn)
 
-    MemberAccessNode(std::string obj, std::string memb, std::vector<ExprPtr> args = {}, SourceLocation loc = {})
-        : ExprNode(loc), object(std::move(obj)), member(std::move(memb)), arguments(std::move(args)) {}
+    MemberAccessNode(std::string obj, std::string memb, std::vector<ExprPtr> args = {},
+                     SourceLocation loc = {}, bool called = false)
+        : ExprNode(loc), object(std::move(obj)), member(std::move(memb)),
+          arguments(std::move(args)), isCalled(called) {}
+
+    void accept(ASTVisitor& visitor) override;
+};
+
+/**
+ * @brief Chained member access: expr.field  (where expr is not a plain identifier)
+ *        Supports: a.b.c, a.b.c(), fun().field, etc.
+ */
+class ChainedMemberAccessNode : public ExprNode {
+public:
+    ExprPtr object;                  // any expression
+    std::string field;               // field name
+    std::vector<ExprPtr> arguments;  // arguments when called as a method
+    bool isCalled = false;           // true when () was present
+
+    ChainedMemberAccessNode(ExprPtr obj, std::string fld,
+                             std::vector<ExprPtr> args = {},
+                             SourceLocation loc = {}, bool called = false)
+        : ExprNode(loc), object(std::move(obj)), field(std::move(fld)),
+          arguments(std::move(args)), isCalled(called) {}
 
     void accept(ASTVisitor& visitor) override;
 };
@@ -390,9 +413,9 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
-// ============================================================================
-// Statement Nodes
-// ============================================================================
+/*
+ Statement Nodes
+*/
 
 /**
  * @brief Variable declaration: tipo: nombre = valor
@@ -666,9 +689,9 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
-// ============================================================================
-// New Literal Nodes: Set, Tuple, Record
-// ============================================================================
+/*
+ New Literal Nodes: Set, Tuple, Record
+*/
 
 /**
  * @brief Set literal: {1, 2, 3}
@@ -715,9 +738,9 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
-// ============================================================================
-// Match Statement
-// ============================================================================
+/*
+ Match Statement
+*/
 
 /**
  * @brief Single arm in a match statement
@@ -745,9 +768,9 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
-// ============================================================================
-// Program Node (Root)
-// ============================================================================
+/*
+ Program Node (Root)
+*/
 
 /**
  * @brief Root node containing all top-level declarations
@@ -762,9 +785,9 @@ public:
     void accept(ASTVisitor& visitor) override;
 };
 
-// ============================================================================
-// Visitor Interface
-// ============================================================================
+/*
+ Visitor Interface
+*/
 
 /**
  * @brief Visitor pattern interface for AST traversal
@@ -787,6 +810,7 @@ public:
     virtual void visit(TernaryOpNode& node) = 0;
     virtual void visit(FunctionCallNode& node) = 0;
     virtual void visit(MemberAccessNode& node) = 0;
+    virtual void visit(ChainedMemberAccessNode& node) = 0;
     virtual void visit(IndexAccessNode& node) = 0;
     virtual void visit(SliceNode& node) = 0;
     virtual void visit(LambdaNode& node) = 0;
@@ -817,9 +841,9 @@ public:
     virtual void visit(ProgramNode& node) = 0;
 };
 
-// ============================================================================
-// Accept Implementations (inline)
-// ============================================================================
+/*
+ Accept Implementations (inline)
+*/
 
 inline void IntLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void FloatLiteralNode::accept(ASTVisitor& v) { v.visit(*this); }
@@ -834,6 +858,7 @@ inline void UnaryOpNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void TernaryOpNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void FunctionCallNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void MemberAccessNode::accept(ASTVisitor& v) { v.visit(*this); }
+inline void ChainedMemberAccessNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void IndexAccessNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void SliceNode::accept(ASTVisitor& v) { v.visit(*this); }
 inline void LambdaNode::accept(ASTVisitor& v) { v.visit(*this); }

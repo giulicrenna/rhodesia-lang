@@ -1,88 +1,187 @@
 const vscode = require('vscode');
+const { builtinFunctions, moduleDescriptors } = require('./builtinDescriptors');
+const { getAvailableLibPaths, parseIncludedFile } = require('./doxygenParser');
+
+// Pre-compute available include paths at activation time
+const availableLibPaths = getAvailableLibPaths();
 
 class RhodesiaAutocompleteProvider {
     constructor() {
         this.keywords = [
-            'if', 'else', 'for', 'while', 'break', 'continue', 'return', 'in', 'fun'
+            'if', 'else', 'for', 'while', 'break', 'continue', 'return', 'in', 'fun', 'include'
         ];
 
         this.types = [
-            'int', 'float64', 'vec', 'mat', 'string', 'void'
+            'int', 'float64', 'vec', 'mat', 'string', 'void', 'bool'
         ];
 
-        this.builtinFunctions = [
-            { label: 'norm', detail: 'norm(vec) -> float64 | norm(mat) -> float64', documentation: 'Compute Euclidean norm of vector or Frobenius norm of matrix' },
-            { label: 'dot', detail: 'dot(vec, vec) -> float64', documentation: 'Compute dot product of two vectors' },
-            { label: 'transpose', detail: 'transpose(mat) -> mat | transpose(vec) -> mat', documentation: 'Compute transpose of matrix or vector' },
-            { label: 'inv', detail: 'inv(mat) -> mat', documentation: 'Compute matrix inverse' },
-            { label: 'sum', detail: 'sum(vec) -> float64 | sum(mat) -> float64', documentation: 'Compute sum of all elements' },
-            { label: 'mean', detail: 'mean(vec) -> float64 | mean(mat) -> float64', documentation: 'Compute arithmetic mean of all elements' },
-            { label: 'zeros', detail: 'zeros(int) -> vec | zeros(int, int) -> mat', documentation: 'Create zero vector or matrix' },
-            { label: 'ones', detail: 'ones(int) -> vec | ones(int, int) -> mat', documentation: 'Create vector or matrix filled with ones' },
-            { label: 'eye', detail: 'eye(int) -> mat', documentation: 'Create identity matrix' },
-            { label: 'range', detail: 'range(int) -> vec | range(int, int) -> vec', documentation: 'Create range vector' },
-            { label: 'sqrt', detail: 'sqrt(float64) -> float64 | sqrt(vec) -> vec', documentation: 'Compute square root' },
-            { label: 'exp', detail: 'exp(float64) -> float64 | exp(vec) -> vec', documentation: 'Compute exponential' },
-            { label: 'log', detail: 'log(float64) -> float64 | log(vec) -> vec', documentation: 'Compute natural logarithm' },
-            { label: 'abs', detail: 'abs(float64) -> float64 | abs(vec) -> vec', documentation: 'Compute absolute value' },
-            { label: 'sin', detail: 'sin(float64) -> float64', documentation: 'Compute sine' },
-            { label: 'cos', detail: 'cos(float64) -> float64', documentation: 'Compute cosine' },
-            { label: 'tan', detail: 'tan(float64) -> float64', documentation: 'Compute tangent' },
-            { label: 'rows', detail: 'rows(mat) -> int', documentation: 'Get number of rows in matrix' },
-            { label: 'cols', detail: 'cols(mat) -> int', documentation: 'Get number of columns in matrix' },
-            { label: 'size', detail: 'size(vec) -> int | size(mat) -> int', documentation: 'Get total number of elements' },
-            { label: 'print', detail: 'print(...) -> void', documentation: 'Print values without newline' },
-            { label: 'println', detail: 'println(...) -> void', documentation: 'Print values with newline' }
-        ];
+        this.builtinFunctions = builtinFunctions;
+        this.moduleDescriptors = moduleDescriptors;
 
         this.logicalOperators = [
             'and', 'or', 'not'
         ];
+
+        this.moduleNames = Object.keys(moduleDescriptors);
+
+        // Cache for parsed include files within a session
+        this._includeCache = new Map();
+    }
+
+    /**
+     * Parse the include statements from the document text and return
+     * the union of { functions, constants } from all included files.
+     */
+    _getIncludedSymbols(documentText) {
+        const functions = [];
+        const constants = [];
+        const includeRe = /^include\s+(\S+)/gm;
+        let match;
+        while ((match = includeRe.exec(documentText)) !== null) {
+            const includePath = match[1].trim();
+            if (!this._includeCache.has(includePath)) {
+                this._includeCache.set(includePath, parseIncludedFile(includePath));
+            }
+            const symbols = this._includeCache.get(includePath);
+            functions.push(...(symbols.functions || []));
+            constants.push(...(symbols.constants || []));
+        }
+        return { functions, constants };
     }
 
     provideCompletionItems(document, position, token, context) {
-        const linePrefix = document.lineAt(position).text.substr(0, position.character);
+        const linePrefix = document.lineAt(position).text.substring(0, position.character);
         const items = [];
 
-        // Suggest keywords
+        // ----------------------------------------------------------------
+        // Include path completions: line starts with "include "
+        // e.g. `include math/core/` → suggest matching paths
+        // ----------------------------------------------------------------
+        const includeMatch = linePrefix.match(/^include\s+(.*)$/);
+        if (includeMatch) {
+            const typed = includeMatch[1];
+            const typedLower = typed.toLowerCase();
+            availableLibPaths.forEach(libPath => {
+                if (libPath.toLowerCase().startsWith(typedLower)) {
+                    const item = new vscode.CompletionItem(libPath, vscode.CompletionItemKind.Module);
+                    item.detail = 'Include path';
+                    item.documentation = new vscode.MarkdownString(
+                        `Include \`${libPath}\`\n\nImports functions and constants from this library file.`
+                    );
+                    item.insertText = libPath;
+                    // filterText uses the full path so VS Code fuzzy-matches the entire
+                    // "math/numer" query against "math/numerical/..." correctly,
+                    // even when the filter has only seen the last word segment.
+                    item.filterText = libPath;
+                    // Replace from the start of the typed partial path
+                    const startChar = linePrefix.length - typed.length;
+                    item.range = new vscode.Range(
+                        position.line, startChar,
+                        position.line, position.character
+                    );
+                    items.push(item);
+                }
+            });
+            return items;
+        }
+
+        // ----------------------------------------------------------------
+        // Module-qualified completions: detect "module." at cursor
+        // ----------------------------------------------------------------
+        const moduleMatch = linePrefix.match(/\b(\w+)\.\s*$/);
+        if (moduleMatch) {
+            const moduleName = moduleMatch[1];
+            const mod = this.moduleDescriptors[moduleName];
+            if (mod) {
+                if (mod.functions) {
+                    mod.functions.forEach(func => {
+                        const item = new vscode.CompletionItem(func.label, vscode.CompletionItemKind.Function);
+                        item.detail = func.detail;
+                        item.documentation = new vscode.MarkdownString(func.documentation);
+                        item.insertText = func.label;
+                        items.push(item);
+                    });
+                }
+                if (mod.constants) {
+                    mod.constants.forEach(constant => {
+                        const item = new vscode.CompletionItem(constant.label, vscode.CompletionItemKind.Constant);
+                        item.detail = `${moduleName}.${constant.label}: ${constant.detail}`;
+                        item.documentation = new vscode.MarkdownString(constant.documentation);
+                        item.insertText = constant.label;
+                        items.push(item);
+                    });
+                }
+                return items;
+            }
+        }
+
+        // ----------------------------------------------------------------
+        // Global completions: keywords, types, builtins, modules, operators
+        // ----------------------------------------------------------------
+
         this.keywords.forEach(keyword => {
             items.push(new vscode.CompletionItem(keyword, vscode.CompletionItemKind.Keyword));
         });
 
-        // Suggest types
         this.types.forEach(type => {
             items.push(new vscode.CompletionItem(type, vscode.CompletionItemKind.Class));
         });
 
-        // Suggest built-in functions
         this.builtinFunctions.forEach(func => {
             const item = new vscode.CompletionItem(func.label, vscode.CompletionItemKind.Function);
             item.detail = func.detail;
-            item.documentation = func.documentation;
+            item.documentation = new vscode.MarkdownString(func.documentation);
             items.push(item);
         });
 
-        // Suggest logical operators
+        this.moduleNames.forEach(modName => {
+            const item = new vscode.CompletionItem(modName, vscode.CompletionItemKind.Module);
+            item.detail = `Module: ${modName}`;
+            item.documentation = new vscode.MarkdownString(
+                `Built-in module \`${modName}\`. Type \`${modName}.\` to see its functions.`
+            );
+            items.push(item);
+        });
+
         this.logicalOperators.forEach(op => {
             items.push(new vscode.CompletionItem(op, vscode.CompletionItemKind.Operator));
         });
 
-        // Context-aware suggestions
+        // ----------------------------------------------------------------
+        // Symbols from included files (functions and constants)
+        // ----------------------------------------------------------------
+        const documentText = document.getText();
+        const { functions: incFuncs, constants: incConsts } = this._getIncludedSymbols(documentText);
+
+        const seenLabels = new Set(this.builtinFunctions.map(f => f.label));
+
+        incFuncs.forEach(func => {
+            if (seenLabels.has(func.label)) return; // already in builtins
+            seenLabels.add(func.label);
+            const item = new vscode.CompletionItem(func.label, vscode.CompletionItemKind.Function);
+            item.detail = func.detail;
+            item.documentation = new vscode.MarkdownString(func.documentation);
+            items.push(item);
+        });
+
+        incConsts.forEach(constant => {
+            if (seenLabels.has(constant.label)) return;
+            seenLabels.add(constant.label);
+            const item = new vscode.CompletionItem(constant.label, vscode.CompletionItemKind.Constant);
+            item.detail = constant.detail;
+            item.documentation = new vscode.MarkdownString(
+                `**${constant.label}** = \`${constant.value}\`\n\n${constant.documentation}`
+            );
+            items.push(item);
+        });
+
+        // Context: suggest return types after "fun ... ->"
         if (linePrefix.includes('fun ') && !linePrefix.includes('->')) {
-            // Suggest return types after function declaration
             this.types.forEach(type => {
                 const item = new vscode.CompletionItem(type, vscode.CompletionItemKind.Class);
                 item.preselect = true;
-                items.unshift(item); // Show types first
+                items.unshift(item);
             });
-        }
-
-        if (linePrefix.match(/\\b(int|float64|vec|mat|string|void)\\s*:\\s*\\w*$/)) {
-            // Suggest variable names after type declaration
-            const varItem = new vscode.CompletionItem('variable_name', vscode.CompletionItemKind.Variable);
-            varItem.insertText = 'variable_name = ';
-            varItem.range = new vscode.Range(position.line, position.character - 0, position.line, position.character);
-            items.unshift(varItem);
         }
 
         return items;

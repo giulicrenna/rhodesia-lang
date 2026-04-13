@@ -1,6 +1,6 @@
-// ============================================================
-// Ejemplos: Set, Tuple y Record con sintaxis literal
-// ============================================================
+/*
+ Ejemplos: Set, Tuple y Record con sintaxis literal
+*/
 
 // ------------------------------------------------------------
 // SET: coleccion sin duplicados, sin orden

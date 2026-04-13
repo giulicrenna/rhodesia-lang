@@ -12,11 +12,14 @@
 #include "Lexer.hpp"
 #include "Parser.hpp"
 #include "Error.hpp"
+#include <algorithm>
+#include <cstdlib>
 #include <string>
 #include <unordered_map>
 #include <memory>
 #include <fstream>
 #include <sstream>
+#include <vector>
 #include <filesystem>
 
 namespace Rhodesia {
@@ -37,12 +40,23 @@ struct LoadedModule {
  */
 class ModuleLoader {
 public:
+    ModuleLoader()
+        : baseDirectory_(std::filesystem::current_path()),
+          repoLibsInitialized_(false) {
+        loadEnvLibraryPath();
+        ensureBaseSearchPath();
+        ensureRepoLibSearchPath();
+    }
+
     /**
      * @brief Set the base directory for module resolution
      * @param baseDir Directory where the main file is located
      */
     void setBaseDirectory(const std::string& baseDir) {
         baseDirectory_ = std::filesystem::absolute(baseDir);
+        repoLibsInitialized_ = false;
+        ensureBaseSearchPath();
+        ensureRepoLibSearchPath();
     }
 
     /**
@@ -112,6 +126,58 @@ public:
 private:
     std::filesystem::path baseDirectory_;
     std::unordered_map<std::string, std::unique_ptr<LoadedModule>> moduleCache_;
+    std::vector<std::filesystem::path> searchPaths_;
+    bool repoLibsInitialized_;
+    bool basePathRegistered_ = false;
+
+    void loadEnvLibraryPath() {
+        const char* envPath = std::getenv("RHODESIA_LIB_PATH");
+        if (envPath && *envPath) {
+            std::filesystem::path path(envPath);
+            if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
+                searchPaths_.push_back(path);
+            }
+        }
+    }
+
+    void ensureBaseSearchPath() {
+        if (!basePathRegistered_) {
+            searchPaths_.insert(searchPaths_.begin(), baseDirectory_);
+            basePathRegistered_ = true;
+            return;
+        }
+
+        if (!searchPaths_.empty()) {
+            searchPaths_[0] = baseDirectory_;
+        } else {
+            searchPaths_.push_back(baseDirectory_);
+            basePathRegistered_ = true;
+        }
+    }
+
+    void ensureRepoLibSearchPath() {
+        if (repoLibsInitialized_) {
+            return;
+        }
+
+        std::filesystem::path current = baseDirectory_;
+        while (true) {
+            std::filesystem::path candidate = current / "libs";
+            if (std::filesystem::exists(candidate) && std::filesystem::is_directory(candidate)) {
+                auto it = std::find(searchPaths_.begin(), searchPaths_.end(), candidate);
+                if (it == searchPaths_.end()) {
+                    searchPaths_.push_back(candidate);
+                }
+                break;
+            }
+            if (current == current.root_path()) {
+                break;
+            }
+            current = current.parent_path();
+        }
+
+        repoLibsInitialized_ = true;
+    }
 
     /**
      * @brief Resolve module name to file path
@@ -119,6 +185,15 @@ private:
      * @return Full path to the .rho file
      */
     std::string resolveModulePath(const std::string& moduleName) {
+        ensureRepoLibSearchPath();
+
+        for (const auto& searchPath : searchPaths_) {
+            std::filesystem::path candidate = searchPath / (moduleName + ".rho");
+            if (std::filesystem::exists(candidate)) {
+                return candidate.string();
+            }
+        }
+
         // Try different resolution strategies:
 
         // 1. Relative to base directory

@@ -1,6 +1,6 @@
-// ============================================
-// Test del tipo Map en Rhodesia
-// ============================================
+/*
+ Test del tipo Map en Rhodesia
+*/
 
 println("=== Creación y operaciones básicas ===")
 

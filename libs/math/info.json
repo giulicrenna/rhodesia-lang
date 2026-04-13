@@ -1,0 +1,370 @@
+{
+  "name": "rhodesia-math",
+  "version": "1.0.0",
+  "description": "Comprehensive mathematical library for the Rhodesia programming language, providing core mathematical functions, linear algebra operations, numerical methods, and statistical analysis.",
+  "author": "Rhodesia Development Team",
+  "license": "MIT",
+  "modules": [
+    {
+      "name": "core",
+      "description": "Basic mathematical constants and functions",
+      "functions": [
+        "PI", "E", "PHI", "SQRT_2", "SQRT_3",
+        "safe_divide", "power", "vec_abs", "clamp",
+        "lerp", "map_range", "approx_equal", "sign",
+        "step", "smoothstep"
+      ]
+    },
+    {
+      "name": "linear_algebra",
+      "description": "Advanced matrix and vector operations",
+      "submodules": [
+        {
+          "name": "matrices",
+          "functions": [
+            "mat_trace", "mat_det_2x2", "mat_det_3x3", "mat_transpose",
+            "mat_hadamard", "mat_divide", "mat_frobenius_norm", "mat_max_norm",
+            "mat_is_square", "mat_is_symmetric", "mat_is_diagonal", "mat_is_identity",
+            "mat_outer_product", "mat_abs", "mat_clamp", "mat_row_means",
+            "mat_col_means", "mat_row_sums", "mat_col_sums", "mat_diagonal",
+            "mat_from_diagonal", "mat_block"
+          ]
+        },
+        {
+          "name": "vectors",
+          "functions": [
+            "vec_magnitude", "vec_distance", "vec_project", "vec_reject",
+            "vec_angle_radians", "vec_angle_degrees", "vec_is_parallel",
+            "vec_is_orthogonal", "vec_normalize_safe", "vec_cross_2d",
+            "vec_cross_3d", "vec_reflect", "vec_rotate_2d", "vec_rotate_x",
+            "vec_rotate_y", "vec_rotate_z", "vec_hadamard", "vec_divide",
+            "vec_min", "vec_max", "vec_clamp", "vec_weighted_dot"
+          ]
+        },
+        {
+          "name": "decompositions",
+          "functions": [
+            "lu_decompose_3x3", "qr_decompose_3x3", "cholesky_decompose_3x3",
+            "mat_eigenvalues_2x2", "svd_approximate_2x2", "mat_condition_number",
+            "mat_rank_estimate", "mat_null_space_estimate"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "numerical",
+      "description": "Numerical methods and algorithms",
+      "submodules": [
+        {
+          "name": "integration",
+          "functions": [
+            "rectangle_rule", "rectangle_rule_right", "midpoint_rule",
+            "trapezoidal_rule", "simpsons_rule", "adaptive_quadrature",
+            "romberg_integration", "gaussian_quadrature_2pofloor",
+            "gaussian_quadrature_3pofloor", "monte_carlo_integration",
+            "monte_carlo_multidimensional", "tanh_sinh_quadrature",
+            "improper_integral", "multiple_integration"
+          ]
+        },
+        {
+          "name": "optimization",
+          "functions": [
+            "golden_section_search", "gradient_descent", "conjugate_gradient",
+            "newton_optimization", "nelder_mead", "backtracking_line_search",
+            "bfgs", "penalty_method", "simulated_annealing", "genetic_algorithm"
+          ]
+        },
+        {
+          "name": "root_finding",
+          "functions": [
+            "bisection", "newton_raphson", "secant_method", "fixed_point_iteration",
+            "false_position", "brent_method", "quadratic_roots", "cubic_roots",
+            "multidimensional_newton"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "statistics",
+      "description": "Statistical analysis and probability functions",
+      "submodules": [
+        {
+          "name": "descriptive",
+          "functions": [
+            "mean", "variance", "std_dev", "sample_variance", "sample_std_dev",
+            "median", "mode", "range", "iqr", "skewness", "kurtosis",
+            "coefficient_of_variation", "percentile", "quartiles",
+            "covariance", "correlation", "z_score_normalize", "min_max_normalize",
+            "vec_sort", "min_value", "max_value"
+          ]
+        },
+        {
+          "name": "probability",
+          "functions": [
+            "normal_pdf", "normal_cdf", "erf_approx", "standard_normal_pdf",
+            "standard_normal_cdf", "uniform_pdf", "uniform_cdf", "exponential_pdf",
+            "exponential_cdf", "poisson_pmf", "poisson_cdf", "binomial_pmf",
+            "binomial_cdf", "binomial_coefficient", "gamma_approx", "beta_function",
+            "chisquare_pdf", "student_t_pdf", "standard_normal_quantile"
+          ]
+        },
+        {
+          "name": "regression",
+          "functions": [
+            "linear_regression", "linear_regression_predict", "r_squared",
+            "multiple_regression_2d", "polynomial_regression_quadratic",
+            "polynomial_regression_predict", "weighted_linear_regression",
+            "logistic_function", "logistic_predict", "ridge_regression",
+            "lasso_regression", "mse", "rmse", "mae", "mape",
+            "cross_validation_linear"
+          ]
+        }
+      ]
+    }
+  ],
+  "exports": [
+    {
+      "module": "core",
+      "file": "core/core.rho",
+      "functions": [
+        {"name": "PI", "type": "constant"},
+        {"name": "E", "type": "constant"},
+        {"name": "PHI", "type": "constant"},
+        {"name": "SQRT_2", "type": "constant"},
+        {"name": "SQRT_3", "type": "constant"},
+        {"name": "safe_divide", "type": "function", "signature": "float64: a, float64: b -> float64"},
+        {"name": "power", "type": "function", "signature": "float64: base, int: exponent -> float64"},
+        {"name": "vec_abs", "type": "function", "signature": "vec: v -> vec"},
+        {"name": "clamp", "type": "function", "signature": "float64: value, float64: min_val, float64: max_val -> float64"},
+        {"name": "lerp", "type": "function", "signature": "float64: a, float64: b, float64: t -> float64"},
+        {"name": "map_range", "type": "function", "signature": "float64: value, float64: from_min, float64: from_max, float64: to_min, float64: to_max -> float64"},
+        {"name": "approx_equal", "type": "function", "signature": "float64: a, float64: b, float64: epsilon -> bool"},
+        {"name": "sign", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "step", "type": "function", "signature": "float64: x, float64: threshold -> float64"},
+        {"name": "smoothstep", "type": "function", "signature": "float64: x, float64: edge0, float64: edge1 -> float64"}
+      ]
+    },
+    {
+      "module": "core",
+      "file": "core/trigonometry.rho",
+      "functions": [
+        {"name": "degrees_to_radians", "type": "function", "signature": "float64: degrees -> float64"},
+        {"name": "radians_to_degrees", "type": "function", "signature": "float64: radians -> float64"},
+        {"name": "wrap_angle", "type": "function", "signature": "float64: angle -> float64"},
+        {"name": "wrap_angle_symmetric", "type": "function", "signature": "float64: angle -> float64"},
+        {"name": "sin_taylor", "type": "function", "signature": "float64: x, int: terms -> float64"},
+        {"name": "cos_taylor", "type": "function", "signature": "float64: x, int: terms -> float64"},
+        {"name": "tan_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "asin_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "acos_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "atan_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "atan2_approx", "type": "function", "signature": "float64: y, float64: x -> float64"},
+        {"name": "factorial", "type": "function", "signature": "int: n -> float64"},
+        {"name": "sinh_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "cosh_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "tanh_approx", "type": "function", "signature": "float64: x -> float64"}
+      ]
+    },
+    {
+      "module": "linear_algebra",
+      "file": "linear_algebra/matrices.rho",
+      "functions": [
+        {"name": "mat_trace", "type": "function", "signature": "mat: m -> float64"},
+        {"name": "mat_det_2x2", "type": "function", "signature": "mat: m -> float64"},
+        {"name": "mat_det_3x3", "type": "function", "signature": "mat: m -> float64"},
+        {"name": "mat_transpose", "type": "function", "signature": "mat: m -> mat"},
+        {"name": "mat_hadamard", "type": "function", "signature": "mat: a, mat: b -> mat"},
+        {"name": "mat_divide", "type": "function", "signature": "mat: a, mat: b -> mat"},
+        {"name": "mat_frobenius_norm", "type": "function", "signature": "mat: m -> float64"},
+        {"name": "mat_max_norm", "type": "function", "signature": "mat: m -> float64"},
+        {"name": "mat_is_square", "type": "function", "signature": "mat: m -> bool"},
+        {"name": "mat_is_symmetric", "type": "function", "signature": "mat: m, float64: epsilon -> bool"},
+        {"name": "mat_is_diagonal", "type": "function", "signature": "mat: m, float64: epsilon -> bool"},
+        {"name": "mat_is_identity", "type": "function", "signature": "mat: m, float64: epsilon -> bool"},
+        {"name": "mat_outer_product", "type": "function", "signature": "vec: u, vec: v -> mat"},
+        {"name": "mat_abs", "type": "function", "signature": "mat: m -> mat"},
+        {"name": "mat_clamp", "type": "function", "signature": "mat: m, float64: min_val, float64: max_val -> mat"},
+        {"name": "mat_row_means", "type": "function", "signature": "mat: m -> vec"},
+        {"name": "mat_col_means", "type": "function", "signature": "mat: m -> vec"},
+        {"name": "mat_row_sums", "type": "function", "signature": "mat: m -> vec"},
+        {"name": "mat_col_sums", "type": "function", "signature": "mat: m -> vec"},
+        {"name": "mat_diagonal", "type": "function", "signature": "mat: m -> vec"},
+        {"name": "mat_from_diagonal", "type": "function", "signature": "vec: diag -> mat"},
+        {"name": "mat_block", "type": "function", "signature": "mat: m, int: start_row, int: start_col, int: block_rows, int: block_cols -> mat"}
+      ]
+    },
+    {
+      "module": "linear_algebra",
+      "file": "linear_algebra/vectors.rho",
+      "functions": [
+        {"name": "vec_magnitude", "type": "function", "signature": "vec: v -> float64"},
+        {"name": "vec_distance", "type": "function", "signature": "vec: a, vec: b -> float64"},
+        {"name": "vec_project", "type": "function", "signature": "vec: a, vec: b -> vec"},
+        {"name": "vec_reject", "type": "function", "signature": "vec: a, vec: b -> vec"},
+        {"name": "vec_angle_radians", "type": "function", "signature": "vec: a, vec: b -> float64"},
+        {"name": "vec_angle_degrees", "type": "function", "signature": "vec: a, vec: b -> float64"},
+        {"name": "vec_is_parallel", "type": "function", "signature": "vec: a, vec: b, float64: epsilon -> bool"},
+        {"name": "vec_is_orthogonal", "type": "function", "signature": "vec: a, vec: b, float64: epsilon -> bool"},
+        {"name": "vec_normalize_safe", "type": "function", "signature": "vec: v, float64: epsilon -> vec"},
+        {"name": "vec_cross_2d", "type": "function", "signature": "vec: a, vec: b -> float64"},
+        {"name": "vec_cross_3d", "type": "function", "signature": "vec: a, vec: b -> vec"},
+        {"name": "vec_reflect", "type": "function", "signature": "vec: v, vec: normal -> vec"},
+        {"name": "vec_rotate_2d", "type": "function", "signature": "vec: v, float64: angle -> vec"},
+        {"name": "vec_rotate_x", "type": "function", "signature": "vec: v, float64: angle -> vec"},
+        {"name": "vec_rotate_y", "type": "function", "signature": "vec: v, float64: angle -> vec"},
+        {"name": "vec_rotate_z", "type": "function", "signature": "vec: v, float64: angle -> vec"},
+        {"name": "vec_hadamard", "type": "function", "signature": "vec: a, vec: b -> vec"},
+        {"name": "vec_divide", "type": "function", "signature": "vec: a, vec: b -> vec"},
+        {"name": "vec_min", "type": "function", "signature": "vec: a, vec: b -> vec"},
+        {"name": "vec_max", "type": "function", "signature": "vec: a, vec: b -> vec"},
+        {"name": "vec_clamp", "type": "function", "signature": "vec: v, float64: min_val, float64: max_val -> vec"},
+        {"name": "vec_weighted_dot", "type": "function", "signature": "vec: a, vec: b, vec: weights -> float64"}
+      ]
+    },
+    {
+      "module": "linear_algebra",
+      "file": "linear_algebra/decompositions.rho",
+      "functions": [
+        {"name": "lu_decompose_3x3", "type": "function", "signature": "mat: A -> (mat, mat)"},
+        {"name": "qr_decompose_3x3", "type": "function", "signature": "mat: A -> (mat, mat)"},
+        {"name": "cholesky_decompose_3x3", "type": "function", "signature": "mat: A -> mat"},
+        {"name": "mat_eigenvalues_2x2", "type": "function", "signature": "mat: A -> vec"},
+        {"name": "svd_approximate_2x2", "type": "function", "signature": "mat: A -> (mat, vec, mat)"},
+        {"name": "mat_condition_number", "type": "function", "signature": "mat: A -> float64"},
+        {"name": "mat_rank_estimate", "type": "function", "signature": "mat: A, float64: epsilon -> int"},
+        {"name": "mat_null_space_estimate", "type": "function", "signature": "mat: A, float64: epsilon -> mat"}
+      ]
+    },
+    {
+      "module": "numerical",
+      "file": "numerical/integration.rho",
+      "functions": [
+        {"name": "rectangle_rule", "type": "function", "signature": "function: f, float64: a, float64: b, int: n -> float64"},
+        {"name": "rectangle_rule_right", "type": "function", "signature": "function: f, float64: a, float64: b, int: n -> float64"},
+        {"name": "midpoint_rule", "type": "function", "signature": "function: f, float64: a, float64: b, int: n -> float64"},
+        {"name": "trapezoidal_rule", "type": "function", "signature": "function: f, float64: a, float64: b, int: n -> float64"},
+        {"name": "simpsons_rule", "type": "function", "signature": "function: f, float64: a, float64: b, int: n -> float64"},
+        {"name": "adaptive_quadrature", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol, int: max_depth, int: depth -> float64"},
+        {"name": "romberg_integration", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol, int: max_iter -> float64"},
+        {"name": "gaussian_quadrature_2pofloor", "type": "function", "signature": "function: f, float64: a, float64: b -> float64"},
+        {"name": "gaussian_quadrature_3pofloor", "type": "function", "signature": "function: f, float64: a, float64: b -> float64"},
+        {"name": "monte_carlo_integration", "type": "function", "signature": "function: f, float64: a, float64: b, int: n_samples -> float64"},
+        {"name": "monte_carlo_multidimensional", "type": "function", "signature": "function: f, vec: lower_bounds, vec: upper_bounds, int: n_samples -> float64"},
+        {"name": "tanh_sinh_quadrature", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol, int: max_level -> float64"},
+        {"name": "improper_integral", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol -> float64"},
+        {"name": "multiple_integration", "type": "function", "signature": "function: f, vec: lower_bounds, vec: upper_bounds, int: n_points -> float64"}
+      ]
+    },
+    {
+      "module": "numerical",
+      "file": "numerical/optimization.rho",
+      "functions": [
+        {"name": "golden_section_search", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol, int: max_iter -> float64"},
+        {"name": "gradient_descent", "type": "function", "signature": "function: f, function: grad_f, vec: x0, float64: learning_rate, float64: tol, int: max_iter -> vec"},
+        {"name": "conjugate_gradient", "type": "function", "signature": "function: f, function: grad_f, vec: x0, float64: tol, int: max_iter -> vec"},
+        {"name": "newton_optimization", "type": "function", "signature": "function: f, function: grad_f, function: hessian_f, vec: x0, float64: tol, int: max_iter -> vec"},
+        {"name": "nelder_mead", "type": "function", "signature": "function: f, vec: x0, float64: tol, int: max_iter -> vec"},
+        {"name": "backtracking_line_search", "type": "function", "signature": "function: f, function: grad_f, vec: x, vec: d, float64: alpha_init, float64: c, float64: tau -> float64"},
+        {"name": "bfgs", "type": "function", "signature": "function: f, function: grad_f, vec: x0, float64: tol, int: max_iter -> vec"},
+        {"name": "penalty_method", "type": "function", "signature": "function: f, function: constraint, vec: x0, float64: penalty, float64: tol, int: max_iter -> vec"},
+        {"name": "simulated_annealing", "type": "function", "signature": "function: f, vec: x0, float64: temp_init, float64: cooling_rate, int: max_iter -> vec"},
+        {"name": "genetic_algorithm", "type": "function", "signature": "function: fitness, int: population_size, int: generations, float64: mutation_rate -> vec"}
+      ]
+    },
+    {
+      "module": "numerical",
+      "file": "numerical/root_finding.rho",
+      "functions": [
+        {"name": "bisection", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol, int: max_iter -> float64"},
+        {"name": "newton_raphson", "type": "function", "signature": "function: f, function: df, float64: x0, float64: tol, int: max_iter -> float64"},
+        {"name": "secant_method", "type": "function", "signature": "function: f, float64: x0, float64: x1, float64: tol, int: max_iter -> float64"},
+        {"name": "fixed_point_iteration", "type": "function", "signature": "function: g, float64: x0, float64: tol, int: max_iter -> float64"},
+        {"name": "false_position", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol, int: max_iter -> float64"},
+        {"name": "brent_method", "type": "function", "signature": "function: f, float64: a, float64: b, float64: tol, int: max_iter -> float64"},
+        {"name": "quadratic_roots", "type": "function", "signature": "float64: a, float64: b, float64: c -> (float64, float64)"},
+        {"name": "cubic_roots", "type": "function", "signature": "float64: a, float64: b, float64: c, float64: d -> vec"},
+        {"name": "multidimensional_newton", "type": "function", "signature": "function: F, function: J, vec: x0, float64: tol, int: max_iter -> vec"}
+      ]
+    },
+    {
+      "module": "statistics",
+      "file": "statistics/descriptive.rho",
+      "functions": [
+        {"name": "mean", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "variance", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "std_dev", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "sample_variance", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "sample_std_dev", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "median", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "mode", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "range", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "iqr", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "skewness", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "kurtosis", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "coefficient_of_variation", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "percentile", "type": "function", "signature": "vec: data, float64: p -> float64"},
+        {"name": "quartiles", "type": "function", "signature": "vec: data -> vec"},
+        {"name": "covariance", "type": "function", "signature": "vec: x, vec: y -> float64"},
+        {"name": "correlation", "type": "function", "signature": "vec: x, vec: y -> float64"},
+        {"name": "z_score_normalize", "type": "function", "signature": "vec: data -> vec"},
+        {"name": "min_max_normalize", "type": "function", "signature": "vec: data -> vec"},
+        {"name": "vec_sort", "type": "function", "signature": "vec: data -> vec"},
+        {"name": "min_value", "type": "function", "signature": "vec: data -> float64"},
+        {"name": "max_value", "type": "function", "signature": "vec: data -> float64"}
+      ]
+    },
+    {
+      "module": "statistics",
+      "file": "statistics/probability.rho",
+      "functions": [
+        {"name": "normal_pdf", "type": "function", "signature": "float64: x, float64: mean, float64: std_dev -> float64"},
+        {"name": "normal_cdf", "type": "function", "signature": "float64: x, float64: mean, float64: std_dev -> float64"},
+        {"name": "erf_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "standard_normal_pdf", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "standard_normal_cdf", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "uniform_pdf", "type": "function", "signature": "float64: x, float64: a, float64: b -> float64"},
+        {"name": "uniform_cdf", "type": "function", "signature": "float64: x, float64: a, float64: b -> float64"},
+        {"name": "exponential_pdf", "type": "function", "signature": "float64: x, float64: rate -> float64"},
+        {"name": "exponential_cdf", "type": "function", "signature": "float64: x, float64: rate -> float64"},
+        {"name": "poisson_pmf", "type": "function", "signature": "int: k, float64: lam -> float64"},
+        {"name": "poisson_cdf", "type": "function", "signature": "int: k, float64: lam -> float64"},
+        {"name": "binomial_pmf", "type": "function", "signature": "int: k, int: n, float64: p -> float64"},
+        {"name": "binomial_cdf", "type": "function", "signature": "int: k, int: n, float64: p -> float64"},
+        {"name": "binomial_coefficient", "type": "function", "signature": "int: n, int: k -> float64"},
+        {"name": "gamma_approx", "type": "function", "signature": "float64: x -> float64"},
+        {"name": "beta_function", "type": "function", "signature": "float64: alpha, float64: beta -> float64"},
+        {"name": "chisquare_pdf", "type": "function", "signature": "float64: x, int: k -> float64"},
+        {"name": "student_t_pdf", "type": "function", "signature": "float64: x, int: df -> float64"},
+        {"name": "standard_normal_quantile", "type": "function", "signature": "float64: p -> float64"}
+      ]
+    },
+    {
+      "module": "statistics",
+      "file": "statistics/regression.rho",
+      "functions": [
+        {"name": "linear_regression", "type": "function", "signature": "vec: x, vec: y -> (float64, float64)"},
+        {"name": "linear_regression_predict", "type": "function", "signature": "vec: x, vec: y, float64: x_new -> float64"},
+        {"name": "r_squared", "type": "function", "signature": "vec: x, vec: y -> float64"},
+        {"name": "multiple_regression_2d", "type": "function", "signature": "mat: X, vec: y -> vec"},
+        {"name": "polynomial_regression_quadratic", "type": "function", "signature": "vec: x, vec: y -> (float64, float64, float64)"},
+        {"name": "polynomial_regression_predict", "type": "function", "signature": "vec: x, vec: y, float64: x_new -> float64"},
+        {"name": "weighted_linear_regression", "type": "function", "signature": "vec: x, vec: y, vec: weights -> (float64, float64)"},
+        {"name": "logistic_function", "type": "function", "signature": "float64: z -> float64"},
+        {"name": "logistic_predict", "type": "function", "signature": "vec: coefficients, vec: x -> float64"},
+        {"name": "ridge_regression", "type": "function", "signature": "mat: X, vec: y, float64: lam -> vec"},
+        {"name": "lasso_regression", "type": "function", "signature": "mat: X, vec: y, float64: lam, int: max_iter -> vec"},
+        {"name": "mse", "type": "function", "signature": "vec: y_true, vec: y_pred -> float64"},
+        {"name": "rmse", "type": "function", "signature": "vec: y_true, vec: y_pred -> float64"},
+        {"name": "mae", "type": "function", "signature": "vec: y_true, vec: y_pred -> float64"},
+        {"name": "mape", "type": "function", "signature": "vec: y_true, vec: y_pred -> float64"},
+        {"name": "cross_validation_linear", "type": "function", "signature": "mat: X, vec: y, int: k -> float64"}
+      ]
+    }
+  ],
+  "dependencies": {
+    "core": [],
+    "linear_algebra": ["core"],
+    "numerical": ["core"],
+    "statistics": ["core", "linear_algebra", "numerical"]
+  }
+}

@@ -4,6 +4,7 @@ print("Testing closures:")
 // Closure capturing outer variable
 int: multiplier = 5
 function: multiply = lambda(x) -> x * multiplier
+
 print("multiply(4) with multiplier=5: ")
 print(multiply(4))
 

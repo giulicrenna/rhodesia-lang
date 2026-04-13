@@ -1,0 +1,473 @@
+// optimization.rho
+// Optimization algorithms
+
+// Golden section search for 1D optimization
+fun golden_section_search(function: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+    float64: golden_ratio = (sqrt(5.0) - 1.0) / 2.0
+    float64: c = b - golden_ratio * (b - a)
+    float64: d = a + golden_ratio * (b - a)
+
+    for iter in range(max_iter) {
+        if abs(c - d) < tol {
+            return (a + b) / 2.0
+        }
+
+        float64: fc = f(c)
+        float64: fd = f(d)
+
+        if fc < fd {
+            b = d
+            d = c
+            c = b - golden_ratio * (b - a)
+        } else {
+            a = c
+            c = d
+            d = a + golden_ratio * (b - a)
+        }
+    }
+
+    return (a + b) / 2.0
+}
+
+// Gradient descent for multi-dimensional optimization
+fun gradient_descent(function: f, function: grad_f, vec: x0, float64: learning_rate, float64: tol, int: max_iter) -> vec {
+    vec: x = x0
+
+    for iter in range(max_iter) {
+        vec: gradient = grad_f(x)
+        vec: x_new = x - learning_rate * gradient
+
+        float64: norm_grad = norm(gradient)
+        float64: norm_delta = norm(x_new - x)
+
+        if norm_grad < tol or norm_delta < tol {
+            return x_new
+        }
+
+        x = x_new
+    }
+
+    return x
+}
+
+// Conjugate gradient method
+fun conjugate_gradient(function: f, function: grad_f, vec: x0, float64: tol, int: max_iter) -> vec {
+    vec: x = x0
+    vec: g = grad_f(x)
+    vec: d = -g
+    float64: g_norm_sq = dot(g, g)
+
+    for iter in range(max_iter) {
+        if sqrt(g_norm_sq) < tol {
+            return x
+        }
+
+        // Line search (simple backtracking)
+        float64: alpha = 1.0
+        float64: c = 0.5
+        int: max_ls_iter = 10
+
+        for ls_iter in range(max_ls_iter) {
+            vec: x_new = x + alpha * d
+            vec: g_new = grad_f(x_new)
+
+            if dot(g_new, d) >= c * dot(g, d) {
+                alpha = alpha * 0.5
+            } else {
+                break
+            }
+        }
+
+        vec: x_new = x + alpha * d
+        vec: g_new = grad_f(x_new)
+        float64: g_new_norm_sq = dot(g_new, g_new)
+
+        if sqrt(g_new_norm_sq) < tol {
+            return x_new
+        }
+
+        // Fletcher-Reeves update
+        float64: beta = g_new_norm_sq / g_norm_sq
+        vec: d_new = -g_new + beta * d
+
+        x = x_new
+        g = g_new
+        d = d_new
+        g_norm_sq = g_new_norm_sq
+    }
+
+    return x
+}
+
+// Newton's method for optimization
+fun newton_optimization(function: f, function: grad_f, function: hessian_f, vec: x0, float64: tol, int: max_iter) -> vec {
+    vec: x = x0
+
+    for iter in range(max_iter) {
+        vec: gradient = grad_f(x)
+        mat: hessian = hessian_f(x)
+
+        float64: norm_grad = norm(gradient)
+        if norm_grad < tol {
+            return x
+        }
+
+        // Solve Hessian * delta = -gradient
+        vec: delta = inv(hessian) * (-gradient)
+
+        // Line search
+        float64: alpha = 1.0
+        vec: x_new = x + alpha * delta
+
+        // Simple acceptance criterion
+        vec: grad_new = grad_f(x_new)
+        if norm(grad_new) < norm_grad {
+            x = x_new
+        } else {
+            // Reduce step size
+            alpha = 0.5
+            x_new = x + alpha * delta
+            x = x_new
+        }
+
+        if norm(x_new - x) < tol {
+            return x_new
+        }
+    }
+
+    return x
+}
+
+// Simplex method (Nelder-Mead) for multi-dimensional optimization
+fun nelder_mead(function: f, vec: x0, float64: tol, int: max_iter) -> vec {
+    int: n = size(x0)
+
+    // Initialize simplex
+    mat: simplex = zeros(n + 1, n)
+    for i in range(n + 1) {
+        for j in range(n) {
+            if i == 0 {
+                simplex[i, j] = x0[j]
+            } else {
+                simplex[i, j] = x0[j] + (i == j + 1 ? 0.1 : 0.0)
+            }
+        }
+    }
+
+    // Evaluate function at simplex vertices
+    vec: f_values = zeros(n + 1)
+    for i in range(n + 1) {
+        f_values[i] = f([simplex[i, 0], simplex[i, 1]])  // Simple 2D case
+    }
+
+    for iter in range(max_iter) {
+        // Sort vertices by function value
+        // Simple bubble sort for demonstration
+        for i in range(n + 1) {
+            for j in range(i + 1, n + 1) {
+                if f_values[i] > f_values[j] {
+                    // Swap vertices
+                    for k in range(n) {
+                        float64: temp = simplex[i, k]
+                        simplex[i, k] = simplex[j, k]
+                        simplex[j, k] = temp
+                    }
+                    // Swap function values
+                    float64: temp_f = f_values[i]
+                    f_values[i] = f_values[j]
+                    f_values[j] = temp_f
+                }
+            }
+        }
+
+        // Check for convergence
+        float64: std_dev = 0.0
+        float64: mean_f = mean(f_values)
+        for i in range(n + 1) {
+            std_dev = std_dev + (f_values[i] - mean_f) * (f_values[i] - mean_f)
+        }
+        std_dev = sqrt(std_dev / n + 1)
+
+        if std_dev < tol {
+            return [simplex[0, 0], simplex[0, 1]]  // Return best vertex
+        }
+
+        // Calculate centroid (excluding worst vertex)
+        vec: centroid = zeros(n)
+        for i in range(n) {
+            for j in range(n) {
+                centroid[j] = centroid[j] + simplex[i, j]
+            }
+        }
+        for j in range(n) {
+            centroid[j] = centroid[j] / n
+        }
+
+        // Reflection
+        vec: xr = zeros(n)
+        for j in range(n) {
+            xr[j] = centroid[j] + (centroid[j] - simplex[n, j])
+        }
+        float64: fr = f(xr)
+
+        if fr < f_values[0] {
+            // Expansion
+            vec: xe = zeros(n)
+            for j in range(n) {
+                xe[j] = centroid[j] + 2.0 * (xr[j] - centroid[j])
+            }
+            float64: fe = f(xe)
+
+            if fe < fr {
+                // Replace worst vertex with expanded point
+                for j in range(n) {
+                    simplex[n, j] = xe[j]
+                }
+                f_values[n] = fe
+            } else {
+                // Replace worst vertex with reflected point
+                for j in range(n) {
+                    simplex[n, j] = xr[j]
+                }
+                f_values[n] = fr
+            }
+        } else if fr < f_values[n - 1] {
+            // Replace worst vertex with reflected point
+            for j in range(n) {
+                simplex[n, j] = xr[j]
+            }
+            f_values[n] = fr
+        } else {
+            // Contraction
+            vec: xc = zeros(n)
+            for j in range(n) {
+                xc[j] = centroid[j] + 0.5 * (simplex[n, j] - centroid[j])
+            }
+            float64: fc = f(xc)
+
+            if fc < f_values[n] {
+                // Replace worst vertex with contracted point
+                for j in range(n) {
+                    simplex[n, j] = xc[j]
+                }
+                f_values[n] = fc
+            } else {
+                // Shrink simplex
+                for i in range(1, n + 1) {
+                    for j in range(n) {
+                        simplex[i, j] = simplex[0, j] + 0.5 * (simplex[i, j] - simplex[0, j])
+                    }
+                    f_values[i] = f([simplex[i, 0], simplex[i, 1]])
+                }
+            }
+        }
+    }
+
+    return [simplex[0, 0], simplex[0, 1]]  // Return best vertex found
+}
+
+// Line search using backtracking
+fun backtracking_line_search(function: f, function: grad_f, vec: x, vec: d, float64: alpha_init, float64: c, float64: tau) -> float64 {
+    float64: alpha = alpha_init
+    vec: grad = grad_f(x)
+    float64: grad_dot_d = dot(grad, d)
+
+    while true {
+        vec: x_new = x + alpha * d
+        float64: f_new = f(x_new)
+        float64: f_old = f(x)
+
+        if f_new <= f_old + c * alpha * grad_dot_d {
+            return alpha
+        }
+
+        alpha = alpha * tau
+    }
+}
+
+/**
+ * @brief Quasi-Newton BFGS method
+ * @details Minimizes a function using the BFGS quasi-Newton method
+ * @details Approximates the inverse Hessian matrix to achieve superlinear convergence
+ * @details More efficient than gradient descent for ill-conditioned problems
+ * @param f The function to minimize
+ * @param grad_f The gradient function (returns gradient vector)
+ * @param x0 The initial starting point
+ * @param tol The convergence tolerance
+ * @param max_iter The maximum number of iterations
+ * @return The approximate location of the minimum
+ */
+fun bfgs(function: f, function: grad_f, vec: x0, float64: tol, int: max_iter) -> vec {
+    int: n = size(x0)
+    vec: x = x0
+    vec: grad = grad_f(x)
+    mat: H = eye(n)  // Initial inverse Hessian approximation
+
+    for iter in range(max_iter) {
+        float64: norm_grad = norm(grad)
+        if norm_grad < tol {
+            return x
+        }
+
+        // Search direction
+        vec: d = -H * grad
+
+        // Line search
+        float64: alpha = backtracking_line_search(f, grad_f, x, d, 1.0, 0.5, 0.5)
+
+        // Update
+        vec: x_new = x + alpha * d
+        vec: grad_new = grad_f(x_new)
+        vec: s = x_new - x
+        vec: y = grad_new - grad
+
+        // BFGS update
+        float64: rho = 1.0 / dot(y, s)
+        mat: I = eye(n)
+        mat: term1 = I - rho * mat_outer_product(s, y)
+        mat: term2 = I - rho * mat_outer_product(y, s)
+        mat: term3 = rho * mat_outer_product(s, s)
+
+        H = term1 * H * term2 + term3
+
+        x = x_new
+        grad = grad_new
+    }
+
+    return x
+}
+/**
+ * @brief Constrained optimization using penalty method
+ * @details Minimizes a function subject to constraints using penalty method
+ * @details Converts constrained problem to unconstrained by adding penalty terms
+ * @details Uses gradient descent on penalized objective function
+ * @param f The objective function to minimize
+ * @param constraint The constraint function (should be zero when satisfied)
+ * @param x0 The initial starting point
+ * @param penalty The penalty coefficient for constraint violations
+ * @param tol The convergence tolerance
+ * @param max_iter The
+// Simulated annealing
+fun simulated_annealing(function: f, vec: x0, float64: temp_init, float64: cooling_rate, int: max_iter) -> vec {
+    vec: x_current = x0
+    vec: x_best = x0
+    float64: f_current = f(x_current)
+    float64: f_best = f_current
+    float64: temp = temp_init
+
+    for iter in range(max_iter) {
+        // Generate random neighbor
+        vec: x_new = x_current
+        for i in range(size(x_current)) {
+            x_new[i] = x_new[i] + (rand() - 0.5) * 0.1  // Small random perturbation
+        }
+
+        float64: f_new = f(x_new)
+        float64: delta = f_new - f_current
+
+        // Acceptance probability
+        float64: acceptance_prob = 0.0
+        if delta < 0.0 {
+            acceptance_prob = 1.0
+        } else {
+            acceptance_prob = exp(-delta / temp)
+        }
+
+        // Accept or reject
+        if rand() < acceptance_prob {
+            x_current = x_new
+            f_current = f_new
+
+            if f_new < f_best {
+                x_best = x_new
+                f_best = f_new
+            }
+        }
+
+        // Cool down
+        temp = temp * cooling_rate
+    }
+
+    return x_best
+}
+
+// Genetic algorithm (simplified)
+fun genetic_algorithm(function: fitness, int: population_size, int: generations, float64: mutation_rate) -> vec {
+    int: n = 2  // Dimension (simplified for 2D)
+
+    // Initialize population
+    mat: population = zeros(population_size, n)
+    vec: fitness_values = zeros(population_size)
+
+    for i in range(population_size) {
+        for j in range(n) {
+            population[i, j] = rand() * 10.0 - 5.0  // Random in [-5, 5]
+        }
+        fitness_values[i] = fitness([population[i, 0], population[i, 1]])
+    }
+
+    for gen in range(generations) {
+        // Selection (tournament selection)
+        mat: new_population = zeros(population_size, n)
+
+        for i in range(population_size) {
+            // Tournament selection
+            int: a = floor(rand() * population_size)
+            int: b = floor(rand() * population_size)
+
+            int: winner = a
+            if fitness_values[b] > fitness_values[winner] {
+                winner = b
+            }
+
+            // Copy winner to new population
+            for j in range(n) {
+                new_population[i, j] = population[winner, j]
+            }
+        }
+
+        // Crossover (single point)
+        for i in range(0, population_size, 2) {
+            if i + 1 < population_size and rand() < 0.7 {
+                int: crossover_point = floor(rand() * n)
+
+                for j in range(crossover_point, n) {
+                    float64: temp = new_population[i, j]
+                    new_population[i, j] = new_population[i + 1, j]
+                    new_population[i + 1, j] = temp
+                }
+            }
+        }
+
+        // Mutation
+        for i in range(population_size) {
+            for j in range(n) {
+                if rand() < mutation_rate {
+                    new_population[i, j] = new_population[i, j] + (rand() - 0.5) * 1.0
+                }
+            }
+        }
+
+        // Update population and fitness
+        for i in range(population_size) {
+            for j in range(n) {
+                population[i, j] = new_population[i, j]
+            }
+            fitness_values[i] = fitness([population[i, 0], population[i, 1]])
+        }
+
+        // Find best individual
+        float64: best_fitness = fitness_values[0]
+        int: best_index = 0
+
+        for i in range(1, population_size) {
+            if fitness_values[i] > best_fitness {
+                best_fitness = fitness_values[i]
+                best_index = i
+            }
+        }
+    }
+
+    // Return best individual
+    return [population[best_index, 0], population[best_index, 1]]
+}

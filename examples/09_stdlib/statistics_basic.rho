@@ -1,6 +1,6 @@
-// ============================================================================
-// Basic Statistics Module Usage Examples
-// ============================================================================
+/*
+ Basic Statistics Module Usage Examples
+*/
 // Quick examples of stats.mean, stats.std, stats.var, stats.cov
 //
 // Usage: ./rhodesia examples/stats_basic.rho

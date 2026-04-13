@@ -12,7 +12,6 @@ class RhodesiaLinter {
             })
         );
 
-        // Register for document changes
         if (vscode.window.activeTextEditor) {
             this.validateTextDocument(vscode.window.activeTextEditor.document);
         }
@@ -36,83 +35,80 @@ class RhodesiaLinter {
 
     validateTextDocument(document) {
         const diagnostics = [];
-
-        // Basic syntax validation
         this.validateSyntax(document, diagnostics);
-
-        // Type checking
         this.validateTypes(document, diagnostics);
-
-        // Update diagnostics
         this.diagnosticCollection.set(document.uri, diagnostics);
     }
 
     validateSyntax(document, diagnostics) {
-        const text = document.getText();
-        const lines = text.split('\n');
+        const lines = document.getText().split('\n');
+        let braceDepth = 0;
 
-        // Check for common syntax errors
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            const lineNumber = i;
+            const line = lines[i];
 
-            // Check for unmatched braces
-            const openBraces = (line.match(/\\{/g) || []).length;
-            const closeBraces = (line.match(/\\}/g) || []).length;
+            // Skip comment lines
+            if (line.trim().startsWith('//')) continue;
 
-            // Check for variable declarations without initialization
-            if (line.match(/\\b[a-zA-Z_][a-zA-Z0-9_]*\\s*:\\s*(?!int|float64|vec|mat|string|void)/)) {
-                const match = line.match(/\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*:/);
-                if (match) {
-                    const range = new vscode.Range(lineNumber, match.index, lineNumber, match.index + match[0].length);
-                    diagnostics.push(new vscode.Diagnostic(
-                        range,
-                        `Variable declaration missing type or initialization`,
-                        vscode.DiagnosticSeverity.Error
-                    ));
+            // Track brace balance across the document
+            for (let j = 0; j < line.length; j++) {
+                if (line[j] === '{') {
+                    braceDepth++;
+                } else if (line[j] === '}') {
+                    braceDepth--;
+                    if (braceDepth < 0) {
+                        diagnostics.push(new vscode.Diagnostic(
+                            new vscode.Range(i, j, i, j + 1),
+                            'Unexpected closing brace',
+                            vscode.DiagnosticSeverity.Error
+                        ));
+                        braceDepth = 0;
+                    }
                 }
             }
 
-            // Check for function declarations
-            if (line.match(/\\bfun\\b/) && !line.match(/->\\s*(int|float64|vec|mat|string|void)\\b/)) {
-                const match = line.match(/\\bfun\\b/);
-                if (match) {
-                    const range = new vscode.Range(lineNumber, match.index, lineNumber, match.index + 3);
-                    diagnostics.push(new vscode.Diagnostic(
-                        range,
-                        `Function declaration missing return type`,
-                        vscode.DiagnosticSeverity.Error
-                    ));
-                }
+            // Check for function declarations without return type annotation
+            // Valid Rhodesia syntax: fun name(...) -> type { ... }
+            const funDeclMatch = line.match(/\bfun\s+(\w+)\s*\([^)]*\)/);
+            if (funDeclMatch && !line.includes('->')) {
+                const funIdx = line.indexOf('fun');
+                diagnostics.push(new vscode.Diagnostic(
+                    new vscode.Range(i, funIdx, i, funIdx + 3 + 1 + funDeclMatch[1].length),
+                    `Function '${funDeclMatch[1]}' is missing a return type (-> type)`,
+                    vscode.DiagnosticSeverity.Warning
+                ));
             }
+        }
+
+        // Report unclosed braces at end of file
+        if (braceDepth > 0) {
+            const lastLine = document.lineCount - 1;
+            diagnostics.push(new vscode.Diagnostic(
+                new vscode.Range(lastLine, 0, lastLine, 0),
+                `Missing ${braceDepth} closing brace${braceDepth > 1 ? 's' : ''}`,
+                vscode.DiagnosticSeverity.Error
+            ));
         }
     }
 
     validateTypes(document, diagnostics) {
-        const text = document.getText();
-        const lines = text.split('\n');
+        const lines = document.getText().split('\n');
 
-        // Simple type checking - this would be more sophisticated in a real implementation
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            const lineNumber = i;
+            const line = lines[i];
+            if (line.trim().startsWith('//')) continue;
 
-            // Check for type mismatches in assignments
-            if (line.match(/\\b(int|float64|vec|mat|string)\\s*:\\s*\\w+\\s*=\\s*([^;]+)/)) {
-                const match = line.match(/\\b(int|float64|vec|mat|string)\\s*:\\s*\\w+\\s*=\\s*([^;]+)/);
-                if (match) {
-                    const declaredType = match[1];
-                    const assignedValue = match[2].trim();
-
-                    // Very basic type checking
-                    if (declaredType === 'int' && assignedValue.match(/\\.\\d+/)) {
-                        const range = new vscode.Range(lineNumber, match.index, lineNumber, line.length);
-                        diagnostics.push(new vscode.Diagnostic(
-                            range,
-                            `Cannot assign float value to int variable`,
-                            vscode.DiagnosticSeverity.Warning
-                        ));
-                    }
+            // Detect float literal assigned to an int variable: int: name = 1.5
+            const intAssignMatch = line.match(/\bint\s*:\s*\w+\s*=\s*([^/\n]+)/);
+            if (intAssignMatch) {
+                const value = intAssignMatch[1].trim();
+                if (/\d+\.\d+/.test(value)) {
+                    const matchIdx = intAssignMatch.index || 0;
+                    diagnostics.push(new vscode.Diagnostic(
+                        new vscode.Range(i, matchIdx, i, line.length),
+                        'Cannot assign float value to int variable',
+                        vscode.DiagnosticSeverity.Warning
+                    ));
                 }
             }
         }
@@ -129,17 +125,19 @@ class RhodesiaCodeActionProvider {
         const codeActions = [];
 
         for (const diagnostic of context.diagnostics) {
-            if (diagnostic.message.includes('missing type or initialization')) {
-                const fix = new vscode.CodeAction('Add type annotation', vscode.CodeActionKind.QuickFix);
+            if (diagnostic.message.includes('missing a return type')) {
+                const fix = new vscode.CodeAction('Add return type -> void', vscode.CodeActionKind.QuickFix);
                 fix.edit = new vscode.WorkspaceEdit();
                 fix.isPreferred = true;
                 fix.diagnostics = [diagnostic];
 
-                // Simple fix - add : int
-                const text = document.getText(diagnostic.range);
-                const newText = text.replace(/(\\w+)\\s*:$/, '$1: int = ');
-                fix.edit.replace(document.uri, diagnostic.range, newText);
-
+                const lineText = document.lineAt(diagnostic.range.start.line).text;
+                // Insert -> void before the opening brace or at end of line
+                const insertPos = lineText.indexOf('{') !== -1
+                    ? lineText.indexOf('{')
+                    : lineText.length;
+                const position = new vscode.Position(diagnostic.range.start.line, insertPos);
+                fix.edit.insert(document.uri, position, '-> void ');
                 codeActions.push(fix);
             }
         }

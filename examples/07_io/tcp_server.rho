@@ -1,0 +1,63 @@
+// Servidor TCP de eco por línea de comandos
+//
+// Uso:
+//   rhodesia examples/07_io/tcp_server.rho
+//
+// Escucha en el puerto indicado, acepta una conexión a la vez,
+// lee líneas y las devuelve como eco hasta que el cliente cierra
+// la conexión o envía "exit". Luego vuelve a esperar la siguiente
+// conexión. Escribe "stop" como mensaje para apagar el servidor.
+
+println("=== Servidor TCP de eco ===")
+println()
+
+str: port_str = io.input("Puerto (ej. 9000): ")
+int: puerto = string.to_int(port_str)
+
+int: server = net.listen(puerto)
+println("Escuchando en 0.0.0.0:", puerto)
+println("Ctrl+C para terminar el proceso.")
+println()
+
+bool: corriendo = true
+
+while corriendo {
+    println("Esperando conexión ...")
+    int: client = net.accept(server)
+    record: peer = net.peer(client)
+    println("Cliente conectado: ", peer.host, ":", peer.port)
+
+    bool: sesion = true
+
+    while sesion {
+        str: msg = net.recv(client, 4096)
+
+        if msg == "" {
+            println("Cliente desconectado.")
+            sesion = false
+        } else {
+            // Quitar \n o \r\n del final para imprimir limpio
+            str: limpio = string.trim(msg)
+            println("< ", limpio)
+
+            if limpio == "exit" or limpio == "quit" {
+                net.send(client, "Hasta luego.\n")
+                sesion = false
+            } else if limpio == "stop" {
+                net.send(client, "Servidor apagado.\n")
+                sesion = false
+                corriendo = false
+            } else {
+                str: eco = string.concat("eco: ", limpio, "\n")
+                net.send(client, eco)
+            }
+        }
+    }
+
+    net.close(client)
+    println("Conexión cerrada.")
+    println()
+}
+
+net.close(server)
+println("Servidor detenido.")

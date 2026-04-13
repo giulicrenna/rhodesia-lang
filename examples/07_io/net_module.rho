@@ -1,0 +1,89 @@
+// Módulo net: sockets TCP y cliente HTTP/1.1
+
+println("=== net: HTTP ===")
+println()
+
+// -----------------------------------------------------------------------
+// HTTP GET básico
+// -----------------------------------------------------------------------
+println("--- net.http_get ---")
+
+record: resp = net.http_get("http://httpbin.org/get")
+println("Status: ", resp.status)
+println("Status text: ", resp.status_text)
+println("Body (primeros 200 chars): ", string.slice(resp.body, 0, 200))
+println()
+
+// Acceder a un header de la respuesta
+str: content_type = mapping.get(resp.headers, "content-type")
+println("Content-Type: ", content_type)
+println()
+
+// -----------------------------------------------------------------------
+// HTTP POST con body
+// -----------------------------------------------------------------------
+println("--- net.http_post ---")
+
+record: post_resp = net.http_post("http://httpbin.org/post", "campo=valor&otro=123")
+println("Status POST: ", post_resp.status)
+println()
+
+// -----------------------------------------------------------------------
+// net.http_request: método arbitrario con headers personalizados
+// -----------------------------------------------------------------------
+println("--- net.http_request (PUT con JSON) ---")
+
+map: headers = mapping.create()
+mapping.put(headers, "Content-Type", "application/json")
+mapping.put(headers, "Accept", "application/json")
+
+str: json_body = "{\"nombre\": \"Rhodesia\", \"version\": 1}"
+record: put_resp = net.http_request("PUT", "http://httpbin.org/put", json_body, headers)
+println("Status PUT: ", put_resp.status)
+println()
+
+// -----------------------------------------------------------------------
+// Socket TCP crudo (cliente)
+// -----------------------------------------------------------------------
+println("--- net.socket / connect / send / recv_all ---")
+
+int: sock = net.socket("httpbin.org", 80)
+bool: ok = net.connect(sock)
+println("Conectado: ", ok)
+
+if ok {
+    str: request = "GET /ip HTTP/1.1\r\nHost: httpbin.org\r\nConnection: close\r\n\r\n"
+    int: sent = net.send(sock, request)
+    println("Bytes enviados: ", sent)
+
+    str: raw = net.recv_all(sock)
+    println("Respuesta cruda (primeros 300):")
+    println(string.slice(raw, 0, 300))
+}
+
+net.close(sock)
+println()
+
+// -----------------------------------------------------------------------
+// Servidor TCP mínimo (eco de una sola conexión) - demo de API
+// Descomentar para probar:
+//   Terminal 1: rhodesia net_module.rho
+//   Terminal 2: nc 127.0.0.1 9000
+// -----------------------------------------------------------------------
+println("--- net.listen / accept / peer / send / close ---")
+
+// int: server = net.listen(9000)
+// println("Esperando conexión en :9000 ...")
+// int: client = net.accept(server)
+// record: info = net.peer(client)
+// println("Cliente conectado desde: ", info.host, ":", info.port)
+// str: msg = net.recv(client, 1024)
+// println("Recibido: ", msg)
+// net.send(client, "eco: " + msg)
+// net.close(client)
+// net.close(server)
+
+println("Servidor comentado para no bloquear el ejemplo.")
+println()
+
+println("=== Fin net module ===")

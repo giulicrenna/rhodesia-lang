@@ -61,6 +61,20 @@ cd build
 cmake ..
 make
 
+# Copy Rhodesia math libraries into installable libs directory
+LIB_TARGET="/opt/rhodesia-lang/libs"
+LIB_SOURCE="/opt/rhodesia-lang/examples/10_applications/math_library"
+LIB_MODULES=(core linear_algebra numerical statistics)
+
+echo "Provisioning Rhodesia math libraries..."
+rm -rf "$LIB_TARGET"
+mkdir -p "$LIB_TARGET"
+for module in "${LIB_MODULES[@]}"; do
+    if [ -d "$LIB_SOURCE/$module" ]; then
+        cp -r "$LIB_SOURCE/$module" "$LIB_TARGET/$module"
+    fi
+done
+
 # Add Rhodesia to PATH
 if ! grep -q "/opt/rhodesia-lang/build" /etc/environment; then
     echo "Adding Rhodesia to system PATH..."
@@ -73,6 +87,16 @@ if [ ! -f "/usr/local/bin/rhodesia" ]; then
     echo "Creating symlink..."
     ln -s /opt/rhodesia-lang/build/rhodesia /usr/local/bin/rhodesia
 fi
+
+LIB_ENV_LINE="RHODESIA_LIB_PATH=\"$LIB_TARGET\""
+echo "Configuring RHODESIA_LIB_PATH..."
+if grep -q "^RHODESIA_LIB_PATH=" /etc/environment; then
+    sed -i "s|^RHODESIA_LIB_PATH=.*|$LIB_ENV_LINE|" /etc/environment
+else
+    echo "$LIB_ENV_LINE" >> /etc/environment
+fi
+export RHODESIA_LIB_PATH="$LIB_TARGET"
+source /etc/environment
 
 echo ""
 echo "Rhodesia installation completed successfully!"

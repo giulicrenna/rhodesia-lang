@@ -8,9 +8,9 @@ println("  Data Science Pipeline with Rhodesia")
 println("========================================")
 println("")
 
-// ============================================================================
-// 1. DATA PREPARATION
-// ============================================================================
+/*
+ 1. DATA PREPARATION
+*/
 println("1. Data Preparation")
 println("-------------------")
 
@@ -38,9 +38,9 @@ println("Dataset shape: ", n_samples, " x ", n_features)
 println("Target size: ", math.size(y))
 println("")
 
-// ============================================================================
-// 2. TRAIN/TEST SPLIT (manual 80/20)
-// ============================================================================
+/*
+ 2. TRAIN/TEST SPLIT (manual 80/20)
+*/
 println("2. Train/Test Split (80/20)")
 println("---------------------------")
 
@@ -69,9 +69,9 @@ println("Training samples: ", math.rows(X_train))
 println("Test samples: ", math.rows(X_test))
 println("")
 
-// ============================================================================
-// 3. MODEL TRAINING (OLS)
-// ============================================================================
+/*
+ 3. MODEL TRAINING (OLS)
+*/
 println("3. Model Training (Ordinary Least Squares)")
 println("------------------------------------------")
 
@@ -91,9 +91,9 @@ println("  w1 (feature 1): ", weights[1])
 println("  w2 (feature 2): ", weights[2])
 println("")
 
-// ============================================================================
-// 4. PREDICTIONS
-// ============================================================================
+/*
+ 4. PREDICTIONS
+*/
 println("4. Predictions")
 println("--------------")
 
@@ -122,9 +122,9 @@ for i in range(math.size(y_test)) {
 }
 println("")
 
-// ============================================================================
-// 5. MODEL EVALUATION
-// ============================================================================
+/*
+ 5. MODEL EVALUATION
+*/
 println("5. Model Evaluation")
 println("-------------------")
 
@@ -171,9 +171,9 @@ println("  MAE:  ", mae(y_test, y_test_pred))
 println("  R²:   ", r_squared(y_test, y_test_pred))
 println("")
 
-// ============================================================================
-// 6. FEATURE IMPORTANCE (normalized weights)
-// ============================================================================
+/*
+ 6. FEATURE IMPORTANCE (normalized weights)
+*/
 println("6. Feature Importance")
 println("---------------------")
 

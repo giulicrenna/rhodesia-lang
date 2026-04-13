@@ -20,6 +20,16 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <map>
+// POSIX networking (used by NetworkModule.hpp)
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <cerrno>
 
 namespace Rhodesia {
 
@@ -82,6 +92,8 @@ private:
  */
 using BuiltinFunc = std::function<RhoValue(const std::vector<RhoValue>&, SourceLocation)>;
 
+#include "NetworkModule.hpp"
+
 /**
  * @brief Registry of all built-in functions
  */
@@ -97,6 +109,14 @@ public:
      */
     bool isBuiltin(const std::string& name) const {
         return functions_.find(name) != functions_.end();
+    }
+
+    /**
+     * @brief Check if a name is a registered built-in module
+     */
+    bool isModule(const std::string& name) const {
+        return modules_.find(name) != modules_.end() ||
+               moduleConstants_.find(name) != moduleConstants_.end();
     }
 
     /**
@@ -561,7 +581,18 @@ private:
                     }
                 }, args[0]);
             } else {
-                // min(a, b, c, ...)
+                // min(a, b, c, ...) — preserve int type if all args are integers
+                bool allInt = true;
+                for (const auto& a : args) {
+                    if (!std::holds_alternative<int64_t>(a)) { allInt = false; break; }
+                }
+                if (allInt) {
+                    int64_t minVal = std::get<int64_t>(args[0]);
+                    for (size_t i = 1; i < args.size(); ++i) {
+                        minVal = std::min(minVal, std::get<int64_t>(args[i]));
+                    }
+                    return minVal;
+                }
                 double minVal = toDouble(args[0]);
                 for (size_t i = 1; i < args.size(); ++i) {
                     minVal = std::min(minVal, toDouble(args[i]));
@@ -590,7 +621,18 @@ private:
                     }
                 }, args[0]);
             } else {
-                // max(a, b, c, ...)
+                // max(a, b, c, ...) — preserve int type if all args are integers
+                bool allInt = true;
+                for (const auto& a : args) {
+                    if (!std::holds_alternative<int64_t>(a)) { allInt = false; break; }
+                }
+                if (allInt) {
+                    int64_t maxVal = std::get<int64_t>(args[0]);
+                    for (size_t i = 1; i < args.size(); ++i) {
+                        maxVal = std::max(maxVal, std::get<int64_t>(args[i]));
+                    }
+                    return maxVal;
+                }
                 double maxVal = toDouble(args[0]);
                 for (size_t i = 1; i < args.size(); ++i) {
                     maxVal = std::max(maxVal, toDouble(args[i]));
@@ -2165,6 +2207,59 @@ private:
             return count;
         };
 
+        /**
+         * string.to_int(s) -> int
+         * Parse a decimal integer string and return its int value.
+         * Throws RuntimeError if the string is not a valid integer.
+         */
+        stringModule["to_int"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1)
+                throw ArgumentError::wrongCount("string.to_int", 1, args.size(), loc);
+            const auto* s = std::get_if<std::string>(&args[0]);
+            if (!s) throw TypeError("string.to_int: argument must be a string", loc);
+            try {
+                return static_cast<int64_t>(std::stoll(*s));
+            } catch (...) {
+                throw RuntimeError("string.to_int: cannot parse '" + *s + "' as integer", loc);
+            }
+        };
+
+        /**
+         * string.to_float(s) -> float64
+         * Parse a floating-point string and return its float64 value.
+         * Throws RuntimeError if the string is not a valid number.
+         */
+        stringModule["to_float"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1)
+                throw ArgumentError::wrongCount("string.to_float", 1, args.size(), loc);
+            const auto* s = std::get_if<std::string>(&args[0]);
+            if (!s) throw TypeError("string.to_float: argument must be a string", loc);
+            try {
+                return std::stod(*s);
+            } catch (...) {
+                throw RuntimeError("string.to_float: cannot parse '" + *s + "' as float", loc);
+            }
+        };
+
+        /**
+         * string.slice(s, start, end) -> str
+         * Return the substring s[start..end) (0-based, end exclusive).
+         * Clamps indices to string bounds silently.
+         */
+        stringModule["slice"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 3)
+                throw ArgumentError::wrongCount("string.slice", 3, args.size(), loc);
+            const auto* s = std::get_if<std::string>(&args[0]);
+            if (!s) throw TypeError("string.slice: first argument must be a string", loc);
+            int64_t start = toInt(args[1]);
+            int64_t end   = toInt(args[2]);
+            int64_t len   = static_cast<int64_t>(s->size());
+            if (start < 0) start = 0;
+            if (end > len) end = len;
+            if (start >= end) return std::string{};
+            return s->substr(static_cast<size_t>(start), static_cast<size_t>(end - start));
+        };
+
         // ====================================================================
         // Mapping Module Functions
         // ====================================================================
@@ -2370,6 +2465,12 @@ private:
 
             return newMap;
         };
+
+        // mapping.put — alias for mapping.set (avoids the 'set' keyword conflict)
+        mappingModule["put"] = mappingModule["set"];
+
+        // mapping.remove — alias for mapping.delete (avoids the 'delete' keyword conflict)
+        mappingModule["remove"] = mappingModule["delete"];
 
         // ====================================================================
         // Array Module Functions
@@ -3071,6 +3172,8 @@ private:
                 functions_[name] = fn;
             }
         }
+
+        registerNetworkModule(modules_, moduleConstants_);
     }
 };
 

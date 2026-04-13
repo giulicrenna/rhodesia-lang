@@ -1,0 +1,360 @@
+/**
+ * @file probability.rho
+ * @brief Probability distribution functions
+ */
+/**
+ * @brief Normal distribution PDF (Probability Density Function)
+ * @details Calculates the probability density function of a normal distribution
+ * @details Formula: (1/(σ√(2π))) * exp(-((x-μ)²)/(2σ²))
+ * @param x The value at which to evaluate the PDF
+ * @param mean The mean (μ) of the normal distribution
+ * @param std_dev The standard deviation (σ) of the normal distribution
+ * @return The probability density at x
+ */
+fun normal_pdf(float64: x, float64: mean, float64: std_dev) -> float64 {
+    float64: exponent = -0.5 * power((x - mean) / std_dev, 2)
+    float64: coeff = 1.0 / (std_dev * sqrt(2.0 * PI))
+    return coeff * exp(exponent)
+}
+/**
+ * @brief Normal distribution CDF approximation (using error function approximation)
+ * @details Calculates the cumulative distribution function of a normal distribution
+ * @details Uses error function approximation for numerical stability
+ * @param x The value at which to evaluate the CDF
+ * @param mean The mean (μ) of the normal distribution
+ * @param std_dev The standard deviation (σ) of the normal distribution
+ * @return The cumulative probability up to x
+ */
+fun normal_cdf(float64: x, float64: mean, float64: std_dev) -> float64 {
+    float64: z = (x - mean) / std_dev
+    return 0.5 * (1.0 + erf_approx(z))
+}
+/**
+ * @brief Error function approximation
+ * @details Approximates the error function (erf) using a polynomial approximation
+ * @details Used in normal distribution CDF calculation
+ * @param x The value at which to evaluate the error function
+ * @return The approximate value of the error function
+ */
+fun erf_approx(float64: x) -> float64 {
+    // Simple approximation of the error function
+    float64: abs_x = abs(x)
+    float64: t = 1.0 / (1.0 + 0.3275911 * abs_x)
+
+    float64: a1 = 0.254829592
+    float64: a2 = -0.284496736
+    float64: a3 = 1.421413741
+    float64: a4 = -1.453152027
+    float64: a5 = 1.061405429
+
+    float64: poly = 1.0 + a1 * t + a2 * t * t + a3 * t * t * t + a4 * t * t * t * t + a5 * t * t * t * t * t
+    float64: result = 1.0 - poly * exp(-x * x)
+
+    if x < 0.0 {
+        result = -result
+    }
+
+    return result
+}
+/**
+ * @brief Standard normal distribution PDF (mean=0, std_dev=1)
+ * @details Calculates the PDF of the standard normal distribution
+ * @details Convenience function for normal distribution with mean=0 and std_dev=1
+ * @param x The value at which to evaluate the PDF
+ * @return The probability density at x for standard normal distribution
+ */
+fun standard_normal_pdf(float64: x) -> float64 {
+    return normal_pdf(x, 0.0, 1.0)
+}
+/**
+ * @brief Standard normal distribution CDF
+ * @details Calculates the CDF of the standard normal distribution
+ * @details Convenience function for normal distribution with mean=0 and std_dev=1
+ * @param x The value at which to evaluate the CDF
+ * @return The cumulative probability up to x for standard normal distribution
+ */
+fun standard_normal_cdf(float64: x) -> float64 {
+    return normal_cdf(x, 0.0, 1.0)
+}
+/**
+ * @brief Uniform distribution PDF
+ * @details Calculates the probability density function of a uniform distribution
+ * @details Constant probability density between a and b, zero elsewhere
+ * @param x The value at which to evaluate the PDF
+ * @param a The lower bound of the uniform distribution
+ * @param b The upper bound of the uniform distribution
+ * @return The probability density at x
+ */
+fun uniform_pdf(float64: x, float64: a, float64: b) -> float64 {
+    if x < a or x > b {
+        return 0.0
+    }
+    return 1.0 / (b - a)
+}
+/**
+ * @brief Uniform distribution CDF
+ * @details Calculates the cumulative distribution function of a uniform distribution
+ * @details Linear increase from 0 to 1 between a and b
+ * @param x The value at which to evaluate the CDF
+ * @param a The lower bound of the uniform distribution
+ * @param b The upper bound of the uniform distribution
+ * @return The cumulative probability up to x
+ */
+fun uniform_cdf(float64: x, float64: a, float64: b) -> float64 {
+    if x < a {
+        return 0.0
+    }
+    if x > b {
+        return 1.0
+    }
+    return (x - a) / (b - a)
+}
+/**
+ * @brief Exponential distribution PDF
+ * @details Calculates the probability density function of an exponential distribution
+ * @details Models time between events in a Poisson process
+ * @param x The value at which to evaluate the PDF
+ * @param rate The rate parameter (λ) of the exponential distribution
+ * @return The probability density at x
+ */
+fun exponential_pdf(float64: x, float64: rate) -> float64 {
+    if x < 0.0 {
+        return 0.0
+    }
+    return rate * exp(-rate * x)
+}
+/**
+ * @brief Exponential distribution CDF
+ * @details Calculates the cumulative distribution function of an exponential distribution
+ * @details Models cumulative probability of waiting time in a Poisson process
+ * @param x The value at which to evaluate the CDF
+ * @param rate The rate parameter (λ) of the exponential distribution
+ * @return The cumulative probability up to x
+ */
+fun exponential_cdf(float64: x, float64: rate) -> float64 {
+    if x < 0.0 {
+        return 0.0
+    }
+    return 1.0 - exp(-rate * x)
+}
+/**
+ * @brief Poisson distribution PMF (Probability Mass Function)
+ * @details Calculates the probability mass function of a Poisson distribution
+ * @details Models number of events in a fixed interval of time/space
+ * @param k The number of events (non-negative integer)
+ * @param lam The rate parameter (λ) of the Poisson distribution
+ * @return The probability of exactly k events occurring
+ */
+fun poisson_pmf(int: k, float64: lam) -> float64 {
+    return power(lam, k) * exp(-lam) / factorial(k)
+}
+/**
+ * @brief Poisson distribution CDF (approximate)
+ * @details Calculates the cumulative distribution function of a Poisson distribution
+ * @details Sums PMF values from 0 to k
+ * @param k The maximum number of events to include in the CDF
+ * @param lam The rate parameter (λ) of the Poisson distribution
+ * @return The cumulative probability of k or fewer events
+ */
+fun poisson_cdf(int: k, float64: lam) -> float64 {
+    float64: sum = 0.0
+    for i in range(k + 1) {
+        sum = sum + poisson_pmf(i, lam)
+    }
+    return sum
+}
+/**
+ * @brief Binomial distribution PMF
+ * @details Calculates the probability mass function of a binomial distribution
+ * @details Models number of successes in n independent trials with success probability p
+ * @param k The number of successes
+ * @param n The number of trials
+ * @param p The probability of success in each trial
+ * @return The probability of exactly k successes in n trials
+ */
+fun binomial_pmf(int: k, int: n, float64: p) -> float64 {
+    return binomial_coefficient(n, k) * power(p, k) * power(1.0 - p, n - k)
+}
+/**
+ * @brief Binomial distribution CDF (approximate)
+ * @details Calculates the cumulative distribution function of a binomial distribution
+ * @details Sums PMF values from 0 to k
+ * @param k The maximum number of successes to include in the CDF
+ * @param n The number of trials
+ * @param p The probability of success in each trial
+ * @return The cumulative probability of k or fewer successes
+ */
+fun binomial_cdf(int: k, int: n, float64: p) -> float64 {
+    float64: sum = 0.0
+    for i in range(k + 1) {
+        sum = sum + binomial_pmf(i, n, p)
+    }
+    return sum
+}
+/**
+ * @brief Binomial coefficient (n choose k)
+ * @details Calculates the binomial coefficient (n choose k)
+ * @details Number of ways to choose k items from n items without regard to order
+ * @details Used in binomial distribution and other combinatorial calculations
+ * @param n The total number of items
+ * @param k The number of items to choose
+ * @return The binomial coefficient C(n,k)
+ */
+fun binomial_coefficient(int: n, int: k) -> float64 {
+    if k < 0 or k > n {
+        return 0.0
+    }
+    if k == 0 or k == n {
+        return 1.0
+    }
+
+    // Use multiplicative formula to avoid large factorials
+    float64: result = 1.0
+    int: smaller_k = min(k, n - k)
+
+    for i in range(smaller_k) {
+        result = result * n - i / i + 1
+    }
+
+    return result
+}
+/**
+ * @brief Gamma function approximation (Lanczos approximation)
+ * @details Approximates the gamma function using Lanczos approximation
+ * @details Generalization of factorial function to real and complex numbers
+ * @details Used in various probability distributions and special functions
+ * @param x The value at which to evaluate the gamma function
+ * @return The approximate value of the gamma function
+ */
+fun gamma_approx(float64: x) -> float64 {
+    // Simple approximation for positive x
+    if x <= 0.0 {
+        return 0.0  // Gamma function undefined for non-positive integers
+    }
+
+    // Coefficients for Lanczos approximation
+    vec: p = [
+        676.5203681218851,
+        -1259.1392167224028,
+        771.32342877765313,
+        -176.61502916214059,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.9843695780195716e-6,
+        1.5056327351493116e-7
+    ]
+
+    float64: g = 7.0
+    float64: z = x
+
+    if x < 0.5 {
+        return PI / (sin_taylor(PI * x, 10) * gamma_approx(1.0 - x))
+    }
+
+    z = x - 1.0
+    float64: x_tilde = z + g + 0.5
+    float64: sum = 0.0
+
+    for i in range(8) {
+        sum = sum + p[i] / (z + i + 1.0)
+    }
+
+    float64: t = z + g + 0.5
+    float64: result = sqrt(2.0 * PI) * power(t, z + 0.5) * exp(-t) * sum
+
+    return result
+}
+/**
+ * @brief Beta function using gamma function
+ * @details Calculates the beta function using gamma function approximation
+ * @details Used in beta distribution and other probability calculations
+ * @param alpha The first shape parameter (α)
+ * @param beta The second shape parameter (β)
+ * @return The value of the beta function B(α,β)
+ */
+fun beta_function(float64: alpha, float64: beta) -> float64 {
+    return gamma_approx(alpha) * gamma_approx(beta) / gamma_approx(alpha + beta)
+}
+/**
+ * @brief Chi-squared distribution PDF
+ * @details Calculates the probability density function of a chi-squared distribution
+ * @details Special case of gamma distribution with shape parameter k/2 and scale 2
+ * @param x The value at which to evaluate the PDF
+ * @param k The degrees of freedom (positive integer)
+ * @return The probability density at x
+ */
+fun chisquare_pdf(float64: x, int: k) -> float64 {
+    if x <= 0.0 {
+        return 0.0
+    }
+    float64: coeff = 1.0 / (power(2.0, k/2.0) * gamma_approx(k/2.0))
+    return coeff * power(x, k/2.0 - 1.0) * exp(-x / 2.0)
+}
+/**
+ * @brief Student's t-distribution PDF
+ * @details Calculates the probability density function of Student's t-distribution
+ * @details Used in hypothesis testing and confidence intervals for small samples
+ * @param x The value at which to evaluate the PDF
+ * @param df The degrees of freedom (positive integer)
+ * @return The probability density at x
+ */
+fun student_t_pdf(float64: x, int: df) -> float64 {
+    float64: coeff = gamma_approx((df + 1.0) / 2.0) /
+                    (sqrt(df * PI) * gamma_approx(df / 2.0))
+    return coeff * power(1.0 + x * x / df, -(df + 1.0) / 2.0)
+}
+/**
+ * @brief Inverse CDF (quantile function) for standard normal (approximate)
+ * @details Calculates the inverse cumulative distribution function for standard normal
+ * @details Also known as the probit function or quantile function
+ * @details Used to generate normally distributed random numbers and calculate confidence intervals
+ * @param p The probability (0 < p < 1)
+ * @return The z-score corresponding to the given probability
+ */
+fun standard_normal_quantile(float64: p) -> float64 {
+    // Simple approximation for p in (0, 1)
+    if p <= 0.0 or p >= 1.0 {
+        return 0.0  // Handle edge cases
+    }
+
+    // Coefficients for Beasley-Springer approximation
+    vec: a = [-3.969683028665376e+01,  2.209460984245205e+02,
+              -2.759285104469687e+02,  1.383577518672690e+02,
+              -3.066479806614716e+01,  2.506628277459239e+00]
+
+    vec: b = [-5.447609879822406e+01,  1.615858368580409e+02,
+              -1.556989798598866e+02,  6.680131188771972e+01,
+              -1.328068155288572e+01]
+
+    vec: c = [-7.784894002430293e-03, -3.223964580411365e-01,
+              -2.400758277161838e+00, -2.549732539343734e+00,
+              4.374664141464968e+00,  2.938163982698783e+00]
+
+    vec: d = [7.784695709041462e-03, 3.224671290700398e-01,
+              2.445134137142996e+00,  3.754408661907416e+00]
+
+    float64: q = p - 0.5
+    float64: r = 0.0
+
+    if abs(q) <= 0.425 {
+        r = q * q
+        return q * (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) /
+               (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
+    } else {
+        r = p
+        if q > 0.0 {
+            r = 1.0 - p
+        }
+        r = sqrt(-log(r))
+
+        if r <= 5.0 {
+            r = r - 1.6
+            return (((((c[0] * r + c[1]) * r + c[2]) * r + c[3]) * r + c[4]) * r + c[5]) /
+                   (((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1.0))
+        } else {
+            r = r - 5.0
+            return (((((c[0] * r + c[1]) * r + c[2]) * r + c[3]) * r + c[4]) * r + c[5]) /
+                   (((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1.0))
+        }
+    }
+}

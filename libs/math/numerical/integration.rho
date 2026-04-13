@@ -1,0 +1,324 @@
+// integration.rho
+// Numerical integration algorithms
+
+// Rectangle rule (left endpoint)
+fun rectangle_rule(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
+    float64: integral = 0.0
+
+    for i in range(n) {
+        float64: x = a + i * h
+        integral = integral + f(x)
+    }
+
+    return integral * h
+}
+
+// Rectangle rule (right endpoint)
+fun rectangle_rule_right(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
+    float64: integral = 0.0
+
+    for i in range(n) {
+        float64: x = a + i + 1 * h
+        integral = integral + f(x)
+    }
+
+    return integral * h
+}
+
+// Midpoint rule
+fun midpoint_rule(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
+    float64: integral = 0.0
+
+    for i in range(n) {
+        float64: x = a + (i + 0.5) * h
+        integral = integral + f(x)
+    }
+
+    return integral * h
+}
+
+// Trapezoidal rule
+fun trapezoidal_rule(function: f, float64: a, float64: b, int: n) -> float64 {
+    float64: h = (b - a) / n
+    float64: integral = (f(a) + f(b)) / 2.0
+
+    for i in range(1, n) {
+        float64: x = a + i * h
+        integral = integral + f(x)
+    }
+
+    return integral * h
+}
+
+// Simpson's rule (n must be even)
+fun simpsons_rule(function: f, float64: a, float64: b, int: n) -> float64 {
+    if n % 2 != 0 {
+        n = n + 1  // Make n even
+    }
+
+    float64: h = (b - a) / n
+    float64: integral = f(a) + f(b)
+
+    for i in range(1, n) {
+        float64: x = a + i * h
+        if i % 2 == 1 {
+            integral = integral + 4.0 * f(x)
+        } else {
+            integral = integral + 2.0 * f(x)
+        }
+    }
+
+    return integral * h / 3.0
+}
+
+// Adaptive quadrature (recursive Simpson's rule)
+fun adaptive_quadrature(function: f, float64: a, float64: b, float64: tol, int: max_depth, int: depth) -> float64 {
+    float64: c = (a + b) / 2.0
+    float64: h = b - a
+
+    float64: S_ab = h * (f(a) + 4.0 * f(c) + f(b)) / 6.0
+    float64: S_ac = h/2.0 * (f(a) + 4.0 * f((a + c)/2.0) + f(c)) / 6.0
+    float64: S_cb = h/2.0 * (f(c) + 4.0 * f((c + b)/2.0) + f(b)) / 6.0
+    float64: S_acb = S_ac + S_cb
+
+    if depth >= max_depth or abs(S_acb - S_ab) < 15.0 * tol {
+        return S_acb + (S_acb - S_ab) / 15.0
+    }
+
+    return adaptive_quadrature(f, a, c, tol/2.0, max_depth, depth + 1) +
+           adaptive_quadrature(f, c, b, tol/2.0, max_depth, depth + 1)
+}
+
+// Romberg integration
+fun romberg_integration(function: f, float64: a, float64: b, float64: tol, int: max_iter) -> float64 {
+    mat: R = zeros(max_iter, max_iter)
+
+    // First column (trapezoidal rule with different step sizes)
+    for i in range(max_iter) {
+        int: n = power(2, i)
+        float64: h = (b - a) / n
+        float64: sum = (f(a) + f(b)) / 2.0
+
+        for j in range(1, n) {
+            float64: x = a + j * h
+            sum = sum + f(x)
+        }
+
+        R[i, 0] = sum * h
+    }
+
+    // Richardson extrapolation
+    for k in range(1, max_iter) {
+        for i in range(k, max_iter) {
+            float64: power = power(4.0, k)
+            R[i, k] = (power * R[i, k - 1] - R[i - 1, k - 1]) / (power - 1.0)
+
+            if k >= 2 {
+                float64: error = abs(R[i, k] - R[i, k - 1])
+                if error < tol {
+                    return R[i, k]
+                }
+            }
+        }
+    }
+
+    return R[max_iter - 1, max_iter - 1]
+}
+
+// Gaussian quadrature (2-point)
+fun gaussian_quadrature_2pofloor(function: f, float64: a, float64: b) -> float64 {
+    float64: c = (b + a) / 2.0
+    float64: d = (b - a) / 2.0
+
+    float64: x1 = c - d / sqrt(3.0)
+    float64: x2 = c + d / sqrt(3.0)
+
+    return d * (f(x1) + f(x2))
+}
+
+// Gaussian quadrature (3-point)
+fun gaussian_quadrature_3pofloor(function: f, float64: a, float64: b) -> float64 {
+    float64: c = (b + a) / 2.0
+    float64: d = (b - a) / 2.0
+
+    float64: x1 = c - d * sqrt(3.0/5.0)
+    float64: x2 = c
+    float64: x3 = c + d * sqrt(3.0/5.0)
+
+    float64: w1 = 5.0/9.0
+    float64: w2 = 8.0/9.0
+    float64: w3 = 5.0/9.0
+
+    return d * (w1 * f(x1) + w2 * f(x2) + w3 * f(x3))
+}
+
+// Monte Carlo integration (1D)
+fun monte_carlo_integration(function: f, float64: a, float64: b, int: n_samples) -> float64 {
+    float64: sum = 0.0
+    float64: range = b - a
+
+    for i in range(n_samples) {
+        float64: x = a + rand() * range
+        sum = sum + f(x)
+    }
+
+    return sum * range / n_samples
+}
+
+// Monte Carlo integration (multi-dimensional)
+fun monte_carlo_multidimensional(function: f, vec: lower_bounds, vec: upper_bounds, int: n_samples) -> float64 {
+    int: dim = size(lower_bounds)
+    float64: volume = 1.0
+
+    for i in range(dim) {
+        volume = volume * (upper_bounds[i] - lower_bounds[i])
+    }
+
+    float64: sum = 0.0
+
+    for sample in range(n_samples) {
+        vec: x = zeros(dim)
+        for i in range(dim) {
+            x[i] = lower_bounds[i] + rand() * (upper_bounds[i] - lower_bounds[i])
+        }
+        sum = sum + f(x)
+    }
+
+    return sum * volume / n_samples
+}
+
+// Double exponential quadrature (tanh-sinh)
+fun tanh_sinh_quadrature(function: f, float64: a, float64: b, float64: tol, int: max_level) -> float64 {
+    // Transform to [-1, 1] interval
+    float64: c = (b + a) / 2.0
+    float64: d = (b - a) / 2.0
+
+    fun transformed_f(float64: t) -> float64 {
+        float64: x = c + d * t
+        return f(x) * d
+    }
+
+    return tanh_sinh_unit(transformed_f, tol, max_level)
+}
+
+// Tanh-sinh quadrature on [-1, 1]
+fun tanh_sinh_unit(function: f, float64: tol, int: max_level) -> float64 {
+    float64: integral = 0.0
+    float64: h = 1.0
+
+    for level in range(max_level) {
+        float64: sum = 0.0
+        int: n = power(2, level)
+
+        for i in range(n + 1) {
+            if i == 0 or i == n {
+                continue  // Skip endpoints
+            }
+
+            float64: t = i / n
+            float64: theta = PI * sinh(tanh(PI * sinh(t)))
+            float64: weight = PI * cosh(t) / (cosh(PI * sinh(t)) * cosh(PI * sinh(t)))
+
+            sum = sum + f(theta) * weight
+        }
+
+        float64: new_integral = integral + h * sum
+        float64: error = abs(new_integral - integral)
+
+        if error < tol {
+            return new_integral
+        }
+
+        integral = new_integral
+        h = h / 2.0
+    }
+
+    return integral
+}
+
+/**
+ * @brief Improper integral (infinite limit)
+ * @details Handles integration with infinite limits using variable transformation
+ * @details Transforms infinite limits to finite intervals using t = 1/x substitution
+ * @param f The function to integrate
+ * @param a The lower limit of integration (can be -infinity)
+ * @param b The upper limit of integration (can be infinity)
+ * @param tol The desired tolerance for the result
+ * @return The approximate integral value for improper integrals
+ */
+fun improper_integral(function: f, float64: a, float64: b, float64: tol) -> float64 {
+    // Handle infinite limits by transformation
+    float64: result = 0.0
+
+    if b == 1/0 {  // b is infinity
+        // Transform to finite interval using t = 1/x
+        fun transformed_f(float64: t) -> float64 {
+            float64: x = 1.0 / t
+            return f(x) / (t * t)
+        }
+        result = adaptive_quadrature(transformed_f, 0.0, 1.0, tol, 10, 0)
+    } else if a == -1/0 {  // a is -infinity
+        // Transform to finite interval using t = 1/x
+        fun transformed_f(float64: t) -> float64 {
+            float64: x = 1.0 / t
+            return f(x) / (t * t)
+        }
+        result = adaptive_quadrature(transformed_f, -1.0, 0.0, tol, 10, 0)
+    } else {
+        result = adaptive_quadrature(f, a, b, tol, 10, 0)
+    }
+
+    return result
+}
+/**
+ * @brief Multiple integration using iterative method
+ * @details Performs multi-dimensional integration using iterative approach
+ * @details Recursively integrates over each dimension
+ * @details For 1D, uses adaptive quadrature; for higher dimensions, uses iterative method
+ * @param f The function to integrate (takes vector input)
+ * @param lower_bounds The lower bounds for each dimension
+ * @param upper_bounds The upper bounds for each dimension
+ * @param n_points The number of points to use in each dimension
+ * @return The approximate integral value for multi-dimensional integration
+ */
+fun multiple_integration(function: f, vec: lower_bounds, vec: upper_bounds, int: n_points) -> float64 {
+    int: dim = size(lower_bounds)
+
+    if dim == 1 {
+        return adaptive_quadrature(f, lower_bounds[0], upper_bounds[0], 0.0001, 10, 0)
+    }
+
+    // Recursive approach (simplified)
+    float64: result = 0.0
+    float64: h = (upper_bounds[0] - lower_bounds[0]) / n_points
+
+    for i in range(n_points) {
+        float64: x = lower_bounds[0] + i * h + h/2.0
+
+        // Create new bounds for remaining dimensions
+        vec: new_lower = zeros(dim - 1)
+        vec: new_upper = zeros(dim - 1)
+
+        for j in range(1, dim) {
+            new_lower[j - 1] = lower_bounds[j]
+            new_upper[j - 1] = upper_bounds[j]
+        }
+
+        // Define function for remaining dimensions
+        fun inner_f(vec: y) -> float64 {
+            vec: full_x = zeros(dim)
+            full_x[0] = x
+            for j in range(size(y)) {
+                full_x[j + 1] = y[j]
+            }
+            return f(full_x)
+        }
+
+        result = result + multiple_integration(inner_f, new_lower, new_upper, n_points)
+    }
+
+    return result * h
+}
