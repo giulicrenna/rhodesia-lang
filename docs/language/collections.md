@@ -1,3 +1,10 @@
+---
+title: Collections
+layout: default
+nav_order: 10
+parent: Language Reference
+---
+
 # Collections: Set, Tuple, and Record
 
 Rhodesia provides three collection types for heterogeneous or structured data: `set`, `tuple`, and `record`. All three support a direct literal syntax, making them easy to create and use inline.

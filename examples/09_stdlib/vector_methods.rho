@@ -1,7 +1,7 @@
 // Test file for vector module methods
 // Testing: vector.append, vector.remove, vector.reverse, vector.insert
 
-println("=== Vec Module Methods Test ===")
+println("Vec Module Methods Test")
 println("")
 
 // Create initial vector
@@ -86,4 +86,4 @@ mutable[2] = 300.0
 println("After mutable[2] = 300:", mutable)
 println("")
 
-println("=== All tests completed! ===")
+println("All tests completed!")

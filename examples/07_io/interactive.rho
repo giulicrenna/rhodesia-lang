@@ -1,5 +1,5 @@
 // Test interactivo de io.input()
-println("=== Test de Entrada Interactiva ===")
+println("Test de Entrada Interactiva")
 println()
 
 // Pedir nombre

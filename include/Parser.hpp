@@ -55,9 +55,6 @@ private:
     std::vector<Token> tokens_;
     size_t current_;
     
-    // ========================================================================
-    // Token Navigation
-    // ========================================================================
     
     const Token& peek() const {
         return tokens_[current_];
@@ -130,9 +127,6 @@ private:
         }
     }
     
-    // ========================================================================
-    // Statement Parsing
-    // ========================================================================
     
     StmtPtr parseStatement() {
         if (match(TokenType::KwInclude)) return parseInclude();
@@ -545,9 +539,6 @@ private:
         return std::make_unique<BlockNode>(std::move(statements), loc);
     }
     
-    // ========================================================================
-    // Expression Parsing (Pratt Parser / Precedence Climbing)
-    // ========================================================================
 
     ExprPtr parseExpression() {
         return parseTernary();
@@ -748,8 +739,15 @@ private:
                 // Member access: expr.member or module.function(args)
                 SourceLocation loc = previous().location;
 
-                // Parse member name
-                Token memberToken = consume(TokenType::Identifier, "member name after '.'");
+                // Parse member name. Also accept type-keyword tokens (KwSet, KwMap, KwArr, ...)
+                // because a method like `mapping.set(...)` uses a name that
+                // happens to coincide with a reserved type.
+                Token memberToken;
+                if (check(TokenType::Identifier) || isTypeKeyword(peek().type)) {
+                    memberToken = advance();
+                } else {
+                    throw ParseError("member name after '.'", peek().location);
+                }
                 std::string member = memberToken.value;
 
                 auto* ident = dynamic_cast<IdentifierNode*>(expr.get());

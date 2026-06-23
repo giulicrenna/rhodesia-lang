@@ -1,12 +1,9 @@
 // Operadores Bitwise en Rhodesia
 // Soportados en: int, int8..uint64, byte, bool
 
-println("=== Operadores Bitwise ===")
+println("Operadores Bitwise")
 println()
 
-// --------------------------------------------------------
-// AND (&): 1 solo si ambos bits son 1
-// --------------------------------------------------------
 println("--- AND (&) ---")
 int: a = 12   // 1100
 int: b = 10   //  1010
@@ -19,9 +16,6 @@ int: low_byte = valor & mask
 println("305 & 255 = ", low_byte)   // 49 (byte bajo)
 println()
 
-// --------------------------------------------------------
-// OR (|): 1 si al menos un bit es 1
-// --------------------------------------------------------
 println("--- OR (|) ---")
 int: flags = 0
 int: FLAG_READ    = 1   // 001
@@ -35,9 +29,6 @@ flags = flags | FLAG_EXEC
 println("+ EXEC = ", flags)         // 7
 println()
 
-// --------------------------------------------------------
-// XOR (^): 1 si los bits son distintos
-// --------------------------------------------------------
 println("--- XOR (^) ---")
 int: x = 10   // 1010 en binario
 int: y = 12   // 1100 en binario
@@ -57,9 +48,6 @@ p = p ^ q
 println("swap(42, 99) -> p=", p, " q=", q)
 println()
 
-// --------------------------------------------------------
-// NOT (~): invierte todos los bits
-// --------------------------------------------------------
 println("--- NOT (~) ---")
 int: n = 5
 int: not_n = ~n
@@ -70,9 +58,6 @@ int: not_u = ~u
 println("~170 = ", not_u)        // -171
 println()
 
-// --------------------------------------------------------
-// Shift izquierdo (<<): multiplica por potencia de 2
-// --------------------------------------------------------
 println("--- Shift izquierdo (<<) ---")
 int: base = 1
 println("1 << 0 = ", base << 0)   // 1
@@ -84,9 +69,6 @@ int: val = 3
 println("3 << 3 = ", val << 3)    // 24
 println()
 
-// --------------------------------------------------------
-// Shift derecho (>>): divide por potencia de 2
-// --------------------------------------------------------
 println("--- Shift derecho (>>) ---")
 int: big = 256
 println("256 >> 1 = ", big >> 1)  // 128
@@ -97,9 +79,6 @@ int: v = 100
 println("100 >> 2 = ", v >> 2)    // 25
 println()
 
-// --------------------------------------------------------
-// Precedencia: ~ > << >> > & > ^ > |
-// --------------------------------------------------------
 println("--- Precedencia ---")
 int: r1 = 1 | 2 & 3      // & antes que |: 1 | (2&3) = 1|2 = 3
 int: r2 = 4 ^ 2 | 1      // ^ antes que |: (4^2)|1 = 6|1 = 7
@@ -109,9 +88,6 @@ println("4 ^ 2 | 1 = ", r2)   // 7
 println("2 << 1 & 6 = ", r3)  // 4
 println()
 
-// --------------------------------------------------------
-// Con bool
-// --------------------------------------------------------
 println("--- Bool bitwise ---")
 bool: t = true
 bool: f = false
@@ -121,4 +97,4 @@ println("true ^ true  = ", t ^ t)   // false
 println("~true        = ", ~t)       // false
 println()
 
-println("=== Fin operadores bitwise ===")
+println("Fin operadores bitwise")

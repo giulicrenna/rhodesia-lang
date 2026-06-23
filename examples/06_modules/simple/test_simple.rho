@@ -4,7 +4,7 @@
 // Importar funciones del módulo simple_math
 include simple_math{square, cube, double_it}
 
-println("=== Prueba del Sistema de Módulos ===")
+println("Prueba del Sistema de Módulos")
 println("")
 
 float64: x = 5.0
@@ -25,4 +25,4 @@ float64: result = double_it(square(3.0))
 println("double_it(square(3.0)) =", result)
 println("")
 
-println("=== Prueba exitosa ===")
+println("Prueba exitosa")

@@ -1,3 +1,10 @@
+---
+title: net
+layout: default
+nav_order: 12
+parent: Standard Library
+---
+
 # Net Module
 
 The `net` module provides TCP socket primitives and an HTTP/1.1 client built directly on POSIX sockets. No external dependencies are required.

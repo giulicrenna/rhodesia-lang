@@ -11,6 +11,7 @@ fun cube(float64: x) -> float64 {
     return x * x * x
 }
 
+
 // Función para calcular la distancia euclidiana entre dos puntos
 fun distance(vec: p1, vec: p2) -> float64 {
     vec: diff = p1 - p2

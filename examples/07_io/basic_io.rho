@@ -1,76 +1,76 @@
-// Test del módulo IO
-println("=== Test del Módulo IO ===")
+// Test del módulo IO (API path-based: write_file, read_file, append_file, etc.)
+println("Test del Módulo IO")
 println()
 
 // Test 1: Escribir un archivo
 println("Test 1: Escribir archivo")
 str: contenido = "Hola desde Rhodesia!\nEsta es la segunda línea.\nY esta es la tercera.\n"
-int: bytes = io.write("test_output.txt", contenido)
-println("✓ Escritos", bytes, "bytes en test_output.txt")
+int: bytes = io.write_file("test_output.txt", contenido)
+println(" Escritos", bytes, "bytes en test_output.txt")
 println()
 
 // Test 2: Verificar que el archivo existe
 println("Test 2: Verificar existencia de archivo")
 int: existe = io.exists("test_output.txt")
 if existe {
-    println("✓ El archivo test_output.txt existe")
+ println("El archivo test_output.txt existe")
 } else {
-    println("✗ Error: el archivo no existe")
+ println("Error: el archivo no existe")
 }
 println()
 
 // Test 3: Leer el archivo
 println("Test 3: Leer archivo completo")
 if io.exists("test_output.txt") {
-    str: leido = io.read("test_output.txt")
-    println("✓ Contenido leído:")
-    println(leido)
+ str: leido = io.read_file("test_output.txt")
+ println("Contenido leído:")
+ println(leido)
 } else {
-    println("✗ Error: no se puede leer el archivo")
+ println("Error: no se puede leer el archivo")
 }
 println()
 
 // Test 4: Obtener información del archivo
 println("Test 4: Información del archivo")
 if io.exists("test_output.txt") {
-    int: size = io.filesize("test_output.txt")
-    int: lines = io.readlines("test_output.txt")
-    println("✓ Tamaño:", size, "bytes")
-    println("✓ Líneas:", lines)
+ int: size = io.file_size("test_output.txt")
+ int: lines = io.readlines("test_output.txt")
+ println(" Tamaño:", size, "bytes")
+ println(" Líneas:", lines)
 } else {
-    println("✗ Error: archivo no encontrado")
+ println("Error: archivo no encontrado")
 }
 println()
 
 // Test 5: Añadir contenido
 println("Test 5: Añadir contenido al archivo")
 str: nuevo_contenido = "Esta es una línea añadida.\n"
-int: bytes_append = io.append("test_output.txt", nuevo_contenido)
-println("✓ Añadidos", bytes_append, "bytes")
+int: bytes_append = io.append_file("test_output.txt", nuevo_contenido)
+println(" Añadidos", bytes_append, "bytes")
 
 // Verificar el nuevo contenido
-str: contenido_actualizado = io.read("test_output.txt")
+str: contenido_actualizado = io.read_file("test_output.txt")
 println("Contenido actualizado:")
 println(contenido_actualizado)
 println()
 
 // Test 6: Crear backup
 println("Test 6: Crear copia de seguridad")
-str: backup = io.read("test_output.txt")
-io.write("test_backup.txt", backup)
-println("✓ Backup creado en test_backup.txt")
+str: backup = io.read_file("test_output.txt")
+io.write_file("test_backup.txt", backup)
+println("Backup creado en test_backup.txt")
 println()
 
 // Test 7: Verificar ambos archivos
 println("Test 7: Comparar archivos")
-int: size_original = io.filesize("test_output.txt")
-int: size_backup = io.filesize("test_backup.txt")
+int: size_original = io.file_size("test_output.txt")
+int: size_backup = io.file_size("test_backup.txt")
 println("Tamaño original:", size_original, "bytes")
 println("Tamaño backup:", size_backup, "bytes")
 if size_original == size_backup {
-    println("✓ Los archivos tienen el mismo tamaño")
+ println("Los archivos tienen el mismo tamaño")
 } else {
-    println("✗ Error: los tamaños no coinciden")
+ println("Error: los tamaños no coinciden")
 }
 println()
 
@@ -79,15 +79,15 @@ println("Test 8: Eliminar archivos de prueba")
 int: eliminado1 = io.remove("test_output.txt")
 int: eliminado2 = io.remove("test_backup.txt")
 if eliminado1 {
-    println("✓ test_output.txt eliminado")
+ println("test_output.txt eliminado")
 } else {
-    println("✗ Error al eliminar test_output.txt")
+ println("Error al eliminar test_output.txt")
 }
 if eliminado2 {
-    println("✓ test_backup.txt eliminado")
+ println("test_backup.txt eliminado")
 } else {
-    println("✗ Error al eliminar test_backup.txt")
+ println("Error al eliminar test_backup.txt")
 }
 println()
 
-println("=== Todos los tests completados ===")
+println("Todos los tests completados")

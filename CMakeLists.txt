@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Rhodesia VERSION 0.1.0 LANGUAGES CXX)
+project(Rhodesia VERSION 0.1.2 LANGUAGES CXX)
 
 # ============================================================================
 # Compiler Configuration
@@ -22,6 +22,18 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         add_compile_options(-O3 -march=native)
     endif()
 endif()
+
+# Link statically against libstdc++ / libgcc so the resulting .exe does
+# NOT need Strawberry's bin (libgcc_s_seh-1.dll, libstdc++-6.dll) at
+# runtime. UCRT (api-ms-win-crt-*) is always present on Windows 10+.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_link_options(-static-libgcc -static-libstdc++)
+endif()
+
+# On Windows (MinGW/Strawberry), libwinpthread-1.dll is still linked
+# dynamically. Copy the runtime DLLs from the compiler's bin directory
+# next to the executable so it can run without Strawberry in PATH.
+# (Declared here so the target exists; custom commands attached below.)
 
 # ============================================================================
 # Dependencies
@@ -53,7 +65,10 @@ target_link_libraries(rhodesia PRIVATE
 )
 
 # BSD sockets are part of glibc on Linux; no extra library needed.
-# On some exotic targets (e.g. MinGW) you would add -lws2_32 here.
+# On Windows (MSVC / MinGW / Strawberry) we link Winsock 2.
+if(WIN32)
+    target_link_libraries(rhodesia PRIVATE ws2_32)
+endif()
 
 # ============================================================================
 # Installation
@@ -69,6 +84,31 @@ set(CPACK_PACKAGE_NAME "rhodesia")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A strongly-typed language for Data Science")
 include(CPack)
+
+# ============================================================================
+# On Windows (MinGW/Strawberry), libwinpthread-1.dll is still linked
+# dynamically. Copy the runtime DLLs from the compiler's bin directory
+# next to the executable so it can run without Strawberry in PATH.
+# ============================================================================
+if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    find_program(GCC_PATH gcc.exe PATH_SUFFIXES c/bin REQUIRED)
+    get_filename_component(GCC_BIN_DIR "${GCC_PATH}" DIRECTORY)
+    set(RUNTIME_DLLS
+        libwinpthread-1.dll
+        libgcc_s_seh-1.dll
+        libstdc++-6.dll
+    )
+    foreach(dll ${RUNTIME_DLLS})
+        if(EXISTS "${GCC_BIN_DIR}/${dll}")
+            add_custom_command(TARGET rhodesia POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${GCC_BIN_DIR}/${dll}"
+                    "$<TARGET_FILE_DIR:rhodesia>/${dll}"
+                COMMENT "Copiando ${dll} junto al ejecutable"
+            )
+        endif()
+    endforeach()
+endif()
 
 # ============================================================================
 # Status Message

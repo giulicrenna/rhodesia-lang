@@ -1,16 +1,11 @@
-// ============================================================================
-// kmeans.rho - K-means Clustering Example
-// Demonstrates K-means clustering algorithm with Rhodesia
-// ============================================================================
 
-println("=== K-means Clustering with Rhodesia ===")
+println("K-means Clustering with Rhodesia")
 println("")
 
 /*
  1. DATA GENERATION - Create synthetic 2D data points
 */
 println("1. Data Generation")
-println("-----------------")
 
 // Generate 3 clusters of 2D points
 // Cluster 1: Around (2, 2)
@@ -73,7 +68,6 @@ println("")
  2. K-MEANS ALGORITHM
 */
 println("2. K-means Clustering")
-println("---------------------")
 
 // Parameters
 int: k = 3          // Number of clusters
@@ -208,7 +202,6 @@ fun has_converged(mat: old_centroids, mat: new_centroids, float64: tol) -> bool 
  3. RUN K-MEANS
 */
 println("3. Running K-means")
-println("------------------")
 
 // Initialize centroids
 mat: centroids = initialize_centroids(X, k)
@@ -253,7 +246,6 @@ println("")
  4. RESULTS
 */
 println("4. Clustering Results")
-println("--------------------")
 
 println("Final centroids:")
 for i in range(k) {
@@ -280,7 +272,6 @@ println("")
  5. EVALUATION
 */
 println("5. Cluster Evaluation")
-println("--------------------")
 
 // Calculate Within-Cluster Sum of Squares (WCSS)
 fun calculate_wcss(mat: data, vec: clusters, mat: centroids) -> float64 {
@@ -320,7 +311,6 @@ println("")
  6. VISUALIZATION PREPARATION
 */
 println("6. Visualization Data")
-println("--------------------")
 
 println("Data ready for visualization (cluster assignments by point):")
 for i in range(n_samples) {
@@ -333,7 +323,7 @@ for i in range(n_samples) {
 }
 println("")
 
-println("=== K-means Complete! ===")
+println("K-means Complete!")
 print("Clusters found: ")
 println(k)
 print("Total iterations: ")

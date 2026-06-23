@@ -1,9 +1,5 @@
-// ============================================================================
-// matrix_demo.rho - Matrix Operations Demo
-// Demonstrates matrix manipulation in Rhodesia
-// ============================================================================
 
-println("=== Matrix Operations Demo ===")
+println("Matrix Operations Demo")
 println("")
 
 // Create matrices
@@ -24,7 +20,7 @@ println(B)
 println("")
 
 // Basic operations
-println("=== Basic Operations ===")
+println("Basic Operations")
 println("A + B:")
 println(A + B)
 println("")
@@ -42,13 +38,13 @@ println(2.0 * A)
 println("")
 
 // Transpose
-println("=== Transpose ===")
+println("Transpose")
 println("transpose(A):")
 println(math.transpose(A))
 println("")
 
 // Matrix inverse
-println("=== Matrix Inverse ===")
+println("Matrix Inverse")
 mat: A_inv = math.inv(A)
 println("inv(A):")
 println(A_inv)
@@ -59,7 +55,7 @@ println(A * A_inv)
 println("")
 
 // Norms and dimensions
-println("=== Matrix Information ===")
+println("Matrix Information")
 println("rows(A):", math.rows(A))
 println("cols(A):", math.cols(A))
 println("size(A):", math.size(A))
@@ -69,7 +65,7 @@ println("mean(A):", stats.mean(A))
 println("")
 
 // Identity matrix
-println("=== Special Matrices ===")
+println("Special Matrices")
 println("eye(3):")
 println(math.eye(3))
 println("")
@@ -83,7 +79,7 @@ println(math.ones(3, 2))
 println("")
 
 // Matrix-vector multiplication
-println("=== Matrix-Vector Multiplication ===")
+println("Matrix-Vector Multiplication")
 vec: x = [1.0, 2.0, 3.0]
 println("x:", x)
 println("A * x:")
@@ -91,7 +87,7 @@ println(A * x)
 println("")
 
 // Element access
-println("=== Element Access ===")
+println("Element Access")
 println("A[0, 0]:", A[0, 0])
 println("A[1, 2]:", A[1, 2])
 println("A[2, 2]:", A[2, 2])

@@ -1,3 +1,10 @@
+---
+title: Errors
+layout: default
+nav_order: 1
+parent: Troubleshooting
+---
+
 # Rhodesia Error Reference
 
 This page documents common errors in Rhodesia and how to resolve them.

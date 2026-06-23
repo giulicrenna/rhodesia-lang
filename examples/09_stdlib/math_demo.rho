@@ -1,18 +1,11 @@
-// ============================================================================
-// Math Module Demo
-// Demonstrates the new module syntax for mathematical functions
-// ============================================================================
 
-println("========================================")
-println("  Math Module Demonstration")
-println("========================================")
+println("Math Module Demonstration")
 println("")
 
 /*
  1. Creation Functions
 */
 println("1. Creation Functions")
-println("---------------------")
 
 vec: v_zeros = math.zeros(5)
 mat: m_zeros = math.zeros(3, 3)
@@ -31,7 +24,6 @@ println("")
  2. Linear Algebra Functions
 */
 println("2. Linear Algebra Functions")
-println("---------------------------")
 
 mat: A = [
     [1.0, 2.0],
@@ -53,7 +45,6 @@ println("")
  3. Vector Operations
 */
 println("3. Vector Operations")
-println("--------------------")
 
 vec: v1 = [1.0, 2.0, 3.0, 4.0, 5.0]
 vec: v2 = [5.0, 4.0, 3.0, 2.0, 1.0]
@@ -75,7 +66,6 @@ println("")
  4. Element-wise Math Functions
 */
 println("4. Element-wise Math Functions")
-println("-------------------------------")
 
 vec: values = [1.0, 4.0, 9.0, 16.0]
 vec: sqrt_values = math.sqrt(values)
@@ -90,7 +80,6 @@ println("")
  5. Dimension Information
 */
 println("5. Dimension Information")
-println("------------------------")
 
 mat: matrix = [
     [1.0, 2.0, 3.0],
@@ -108,6 +97,4 @@ println("cols: ", num_cols)
 println("size: ", total_size)
 println("")
 
-println("========================================")
-println("  Demo Complete!")
-println("========================================")
+println("Demo Complete!")

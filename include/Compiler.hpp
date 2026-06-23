@@ -23,9 +23,9 @@
 
 namespace Rhodesia {
 
-// ---------------------------------------------------------------------------
+// ----
 // CompilerError
-// ---------------------------------------------------------------------------
+// ----
 
 class CompilerError : public std::runtime_error {
 public:
@@ -33,15 +33,15 @@ public:
         : std::runtime_error("CompilerError: " + msg) {}
 };
 
-// ---------------------------------------------------------------------------
+// ----
 // Compiler
-// ---------------------------------------------------------------------------
+// ----
 
 class Compiler : public ASTVisitor {
 public:
-    // -----------------------------------------------------------------------
+    
     // Supporting types
-    // -----------------------------------------------------------------------
+    
 
     struct Local {
         std::string name;
@@ -56,9 +56,9 @@ public:
         std::string name;
     };
 
-    // -----------------------------------------------------------------------
+    
     // Per-function compiler state
-    // -----------------------------------------------------------------------
+    
 
     struct CompilerState {
         std::shared_ptr<Chunk>      chunk;
@@ -80,9 +80,9 @@ public:
         }
     };
 
-    // -----------------------------------------------------------------------
+    
     // Public API
-    // -----------------------------------------------------------------------
+    
 
     Compiler() = default;
 
@@ -97,9 +97,9 @@ public:
         return stateStack_.back()->chunk;
     }
 
-    // -----------------------------------------------------------------------
+    
     // ASTVisitor – Expressions
-    // -----------------------------------------------------------------------
+    
 
     void visit(IntLiteralNode& node) override {
         int idx = chunk().addConstant(RhoValue{node.value});
@@ -402,9 +402,9 @@ public:
         chunk().emit(Opcode::MAKE_CLOSURE, constIdx);
     }
 
-    // -----------------------------------------------------------------------
+    
     // ASTVisitor – Statements
-    // -----------------------------------------------------------------------
+    
 
     void visit(VarDeclNode& node) override {
         // Compile initializer
@@ -778,9 +778,9 @@ public:
     }
 
 private:
-    // -----------------------------------------------------------------------
+    
     // State management
-    // -----------------------------------------------------------------------
+    
 
     CompilerState*                              current_ = nullptr;
     std::vector<std::unique_ptr<CompilerState>> stateStack_;
@@ -798,9 +798,9 @@ private:
         current_ = stateStack_.empty() ? nullptr : stateStack_.back().get();
     }
 
-    // -----------------------------------------------------------------------
+    
     // Chunk accessor
-    // -----------------------------------------------------------------------
+    
 
     Chunk& chunk() {
         assert(current_ != nullptr);
@@ -811,9 +811,9 @@ private:
         return current_->isTopLevel && current_->scopeDepth == 0;
     }
 
-    // -----------------------------------------------------------------------
+    
     // Scope helpers
-    // -----------------------------------------------------------------------
+    
 
     void beginScope() {
         ++current_->scopeDepth;
@@ -837,9 +837,9 @@ private:
         --current_->scopeDepth;
     }
 
-    // -----------------------------------------------------------------------
+    
     // Local / upvalue resolution
-    // -----------------------------------------------------------------------
+    
 
     /**
      * @brief Add a local variable to the current scope.
@@ -908,9 +908,9 @@ private:
         return -1;
     }
 
-    // -----------------------------------------------------------------------
+    
     // Emit load / store for a named variable (handles local/upvalue/global)
-    // -----------------------------------------------------------------------
+    
 
     void emitLoad(const std::string& name) {
         int localIdx = resolveLocal(current_, name);

@@ -1,3 +1,10 @@
+---
+title: Data Structures
+layout: default
+nav_order: 2
+parent: Examples
+---
+
 # Data Structures Examples
 
 This page demonstrates vector and matrix operations in Rhodesia with practical examples.

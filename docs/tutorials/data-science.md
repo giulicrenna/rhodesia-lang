@@ -1,3 +1,10 @@
+---
+title: Data Science
+layout: default
+nav_order: 2
+parent: Tutorials
+---
+
 # Data Science Tutorial
 
 This tutorial covers data science applications in Rhodesia, including statistical analysis, data manipulation, and machine learning basics.

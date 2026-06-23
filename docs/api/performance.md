@@ -1,3 +1,10 @@
+---
+title: Performance
+layout: default
+nav_order: 3
+parent: API & Architecture
+---
+
 # Performance Guide
 
 This guide covers optimization techniques and performance considerations for Rhodesia programs.

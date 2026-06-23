@@ -1,6 +1,6 @@
 // Test mathematical constants
 
-println("=== Testing Mathematical Constants ===")
+println("Testing Mathematical Constants")
 
 // Access constants directly (sin paréntesis)
 println("math.PI =", math.PI)
@@ -10,7 +10,7 @@ println("math.SQRT_2 =", math.SQRT_2)
 println("math.SQRT_3 =", math.SQRT_3)
 
 println("")
-println("=== Using Constants in Calculations ===")
+println("Using Constants in Calculations")
 
 // Use PI in calculations
 float64: circumference = 2.0 * math.PI * 5.0  // circle with radius 5

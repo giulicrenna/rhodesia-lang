@@ -1,26 +1,26 @@
 // Demostración Completa del Módulo IO de Rhodesia
 // Este archivo muestra todas las capacidades del módulo io
 
-println("╔════════════════════════════════════════╗")
-println("║  Demostración Completa del Módulo IO  ║")
-println("╚════════════════════════════════════════╝")
+println("")
+println("Demostración Completa del Módulo IO")
+println("")
 println()
 
 /*
  1. Entrada Interactiva
 */
-println("=== 1. Entrada por Terminal ===")
-str: usuario = io.input("¿Cuál es tu nombre? ")
+println("1. Entrada por Terminal")
+str: usuario = io.input("¿Cual es tu nombre?")
 println("¡Bienvenido,", usuario, "!")
 println()
 
 /*
  2. Escritura Básica de Archivos
 */
-println("=== 2. Escritura de Archivos ===")
+println("2. Escritura de Archivos")
 
 int: file1 = io.open("demo_datos.txt", "w")
-io.write(file1, "Archivo creado por: ")
+io.write(file1, "Archivo creado por:")
 io.write(file1, usuario)
 io.write(file1, "\n")
 io.write(file1, "Fecha: 2024-01-15\n")
@@ -29,39 +29,39 @@ io.write(file1, "Línea 2: Sistema de IO\n")
 io.write(file1, "Línea 3: Con file handles\n")
 io.close(file1)
 
-println("✓ Archivo 'demo_datos.txt' creado exitosamente")
+println("Archivo 'demo_datos.txt' creado exitosamente")
 println()
 
 /*
  3. Lectura Completa de Archivos
 */
-println("=== 3. Lectura de Archivos ===")
+println("3. Lectura de Archivos")
 
 if io.exists("demo_datos.txt") {
-    int: file_read = io.open("demo_datos.txt", "r")
-    str: contenido = io.read(file_read)
-    io.close(file_read)
+ int: file_read = io.open("demo_datos.txt", "r")
+ str: contenido = io.read(file_read)
+ io.close(file_read)
 
-    println("Contenido del archivo:")
-    println(contenido)
+ println("Contenido del archivo:")
+ println(contenido)
 } else {
-    println("✗ Error: archivo no encontrado")
+ println("Error: archivo no encontrado")
 }
 println()
 
 /*
  4. Lectura Línea por Línea
 */
-println("=== 4. Lectura Línea por Línea ===")
+println("4. Lectura Línea por Línea")
 
 int: file_lines = io.open("demo_datos.txt", "r")
 int: contador = 0
 
 str: linea = io.readline(file_lines)
 while string.length(linea) > 0 {
-    contador = contador + 1
-    println("[", contador, "]", linea)
-    linea = io.readline(file_lines)
+ contador = contador + 1
+ println("[", contador, "]", linea)
+ linea = io.readline(file_lines)
 }
 
 io.close(file_lines)
@@ -71,20 +71,20 @@ println()
 /*
  5. Append (Añadir Contenido)
 */
-println("=== 5. Añadir Contenido (Append) ===")
+println("5. Añadir Contenido (Append)")
 
 int: file_append = io.open("demo_datos.txt", "a")
 io.write(file_append, "Línea 4: Añadida con append\n")
 io.write(file_append, "Línea 5: Final del archivo\n")
 io.close(file_append)
 
-println("✓ Contenido añadido al archivo")
+println("Contenido añadido al archivo")
 println()
 
 /*
  6. Navegación con Seek y Tell
 */
-println("=== 6. Navegación con Seek/Tell ===")
+println("6. Navegación con Seek/Tell")
 
 int: file_nav = io.open("demo_datos.txt", "r")
 
@@ -115,7 +115,7 @@ println()
 /*
  7. Modo Lectura/Escritura (r+)
 */
-println("=== 7. Modo Lectura/Escritura ===")
+println("7. Modo Lectura/Escritura")
 
 int: file_rw = io.open("demo_rw.txt", "w")
 io.write(file_rw, "Inicio del archivo\n")
@@ -146,7 +146,7 @@ println()
 /*
  8. Lectura Parcial de Bytes
 */
-println("=== 8. Lectura Parcial ===")
+println("8. Lectura Parcial")
 
 int: file_partial = io.open("demo_datos.txt", "r")
 
@@ -161,7 +161,7 @@ println()
 /*
  9. Utilidades: exists y remove
 */
-println("=== 9. Funciones Utilitarias ===")
+println("9. Funciones Utilitarias")
 
 // Verificar existencia
 int: existe1 = io.exists("demo_datos.txt")
@@ -176,13 +176,13 @@ io.remove("demo_datos.txt")
 io.remove("demo_rw.txt")
 
 int: existe3 = io.exists("demo_datos.txt")
-println("✓ Archivos eliminados (demo_datos.txt existe:", existe3, ")")
+println(" Archivos eliminados (demo_datos.txt existe:", existe3,")")
 println()
 
 /*
  10. Sistema de Log Completo
 */
-println("=== 10. Sistema de Log ===")
+println("10. Sistema de Log")
 
 str: log_file = "app.log"
 
@@ -192,7 +192,7 @@ io.write(log, "[2024-01-15 10:00:00] Aplicación iniciada\n")
 io.close(log)
 
 log = io.open(log_file, "a")
-io.write(log, "[2024-01-15 10:00:05] Usuario conectado: ")
+io.write(log, "[2024-01-15 10:00:05] Usuario conectado:")
 io.write(log, usuario)
 io.write(log, "\n")
 io.write(log, "[2024-01-15 10:00:10] Operación completada\n")
@@ -208,9 +208,9 @@ println(logs)
 
 // Limpiar
 io.remove(log_file)
-println("✓ Log eliminado")
+println("Log eliminado")
 println()
 
-println("╔════════════════════════════════════════╗")
-println("║   Demostración Completada con Éxito   ║")
-println("╚════════════════════════════════════════╝")
+println("")
+println("Demostración Completada con Éxito")
+println("")

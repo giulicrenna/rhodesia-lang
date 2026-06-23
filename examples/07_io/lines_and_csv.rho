@@ -1,6 +1,6 @@
 // io.lines y io.read_csv en Rhodesia
 
-println("=== IO: lines y CSV ===")
+println("IO: lines y CSV")
 println()
 
 // Función auxiliar para escribir un archivo
@@ -10,9 +10,6 @@ fun write_file(str: path, str: content) -> void {
     io.close(h)
 }
 
-// --------------------------------------------------------
-// io.lines: lee todas las líneas de un archivo como arr
-// --------------------------------------------------------
 println("--- io.lines ---")
 
 write_file("poema.txt", "La vida es corta\nEl arte es largo\nOcasión fugaz\nExperiencia engañosa\nJuicio difícil\n")
@@ -35,9 +32,6 @@ println("Último:  ", ultimo)
 // io.remove("poema.txt")
 println()
 
-// --------------------------------------------------------
-// Leer línea a línea con file handle
-// --------------------------------------------------------
 println("--- io.readline desde archivo ---")
 
 write_file("numeros.txt", "100\n200\n300\n")
@@ -55,9 +49,6 @@ println("Línea 3: ", l3)
 // io.remove("numeros.txt")
 println()
 
-// --------------------------------------------------------
-// io.read_csv: lee CSV como arr de records
-// --------------------------------------------------------
 println("--- io.read_csv (datos de alumnos) ---")
 
 write_file("alumnos.csv", "nombre,nota,aprobado\nAna,8.5,1\nBruno,4.2,0\nCarla,9.1,1\nDiego,5.0,1\n")
@@ -86,9 +77,6 @@ println("Promedio de notas: ", promedio)
 io.remove("alumnos.csv")
 println()
 
-// --------------------------------------------------------
-// io.read_csv: datos numéricos con tipos inferidos automáticamente
-// --------------------------------------------------------
 println("--- io.read_csv (series numéricas) ---")
 
 write_file("mediciones.csv", "x,y,z\n1,1.0,100\n2,4.0,200\n3,9.0,300\n4,16.0,400\n5,25.0,500\n")
@@ -105,4 +93,4 @@ for i in range(n_med) {
 io.remove("mediciones.csv")
 println()
 
-println("=== Fin IO lines y CSV ===")
+println("Fin IO lines y CSV")

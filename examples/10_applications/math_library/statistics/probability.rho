@@ -123,7 +123,10 @@ fun binomial_coefficient(int: n, int: k) -> float64 {
     int: smaller_k = min(k, n - k)
 
     for i in range(smaller_k) {
-        result = result * n - i / i + 1
+        // Standard nCk recurrence: result = result * (n - i) / (i + 1)
+        // The original `result = result * n - i / i + 1` was both operator-
+        // precedence-wrong and divided by zero at i=0.
+        result = result * (n - i) / (i + 1)
     }
 
     return result

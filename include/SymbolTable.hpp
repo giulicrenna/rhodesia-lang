@@ -200,9 +200,6 @@ public:
         return std::nullopt;
     }
     
-    // ========================================================================
-    // Function Management
-    // ========================================================================
     
     /**
      * @brief Register a user-defined function
@@ -234,9 +231,6 @@ public:
         return functions_.find(name) != functions_.end();
     }
     
-    // ========================================================================
-    // Debug/Utility
-    // ========================================================================
     
     /**
      * @brief Get all variable names in current scope

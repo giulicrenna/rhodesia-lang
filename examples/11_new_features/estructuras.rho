@@ -9,11 +9,7 @@
    - Patron: record como estado mutable
 */
 
-
-// ============================================================
-// 1. DEFINICION BASICA
-// ============================================================
-println("=== 1. Definicion basica ===")
+println("1. Definicion basica")
 
 record: persona = {
     nombre: "Laura",
@@ -26,10 +22,7 @@ println("Edad:  ", persona.edad)
 println("Activa:", persona.activa)
 println("")
 
-// ============================================================
-// 2. RECORD COMO PARAMETRO DE FUNCION
-// ============================================================
-println("=== 2. Record como parametro ===")
+println("2. Record como parametro")
 
 fun saludar(record: p) -> str {
     return string.concat("Hola, ", p.nombre, "!")
@@ -43,10 +36,7 @@ println(saludar(persona))
 println("Mayor de edad:", es_mayor_de_edad(persona))
 println("")
 
-// ============================================================
-// 3. RECORD COMO VALOR DE RETORNO
-// ============================================================
-println("=== 3. Record como retorno ===")
+println("3. Record como retorno")
 
 fun crear_punto(float64: x, float64: y) -> record {
     return { x: x, y: y }
@@ -65,10 +55,7 @@ println("P2:", p2.x, p2.y)
 println("Distancia:", distancia(p1, p2))   // 5.0
 println("")
 
-// ============================================================
-// 4. RECORDS ANIDADOS
-// ============================================================
-println("=== 4. Records anidados ===")
+println("4. Records anidados")
 
 record: direccion = {
     calle:   "Av. Siempre Viva",
@@ -89,10 +76,7 @@ println("Ciudad:  ", empleado.dir.ciudad)
 println("Calle:   ", empleado.dir.calle, empleado.dir.numero)
 println("")
 
-// ============================================================
-// 5. COLECCION DE RECORDS (vector de records)
-// ============================================================
-println("=== 5. Coleccion de records ===")
+println("5. Coleccion de records")
 
 record: prod1 = { nombre: "Manzana", precio: 1.20, stock: 100 }
 record: prod2 = { nombre: "Naranja", precio: 0.80, stock: 250 }
@@ -114,10 +98,7 @@ if prod4.precio < barato.precio { barato = prod4 }
 println("Mas barato:", barato.nombre, "a $", barato.precio)
 println("")
 
-// ============================================================
-// 6. RECORD + MATCH (despacho por tipo)
-// ============================================================
-println("=== 6. Record + match ===")
+println("6. Record + match")
 
 fun area(record: figura) -> float64 {
     match figura.tipo {
@@ -141,10 +122,7 @@ println("Area rectangulo (4x6)    :", area(rect))
 println("Area triangulo  (b=3,h=8):", area(triangulo))
 println("")
 
-// ============================================================
-// 7. RECORD COMO ESTADO MUTABLE (contador)
-// ============================================================
-println("=== 7. Record como estado ===")
+println("7. Record como estado")
 
 record: contador = { valor: 0, paso: 1 }
 
@@ -170,10 +148,7 @@ contador2 = incrementar(contador2)
 println("Paso 5, tras 2 incrementos:", contador2.valor)  // 10
 println("")
 
-// ============================================================
-// 8. COMPOSICION: record + tuple + funcion
-// ============================================================
-println("=== 8. Composicion record + tuple ===")
+println("8. Composicion record + tuple")
 
 fun estadisticas(vec: nums) -> record {
     float64: suma  = 0.0

@@ -1,31 +1,31 @@
 // Test del módulo IO con file handles
-println("=== Test del Módulo IO con File Handles ===")
+println("Test del Módulo IO con File Handles")
 println()
 
 // Test 1: Abrir archivo para escritura
 println("Test 1: Abrir y escribir archivo")
 int: file = io.open("test_handle.txt", "w")
-println("✓ Archivo abierto con handle:", file)
+println(" Archivo abierto con handle:", file)
 
 str: contenido = "Primera línea\nSegunda línea\nTercera línea\n"
 int: bytes = io.write(file, contenido)
-println("✓ Escritos", bytes, "bytes")
+println(" Escritos", bytes, "bytes")
 
 io.close(file)
-println("✓ Archivo cerrado")
+println("Archivo cerrado")
 println()
 
 // Test 2: Abrir archivo para lectura
 println("Test 2: Leer archivo completo")
 int: file_read = io.open("test_handle.txt", "r")
-println("✓ Archivo abierto para lectura, handle:", file_read)
+println(" Archivo abierto para lectura, handle:", file_read)
 
 str: leido = io.read(file_read)
-println("✓ Contenido leído:")
+println("Contenido leído:")
 println(leido)
 
 io.close(file_read)
-println("✓ Archivo cerrado")
+println("Archivo cerrado")
 println()
 
 // Test 3: Leer línea por línea
@@ -42,7 +42,7 @@ str: line3 = io.readline(file_lines)
 println("Línea 3:", line3)
 
 io.close(file_lines)
-println("✓ Lectura línea por línea completada")
+println("Lectura línea por línea completada")
 println()
 
 // Test 4: Append (añadir)
@@ -51,7 +51,7 @@ int: file_append = io.open("test_handle.txt", "a")
 str: nueva_linea = "Cuarta línea añadida\n"
 io.write(file_append, nueva_linea)
 io.close(file_append)
-println("✓ Contenido añadido")
+println("Contenido añadido")
 
 // Verificar
 int: file_verify = io.open("test_handle.txt", "r")
@@ -84,7 +84,7 @@ str: chunk2 = io.read(file_seek, 10)
 println("Primeros 10 bytes (de nuevo):", chunk2)
 
 io.close(file_seek)
-println("✓ Test de navegación completado")
+println("Test de navegación completado")
 println()
 
 // Test 6: Modo lectura/escritura
@@ -108,17 +108,17 @@ println("Contenido completo:")
 println(todo)
 
 io.close(file_rw)
-println("✓ Modo r+ funciona correctamente")
+println("Modo r+ funciona correctamente")
 println()
 
 // Test 7: Limpiar
 println("Test 7: Eliminar archivo de prueba")
 int: eliminado = io.remove("test_handle.txt")
 if eliminado {
-    println("✓ Archivo eliminado correctamente")
+ println("Archivo eliminado correctamente")
 } else {
-    println("✗ Error al eliminar archivo")
+ println("Error al eliminar archivo")
 }
 println()
 
-println("=== Todos los tests completados ===")
+println("Todos los tests completados")

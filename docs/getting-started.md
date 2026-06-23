@@ -1,62 +1,90 @@
+---
+title: Getting Started
+layout: default
+nav_order: 2
+---
+
 # Getting Started with Rhodesia
 
-Welcome to Rhodesia! This guide will help you get up and running with your first Rhodesia program.
+Welcome! This guide walks you through building Rhodesia from source and
+running your first program. If you just want to install it, see
+[Installation & Editor Setup](installation.md).
 
-## Prerequisites
+## Quick Install (Windows)
+
+[Download Rhodesia 0.1.2 for Windows (.exe)](https://github.com/giulicrenna/rhodesia-lang/releases/latest/download/rhodesia-setup-0.1.2.exe){: .btn .btn-primary }
+
+The installer adds `rhodesia` to your PATH so the REPL and CLI work from any
+terminal. Pair it with the VS Code extension (**Rhodesia Language Support**
+by `GiulianoCrenna`) for syntax highlighting and tooling.
+
+## Prerequisites (from source)
 
 Before you begin, make sure you have:
 
-- C++ compiler (GCC, Clang, or MSVC)
-- CMake (version 3.10 or higher)
+- C++ compiler (GCC, Clang, or MSVC) with C++20 support
+- CMake 3.16 or higher
 - Eigen3 library
+- (Windows only) Ninja is recommended
 
-### Installation on Ubuntu/Debian
+### Ubuntu / Debian
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake libeigen3-dev
+sudo apt install build-essential cmake libeigen3-dev ninja-build
 ```
 
-### Installation on Fedora
+### Fedora
 
 ```bash
-sudo dnf install gcc-c++ cmake eigen3-devel
+sudo dnf install gcc-c++ cmake eigen3-devel ninja-build
 ```
 
-### Installation on macOS
+### macOS
 
 ```bash
-brew install cmake eigen
+brew install cmake eigen ninja
 ```
 
-## Building Rhodesia
+### Windows
+
+Install Visual Studio (with the C++ workload), then from a Developer PowerShell:
+
+```powershell
+cmake --version    # confirm 3.16+
+# Eigen3 is downloaded automatically via CMake FetchContent if not present
+```
+
+## Building from Source
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/giulicrenna/rhodesia-lang.git
 cd rhodesia-lang
 ```
 
-2. Configure and compile (recommended):
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
-```
-
-Alternative build command using `make` directly:
+2. Configure and build (Release by default):
 
 ```bash
-make -C build -j$(nproc)
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)      # Linux/macOS
+# or
+cmake --build build -j               # Windows
 ```
 
-3. Test the installation:
+3. Verify:
+
 ```bash
 ./build/rhodesia --version
 ```
 
+> Windows installer maintainers: see [Build & Packaging](tutorials/build.md) for
+> Inno Setup steps, CPack config, and the `--vm` toggle.
+
 ## Your First Program
 
-Create a file called `hello.rho`:
+Create `hello.rho`:
 
 ```rhodesia
 // hello.rho - Your first Rhodesia program
@@ -71,38 +99,36 @@ println("Sum:", sum)
 // Vector operations
 vec: v = [1, 2, 3, 4, 5]
 println("Vector:", v)
-println("Sum of vector:", sum(v))
-println("Mean of vector:", mean(v))
+println("Sum of vector:", math.sum(v))
+println("Mean of vector:", math.mean(v))
 ```
 
-Run your program:
+Run it:
 
 ```bash
 ./build/rhodesia hello.rho
 ```
 
-## Interactive Mode
-
-Rhodesia also supports an interactive REPL (Read-Eval-Print Loop):
+## Interactive Mode (REPL)
 
 ```bash
 ./build/rhodesia
 ```
 
-Try these commands:
+Try:
 
 ```rhodesia
 println("Hello from REPL!")
 vec: data = [1, 2, 3, 4, 5]
 println("Data:", data)
-println("Mean:", mean(data))
+println("Mean:", math.mean(data))
 ```
 
-Type `exit` or `quit` to leave the REPL.
+REPL commands: `help`, `vars`, `exit`, `quit`. Multi-line input is enabled
+whenever braces are unbalanced. See [REPL](tutorials/repl.md) for the full
+reference.
 
 ## Running Inline Code
-
-You can execute code directly from the command line:
 
 ```bash
 ./build/rhodesia -e "println('Direct execution:', 2 * 21)"
@@ -116,15 +142,15 @@ rm -rf build
 
 ## Next Steps
 
-- Learn about [Language Syntax](language/syntax.md)
-- Explore [Basic Examples](examples/basics.md)
-- Read about [Standard Library Functions](standard-library/functions.md)
+- [Installation & Editor Setup](installation.md) — Windows installer and VS Code extension.
+- [Language Syntax](language/syntax.md) — full syntax reference.
+- [Type System](language/types.md) — primitive and collection types.
+- [Basic Examples](examples/basics.md) — learn by doing.
+- [Standard Library Overview](standard-library/functions.md) — what ships out of the box.
 
 ## Need Help?
 
-If you encounter issues:
-
-1. Check the [Troubleshooting Guide](troubleshooting/errors.md)
-2. Report bugs on [GitHub](https://github.com/giulicrenna/rhodesia-lang/issues)
+- [Troubleshooting — Errors](troubleshooting/errors.md)
+- [GitHub Issues](https://github.com/giulicrenna/rhodesia-lang/issues)
 
 Happy coding with Rhodesia!

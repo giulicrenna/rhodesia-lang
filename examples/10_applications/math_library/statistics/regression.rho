@@ -56,7 +56,8 @@ fun multiple_regression_2d(mat: X, vec: y) -> vec {
     mat: XT = mat_transpose(X)
     mat: XTX = XT * X
     mat: XTX_inv = inv(XTX)
-    mat: XTy = XT * y
+    // ponytail: XT is (3×5) and y is a 5-vec, so XT*y is a 3-vec, not a matrix.
+    vec: XTy = XT * y
 
     return XTX_inv * XTy
 }

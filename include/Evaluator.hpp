@@ -33,7 +33,13 @@ public:
  */
 class Evaluator : public ASTVisitor {
 public:
-    Evaluator() : result_(int64_t(0)) {}
+    Evaluator() : result_(int64_t(0)), moduleLoader_(std::make_shared<ModuleLoader>()) {}
+
+    // ponytail: build a child Evaluator that shares the parent's module cache.
+    // This keeps sub-module ASTs alive after the child is destroyed, so the
+    // raw `const FunctionDeclNode*` pointers stored in functions_ remain valid.
+    explicit Evaluator(std::shared_ptr<ModuleLoader> sharedLoader)
+        : result_(int64_t(0)), moduleLoader_(std::move(sharedLoader)) {}
 
     /**
      * @brief Evaluate a program
@@ -52,11 +58,8 @@ public:
     /**
      * @brief Access to module loader
      */
-    ModuleLoader& moduleLoader() { return moduleLoader_; }
-
-    // ========================================================================
-    // Expression Visitors
-    // ========================================================================
+    ModuleLoader& moduleLoader() { return *moduleLoader_; }
+    std::shared_ptr<ModuleLoader> moduleLoaderPtr() const { return moduleLoader_; }
 
     void visit(IntLiteralNode& node) override {
         result_ = node.value;
@@ -199,6 +202,21 @@ public:
         for (auto& arg : node.arguments) {
             arg->accept(*this);
             args.push_back(result_);
+        }
+
+        // ponytail: implicit numeric coercion at the call site. `for n in
+        // range(...)` makes `n` a float64 even when the user thinks it's an
+        // integer index, and the math library (and many examples) pass such
+        // values to functions declared `int:`. Truncating to int here lets
+        // `power(x, 2*n+1)` and friends keep working without sprinkling
+        // `int(...)` casts through every library. Same path for int→float64.
+        for (size_t i = 0; i < args.size(); ++i) {
+            const RhoType paramType = funcSig->params[i].type;
+            if (paramType == RhoType::Int && std::holds_alternative<double>(args[i])) {
+                args[i] = static_cast<int64_t>(std::get<double>(args[i]));
+            } else if (paramType == RhoType::Float64 && std::holds_alternative<int64_t>(args[i])) {
+                args[i] = static_cast<double>(std::get<int64_t>(args[i]));
+            }
         }
 
         // Create function scope
@@ -432,10 +450,6 @@ public:
         result_ = record;
     }
 
-    // ========================================================================
-    // Statement Visitors
-    // ========================================================================
-
     void visit(VarDeclNode& node) override {
         node.initializer->accept(*this);
         // Type check and convert if needed
@@ -566,11 +580,16 @@ public:
         // Also expose as a first-class function value so it can be stored in records,
         // passed as arguments, or referenced by name.
         std::vector<std::string> paramNames;
-        for (const auto& param : node.params) paramNames.push_back(param.name);
+        std::vector<RhoType> paramTypes;
+        for (const auto& param : node.params) {
+            paramNames.push_back(param.name);
+            paramTypes.push_back(param.type);
+        }
         std::shared_ptr<void> bodyPtr(node.body.get(), [](void*){});
         auto funcVal = std::make_shared<RhoFunction>(
             std::move(paramNames), bodyPtr, /*isExpression=*/false,
-            /*closure=*/std::unordered_map<std::string, RhoValue>{});
+            /*closure=*/std::unordered_map<std::string, RhoValue>{},
+            std::move(paramTypes));
         // Declare as a variable value; skip silently if already declared in this scope
         // (e.g., re-include or redeclaration) since functions_ already tracks it.
         if (!symbols_.existsInCurrentScope(node.name)) {
@@ -766,14 +785,15 @@ public:
         }
 
         // Load the module
-        ProgramNode* moduleAst = moduleLoader_.loadModule(node.moduleName, node.location);
+        ProgramNode* moduleAst = moduleLoader_->loadModule(node.moduleName, node.location);
 
-        // Create a temporary evaluator to execute the module in isolation
-        Evaluator moduleEvaluator;
-        // Share module cache by setting the same base directory
-        moduleEvaluator.moduleLoader_.setBaseDirectory(
-            moduleLoader_.getBaseDirectory()
-        );
+        // Create a temporary evaluator that shares THIS evaluator's module
+        // cache. Without sharing, sub-modules loaded by `moduleEvaluator` (e.g.
+        // `core/core` from inside `math/index.rho`) live in
+        // `moduleEvaluator.moduleLoader_.moduleCache_` and get destroyed when
+        // `moduleEvaluator` goes out of scope, leaving dangling
+        // `const FunctionDeclNode*` pointers in our `functions_` table.
+        Evaluator moduleEvaluator(moduleLoader_);
         moduleAst->accept(moduleEvaluator);
 
         // Import symbols from the module's symbol table
@@ -798,11 +818,7 @@ public:
 private:
     SymbolTable symbols_;
     RhoValue result_;
-    ModuleLoader moduleLoader_;
-
-    // ========================================================================
-    // Module Import Helpers
-    // ========================================================================
+    std::shared_ptr<ModuleLoader> moduleLoader_;
 
     /**
      * @brief Import a specific symbol from a module's symbol table with optional alias
@@ -890,10 +906,6 @@ private:
         }
     }
 
-    // ========================================================================
-    // Helper Types
-    // ========================================================================
-
     /**
      * @brief Evaluated slice specification with concrete indices
      * Uses int64_t to support negative indices (Python-style)
@@ -902,10 +914,6 @@ private:
         std::optional<int64_t> start;
         std::optional<int64_t> end;
     };
-
-    // ========================================================================
-    // Helper Functions
-    // ========================================================================
 
     static std::string getTypeConversionHint(RhoType target, RhoType source) {
         if (target == RhoType::Int && source == RhoType::Float64) {
@@ -1369,10 +1377,6 @@ private:
         }, target);
     }
 
-    // ========================================================================
-    // Arithmetic Operation Implementations
-    // ========================================================================
-
     RhoValue applyAdd(const RhoValue& left, const RhoValue& right, SourceLocation loc) {
         return std::visit([&loc](const auto& l, const auto& r) -> RhoValue {
             using L = std::decay_t<decltype(l)>;
@@ -1394,6 +1398,15 @@ private:
                 }
                 return Eigen::VectorXd(l + r);
             }
+            // Scalar + Vector / Vector + Scalar (broadcasting)
+            else if constexpr (std::is_same_v<L, Eigen::VectorXd> &&
+                              (std::is_same_v<R, double> || std::is_same_v<R, int64_t>)) {
+                return Eigen::VectorXd(l.array() + static_cast<double>(r));
+            }
+            else if constexpr ((std::is_same_v<L, double> || std::is_same_v<L, int64_t>) &&
+                              std::is_same_v<R, Eigen::VectorXd>) {
+                return Eigen::VectorXd(static_cast<double>(l) + r.array());
+            }
             // Matrix + Matrix
             else if constexpr (std::is_same_v<L, Eigen::MatrixXd> && std::is_same_v<R, Eigen::MatrixXd>) {
                 if (l.rows() != r.rows() || l.cols() != r.cols()) {
@@ -1402,6 +1415,15 @@ private:
                         std::to_string(r.rows()) + "x" + std::to_string(r.cols()), loc);
                 }
                 return Eigen::MatrixXd(l + r);
+            }
+            // Scalar + Matrix / Matrix + Scalar (broadcasting)
+            else if constexpr (std::is_same_v<L, Eigen::MatrixXd> &&
+                              (std::is_same_v<R, double> || std::is_same_v<R, int64_t>)) {
+                return Eigen::MatrixXd(l.array() + static_cast<double>(r));
+            }
+            else if constexpr ((std::is_same_v<L, double> || std::is_same_v<L, int64_t>) &&
+                              std::is_same_v<R, Eigen::MatrixXd>) {
+                return Eigen::MatrixXd(static_cast<double>(l) + r.array());
             }
             else {
                 throw TypeError::incompatibleBinaryOp("+",
@@ -1429,6 +1451,14 @@ private:
                 }
                 return Eigen::VectorXd(l - r);
             }
+            else if constexpr (std::is_same_v<L, Eigen::VectorXd> &&
+                              (std::is_same_v<R, double> || std::is_same_v<R, int64_t>)) {
+                return Eigen::VectorXd(l.array() - static_cast<double>(r));
+            }
+            else if constexpr ((std::is_same_v<L, double> || std::is_same_v<L, int64_t>) &&
+                              std::is_same_v<R, Eigen::VectorXd>) {
+                return Eigen::VectorXd(static_cast<double>(l) - r.array());
+            }
             else if constexpr (std::is_same_v<L, Eigen::MatrixXd> && std::is_same_v<R, Eigen::MatrixXd>) {
                 if (l.rows() != r.rows() || l.cols() != r.cols()) {
                     throw RuntimeError::dimensionMismatch("-",
@@ -1436,6 +1466,14 @@ private:
                         std::to_string(r.rows()) + "x" + std::to_string(r.cols()), loc);
                 }
                 return Eigen::MatrixXd(l - r);
+            }
+            else if constexpr (std::is_same_v<L, Eigen::MatrixXd> &&
+                              (std::is_same_v<R, double> || std::is_same_v<R, int64_t>)) {
+                return Eigen::MatrixXd(l.array() - static_cast<double>(r));
+            }
+            else if constexpr ((std::is_same_v<L, double> || std::is_same_v<L, int64_t>) &&
+                              std::is_same_v<R, Eigen::MatrixXd>) {
+                return Eigen::MatrixXd(static_cast<double>(l) - r.array());
             }
             else {
                 throw TypeError::incompatibleBinaryOp("-",
@@ -1465,6 +1503,14 @@ private:
             else if constexpr (std::is_same_v<L, Eigen::VectorXd> &&
                               (std::is_same_v<R, double> || std::is_same_v<R, int64_t>)) {
                 return Eigen::VectorXd(l * static_cast<double>(r));
+            }
+            // Vector * Vector (element-wise / Hadamard product)
+            else if constexpr (std::is_same_v<L, Eigen::VectorXd> && std::is_same_v<R, Eigen::VectorXd>) {
+                if (l.size() != r.size()) {
+                    throw RuntimeError::dimensionMismatch("*",
+                        std::to_string(l.size()), std::to_string(r.size()), loc);
+                }
+                return Eigen::VectorXd((l.array() * r.array()).matrix());
             }
             // Scalar * Matrix
             else if constexpr ((std::is_same_v<L, double> || std::is_same_v<L, int64_t>) &&
@@ -1542,6 +1588,16 @@ private:
     RhoValue applyMod(const RhoValue& left, const RhoValue& right, SourceLocation loc) {
         if (!isScalar(left) || !isScalar(right)) {
             throw TypeError::incompatibleBinaryOp("%", getValueType(left), getValueType(right));
+        }
+
+        // Float64 % Float64: use fmod and keep the float64 result.
+        if (std::holds_alternative<double>(left) || std::holds_alternative<double>(right)) {
+            double l = toDouble(left);
+            double r = toDouble(right);
+            if (r == 0.0) {
+                throw RuntimeError::divisionByZero(loc);
+            }
+            return std::fmod(l, r);
         }
 
         int64_t l = toInt(left);
@@ -1649,6 +1705,22 @@ private:
                 " arguments, got " + std::to_string(args.size()), loc);
         }
 
+        // ponytail: same implicit numeric coercion as the named-function
+        // dispatch path. `for n in range(...)` produces float64 even when the
+        // user thinks of it as an integer index, so we widen/narrow at the
+        // call site to match the declared parameter type.
+        std::vector<RhoValue> coercedArgs = args;
+        const auto& paramTypes = func->paramTypes();
+        if (!paramTypes.empty() && paramTypes.size() == coercedArgs.size()) {
+            for (size_t i = 0; i < coercedArgs.size(); ++i) {
+                if (paramTypes[i] == RhoType::Int && std::holds_alternative<double>(coercedArgs[i])) {
+                    coercedArgs[i] = static_cast<int64_t>(std::get<double>(coercedArgs[i]));
+                } else if (paramTypes[i] == RhoType::Float64 && std::holds_alternative<int64_t>(coercedArgs[i])) {
+                    coercedArgs[i] = static_cast<double>(std::get<int64_t>(coercedArgs[i]));
+                }
+            }
+        }
+
         // Create new scope for function execution
         ScopeGuard funcGuard(symbols_);
 
@@ -1660,8 +1732,8 @@ private:
 
         // Bind parameters
         const auto& params = func->params();
-        for (size_t i = 0; i < args.size(); ++i) {
-            symbols_.declare(params[i], getValueType(args[i]), args[i], loc);
+        for (size_t i = 0; i < coercedArgs.size(); ++i) {
+            symbols_.declare(params[i], getValueType(coercedArgs[i]), coercedArgs[i], loc);
         }
 
         // Get the body and execute it

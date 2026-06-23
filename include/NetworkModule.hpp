@@ -140,7 +140,7 @@ public:
     bool closeSocket(int64_t handle) {
         auto it = handles_.find(handle);
         if (it == handles_.end()) return false;
-        if (it->second.is_open) ::close(it->second.fd);
+        if (it->second.is_open) close_socket(it->second.fd);
         handles_.erase(it);
         return true;
     }
@@ -154,14 +154,15 @@ public:
         int fd = ::socket(AF_INET, SOCK_STREAM, 0);
         if (fd < 0) return -1;
         int opt = 1;
-        ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                     reinterpret_cast<const char*>(&opt), sizeof(opt));
         struct sockaddr_in addr{};
         addr.sin_family      = AF_INET;
         addr.sin_addr.s_addr = INADDR_ANY;
         addr.sin_port        = htons(static_cast<uint16_t>(port));
         if (::bind(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0 ||
             ::listen(fd, backlog) < 0) {
-            ::close(fd);
+            close_socket(fd);
             return -1;
         }
         int64_t handle = nextHandle_++;
@@ -212,20 +213,19 @@ public:
         if (rc != 0 || !res) return false;
 
         // Switch to non-blocking
-        int flags = ::fcntl(sh.fd, F_GETFL, 0);
-        ::fcntl(sh.fd, F_SETFL, flags | O_NONBLOCK);
+        socket_set_nonblocking(sh.fd);
 
         int conn = ::connect(sh.fd, res->ai_addr, res->ai_addrlen);
         ::freeaddrinfo(res);
 
         if (conn == 0) {
-            ::fcntl(sh.fd, F_SETFL, flags);
+            socket_set_blocking(sh.fd);
             sh.connected = true;
             return true;
         }
 
-        if (errno != EINPROGRESS) {
-            ::fcntl(sh.fd, F_SETFL, flags);
+        if (LAST_SOCKET_ERROR() != EINPROGRESS) {
+            socket_set_blocking(sh.fd);
             return false;
         }
 
@@ -236,13 +236,14 @@ public:
         struct timeval tv{ timeout_secs, 0 };
 
         int sel = ::select(sh.fd + 1, nullptr, &wfds, &efds, &tv);
-        ::fcntl(sh.fd, F_SETFL, flags); // Restore blocking
+        socket_set_blocking(sh.fd); // Restore blocking
 
         if (sel <= 0) return false; // Timeout (0) or select error (-1)
 
         int err = 0;
         socklen_t len = sizeof(err);
-        ::getsockopt(sh.fd, SOL_SOCKET, SO_ERROR, &err, &len);
+        ::getsockopt(sh.fd, SOL_SOCKET, SO_ERROR,
+                     reinterpret_cast<char*>(&err), &len);
         sh.connected = (err == 0);
         return sh.connected;
     }
@@ -370,7 +371,7 @@ inline HttpResponse performHttpRequest(
 
     if (::connect(fd, res->ai_addr, res->ai_addrlen) < 0) {
         ::freeaddrinfo(res);
-        ::close(fd);
+        close_socket(fd);
         throw std::runtime_error("connect() failed: " + parsed.host
                                  + ":" + std::to_string(parsed.port));
     }
@@ -399,7 +400,7 @@ inline HttpResponse performHttpRequest(
     ssize_t n;
     while ((n = ::recv(fd, tmp, sizeof(tmp), 0)) > 0)
         raw.append(tmp, static_cast<size_t>(n));
-    ::close(fd);
+    close_socket(fd);
 
     HttpResponse resp;
     auto headerEnd = raw.find("\r\n\r\n");

@@ -100,7 +100,8 @@ for file in "${ALL_FILES[@]}"; do
   fi
 
   if [[ "$INCLUDE_INTERACTIVE" -eq 0 ]]; then
-    if [[ "$rel" == *"/interactive.rho" ]]; then
+    if [[ "$rel" == *"/interactive.rho" ]] || \
+       [[ "$rel" == *"/tcp_server.rho" ]]; then
       continue
     fi
   fi

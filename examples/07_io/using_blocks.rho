@@ -1,198 +1,198 @@
 // Demostración de bloques 'using' para manejo seguro de archivos
-println("╔═══════════════════════════════════════╗")
-println("║   Demostración de Bloques Using      ║")
-println("╚═══════════════════════════════════════╝")
+println("")
+println("Demostración de Bloques Using")
+println("")
 println()
 
 /*
  1. Using básico - La forma recomendada
 */
-println("=== 1. Using Básico ===")
+println("1. Using Básico")
 
 using io.open("demo_using.txt", "w") as file {
-    io.write(file, "Esta es la primera línea\n")
-    io.write(file, "Esta es la segunda línea\n")
-    io.write(file, "Esta es la tercera línea\n")
-    println("✓ Archivo escrito")
+ io.write(file, "Esta es la primera línea\n")
+ io.write(file, "Esta es la segunda línea\n")
+ io.write(file, "Esta es la tercera línea\n")
+ println("Archivo escrito")
 }
 // El archivo se cierra automáticamente aquí
 
-println("✓ Archivo cerrado automáticamente")
+println("Archivo cerrado automáticamente")
 println()
 
 /*
  2. Lectura con using
 */
-println("=== 2. Lectura con Using ===")
+println("2. Lectura con Using")
 
 using io.open("demo_using.txt", "r") as file_read {
-    str: contenido = io.read(file_read)
-    println("Contenido:")
-    println(contenido)
+ str: contenido = io.read(file_read)
+ println("Contenido:")
+ println(contenido)
 }
 
-println("✓ Archivo cerrado después de leer")
+println("Archivo cerrado después de leer")
 println()
 
 /*
  3. Using anidado - Copiar archivo
 */
-println("=== 3. Using Anidado (Copiar) ===")
+println("3. Using Anidado (Copiar)")
 
 using io.open("demo_using.txt", "r") as input {
-    using io.open("demo_copia.txt", "w") as output {
-        println("Copiando archivo...")
-        str: datos = io.read(input)
-        io.write(output, "=== COPIA ===\n")
-        io.write(output, datos)
-        println("✓ Copia completada")
-    }
+ using io.open("demo_copia.txt", "w") as output {
+ println("Copiando archivo...")
+ str: datos = io.read(input)
+ io.write(output, "=== COPIA ===\n")
+ io.write(output, datos)
+ println("Copia completada")
+ }
 }
 
-println("✓ Ambos archivos cerrados automáticamente")
+println("Ambos archivos cerrados automáticamente")
 println()
 
 /*
  4. Lectura línea por línea
 */
-println("=== 4. Lectura Línea por Línea ===")
+println("4. Lectura Línea por Línea")
 
 int: contador = 0
 using io.open("demo_using.txt", "r") as file_lines {
-    str: linea = io.readline(file_lines)
-    while string.length(linea) > 0 {
-        contador = contador + 1
-        println("[", contador, "]", linea)
-        linea = io.readline(file_lines)
-    }
+ str: linea = io.readline(file_lines)
+ while string.length(linea) > 0 {
+ contador = contador + 1
+ println("[", contador, "]", linea)
+ linea = io.readline(file_lines)
+ }
 }
 
-println("✓ Total de líneas:", contador)
+println(" Total de líneas:", contador)
 println()
 
 /*
  5. Append con using
 */
-println("=== 5. Append con Using ===")
+println("5. Append con Using")
 
 using io.open("demo_using.txt", "a") as file_append {
-    io.write(file_append, "Línea añadida con append\n")
-    io.write(file_append, "Otra línea más\n")
-    println("✓ Líneas añadidas")
+ io.write(file_append, "Línea añadida con append\n")
+ io.write(file_append, "Otra línea más\n")
+ println("Líneas añadidas")
 }
 
 // Verificar
 using io.open("demo_using.txt", "r") as file_verify {
-    str: todo = io.read(file_verify)
-    println("Contenido actualizado:")
-    println(todo)
+ str: todo = io.read(file_verify)
+ println("Contenido actualizado:")
+ println(todo)
 }
 println()
 
 /*
  6. Navegación con seek/tell
 */
-println("=== 6. Navegación con Seek/Tell ===")
+println("6. Navegación con Seek/Tell")
 
 using io.open("demo_using.txt", "r") as file_nav {
-    // Leer inicio
-    str: inicio = io.read(file_nav, 15)
-    println("Primeros 15 bytes:", inicio)
+ // Leer inicio
+ str: inicio = io.read(file_nav, 15)
+ println("Primeros 15 bytes:", inicio)
 
-    int: pos = io.tell(file_nav)
-    println("Posición actual:", pos)
+ int: pos = io.tell(file_nav)
+ println("Posición actual:", pos)
 
-    // Volver al inicio
-    io.seek(file_nav, 0, 0)
+ // Volver al inicio
+ io.seek(file_nav, 0, 0)
 
-    str: de_nuevo = io.read(file_nav, 15)
-    println("De nuevo (15 bytes):", de_nuevo)
+ str: de_nuevo = io.read(file_nav, 15)
+ println("De nuevo (15 bytes):", de_nuevo)
 }
 
-println("✓ Archivo cerrado después de navegar")
+println("Archivo cerrado después de navegar")
 println()
 
 /*
  7. Procesamiento - Convertir a mayúsculas
 */
-println("=== 7. Procesamiento de Archivo ===")
+println("7. Procesamiento de Archivo")
 
 using io.open("demo_using.txt", "r") as input_file {
-    using io.open("demo_upper.txt", "w") as output_file {
-        println("Convirtiendo a mayúsculas...")
+ using io.open("demo_upper.txt", "w") as output_file {
+ println("Convirtiendo a mayúsculas...")
 
-        str: linea = io.readline(input_file)
-        while string.length(linea) > 0 {
-            str: upper_linea = string.upper(linea)
-            io.write(output_file, upper_linea)
-            io.write(output_file, "\n")
-            linea = io.readline(input_file)
-        }
+ str: linea = io.readline(input_file)
+ while string.length(linea) > 0 {
+ str: upper_linea = string.upper(linea)
+ io.write(output_file, upper_linea)
+ io.write(output_file, "\n")
+ linea = io.readline(input_file)
+ }
 
-        println("✓ Conversión completada")
-    }
+ println("Conversión completada")
+ }
 }
 
 // Mostrar resultado
 using io.open("demo_upper.txt", "r") as file_result {
-    str: resultado = io.read(file_result)
-    println("Resultado:")
-    println(resultado)
+ str: resultado = io.read(file_result)
+ println("Resultado:")
+ println(resultado)
 }
 println()
 
 /*
  8. Modo lectura/escritura (r+)
 */
-println("=== 8. Modo Lectura/Escritura ===")
+println("8. Modo Lectura/Escritura")
 
 using io.open("demo_rw.txt", "w+") as file_rw {
-    // Escribir inicial
-    io.write(file_rw, "Línea inicial\n")
+ // Escribir inicial
+ io.write(file_rw, "Línea inicial\n")
 
-    // Volver al inicio y leer
-    io.seek(file_rw, 0, 0)
-    str: leido = io.readline(file_rw)
-    println("Leído:", leido)
+ // Volver al inicio y leer
+ io.seek(file_rw, 0, 0)
+ str: leido = io.readline(file_rw)
+ println("Leído:", leido)
 
-    // Ir al final y añadir
-    io.seek(file_rw, 0, 2)
-    io.write(file_rw, "Línea final\n")
+ // Ir al final y añadir
+ io.seek(file_rw, 0, 2)
+ io.write(file_rw, "Línea final\n")
 
-    // Leer todo
-    io.seek(file_rw, 0, 0)
-    str: todo = io.read(file_rw)
-    println("Contenido completo:")
-    println(todo)
+ // Leer todo
+ io.seek(file_rw, 0, 0)
+ str: todo = io.read(file_rw)
+ println("Contenido completo:")
+ println(todo)
 }
 
-println("✓ Archivo r+ cerrado")
+println("Archivo r+ cerrado")
 println()
 
 /*
  9. Comparación: Manual vs Using
 */
-println("=== 9. Comparación Manual vs Using ===")
+println("9. Comparación Manual vs Using")
 
 // Forma manual (no recomendada)
 println("Forma manual:")
 int: file_manual = io.open("demo_manual.txt", "w")
 io.write(file_manual, "Escrito manualmente\n")
-io.close(file_manual)  // ¡Debes recordar cerrar!
-println("✓ Archivo manual cerrado")
+io.close(file_manual) // ¡Debes recordar cerrar!
+println("Archivo manual cerrado")
 
 // Forma con using (recomendada)
 println("Forma con using:")
 using io.open("demo_using_way.txt", "w") as file_using_way {
-    io.write(file_using_way, "Escrito con using\n")
-}  // Se cierra automáticamente
-println("✓ Archivo using cerrado automáticamente")
+ io.write(file_using_way, "Escrito con using\n")
+} // Se cierra automáticamente
+println("Archivo using cerrado automáticamente")
 println()
 
 /*
  10. Limpieza
 */
-println("=== 10. Limpieza ===")
+println("10. Limpieza")
 
 io.remove("demo_using.txt")
 io.remove("demo_copia.txt")
@@ -201,13 +201,13 @@ io.remove("demo_rw.txt")
 io.remove("demo_manual.txt")
 io.remove("demo_using_way.txt")
 
-println("✓ Archivos de demostración eliminados")
+println("Archivos de demostración eliminados")
 println()
 
-println("╔═══════════════════════════════════════╗")
-println("║     Demostración Completada           ║")
-println("║                                       ║")
-println("║  Los bloques 'using' son la forma    ║")
-println("║  recomendada de trabajar con          ║")
-println("║  archivos en Rhodesia!                ║")
-println("╚═══════════════════════════════════════╝")
+println("")
+println("Demostración Completada")
+println("")
+println("Los bloques 'using' son la forma")
+println("recomendada de trabajar con")
+println("archivos en Rhodesia!")
+println("")

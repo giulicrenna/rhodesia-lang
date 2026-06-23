@@ -1,6 +1,6 @@
 // Advanced Slicing Examples - Practical use cases
 
-println("=== Data Analysis with Slicing ===")
+println("Data Analysis with Slicing")
 
 // Simulate a time series dataset (10 data points)
 vec: timeSeries = [12.5, 15.3, 18.7, 22.1, 19.8, 21.4, 23.6, 25.2, 24.1, 22.9]

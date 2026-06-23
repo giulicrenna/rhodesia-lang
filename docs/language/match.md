@@ -1,3 +1,10 @@
+---
+title: Match Statement
+layout: default
+nav_order: 11
+parent: Language Reference
+---
+
 # Match Statement
 
 The `match` statement provides exhaustive, readable pattern matching against a value. It is the preferred alternative to long chains of `if / else if` when testing a single value against multiple concrete cases.

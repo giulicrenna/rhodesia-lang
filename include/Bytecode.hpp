@@ -22,10 +22,6 @@
 
 namespace Rhodesia {
 
-// ---------------------------------------------------------------------------
-// Opcode
-// ---------------------------------------------------------------------------
-
 /**
  * @brief Bytecode instruction opcodes for the Rhodesia VM
  *
@@ -41,41 +37,25 @@ namespace Rhodesia {
  *   - SLICE_GET: operand flags: bit 0 = has_start, bit 1 = has_end
  */
 enum class Opcode : uint8_t {
-    // -----------------------------------------------------------------------
-    // Constants
-    // -----------------------------------------------------------------------
     LOAD_CONST,         // operand = constants index
     LOAD_NULL,          // push null
     LOAD_TRUE,          // push true
     LOAD_FALSE,         // push false
 
-    // -----------------------------------------------------------------------
-    // Locals
-    // -----------------------------------------------------------------------
     LOAD_LOCAL,         // operand = local slot index
     STORE_LOCAL,        // operand = local slot index
 
-    // -----------------------------------------------------------------------
-    // Upvalues (captured variables for closures)
-    // -----------------------------------------------------------------------
     LOAD_UPVALUE,       // operand = upvalue index
     STORE_UPVALUE,      // operand = upvalue index
 
-    // -----------------------------------------------------------------------
-    // Globals
-    // -----------------------------------------------------------------------
     LOAD_GLOBAL,        // operand = names index
     STORE_GLOBAL,       // operand = names index
 
-    // -----------------------------------------------------------------------
-    // Stack manipulation
-    // -----------------------------------------------------------------------
     POP,                // discard top of stack
     DUP,                // duplicate top of stack
 
-    // -----------------------------------------------------------------------
+    
     // Arithmetic
-    // -----------------------------------------------------------------------
     ADD,
     SUB,
     MUL,
@@ -83,9 +63,8 @@ enum class Opcode : uint8_t {
     MOD,
     NEGATE,             // unary minus
 
-    // -----------------------------------------------------------------------
+    
     // Comparison  (pop two, push bool)
-    // -----------------------------------------------------------------------
     EQ,
     NE,
     LT,
@@ -93,23 +72,20 @@ enum class Opcode : uint8_t {
     LE,
     GE,
 
-    // -----------------------------------------------------------------------
+    
     // Logical
-    // -----------------------------------------------------------------------
     NOT,                // unary logical NOT
 
-    // -----------------------------------------------------------------------
+    
     // Jumps  (absolute target stored in operand)
-    // -----------------------------------------------------------------------
     JUMP,                   // unconditional jump
     JUMP_IF_FALSE,          // pop + jump if false
     JUMP_IF_TRUE,           // pop + jump if true
     JUMP_IF_FALSE_PEEK,     // jump if false, do NOT pop
     JUMP_IF_TRUE_PEEK,      // jump if true,  do NOT pop
 
-    // -----------------------------------------------------------------------
+    
     // Functions & closures
-    // -----------------------------------------------------------------------
     CALL,               // operand = argc  (callee is on stack below args)
     CALL_BUILTIN,       // operand = (name_idx << 8) | argc
     CALL_MODULE,        // operand = name_idx  (argc follows as next instr operand,
@@ -118,9 +94,8 @@ enum class Opcode : uint8_t {
     RETURN_NULL,        // return null
     MAKE_CLOSURE,       // operand = constants index of a Chunk constant (RhoFunction)
 
-    // -----------------------------------------------------------------------
+    
     // Collection builders  (pop N values, push collection)
-    // -----------------------------------------------------------------------
     BUILD_VEC,          // operand = element count  -> Eigen::VectorXd
     BUILD_MAT,          // operand = (rows << 16) | cols  -> Eigen::MatrixXd
     BUILD_SET,          // operand = element count  -> RhoSet
@@ -130,9 +105,8 @@ enum class Opcode : uint8_t {
     BUILD_MAP,          // no operand; pops key/value pairs from stack -> RhoMap
                         //   (pair count is pushed before BUILD_MAP as an int const)
 
-    // -----------------------------------------------------------------------
+    
     // Access operations
-    // -----------------------------------------------------------------------
     INDEX_GET,          // pop index, pop collection, push value
     INDEX_GET_2D,       // pop col, pop row, pop matrix, push value
     INDEX_SET,          // pop value, pop index, pop collection  (collection mutated)
@@ -141,37 +115,31 @@ enum class Opcode : uint8_t {
     SLICE_GET,          // operand flags: 1=has_start, 2=has_end  (values on stack)
     LOAD_MODULE_CONST,  // operand = names index  (module.member access)
 
-    // -----------------------------------------------------------------------
+    
     // Type coercion
-    // -----------------------------------------------------------------------
     COERCE,             // operand = static_cast<int32_t>(RhoType)
 
-    // -----------------------------------------------------------------------
+    
     // Exception handling
-    // -----------------------------------------------------------------------
     THROW,              // pop and throw as UserException
     SETUP_TRY,          // operand = absolute position of catch block
     TEAR_DOWN_TRY,      // leave the try region normally (before catch)
     CATCH_BIND,         // operand = local slot index to store caught exception value
 
-    // -----------------------------------------------------------------------
+    
     // For-loop iteration
-    // -----------------------------------------------------------------------
     MAKE_ITER,          // pop iterable, push RhoIterator
     ITER_NEXT,          // operand = absolute exit position;
                         //   if iterator exhausted jump there, else push next value
     ITER_POP,           // pop iterator off stack at end of loop
 
-    // -----------------------------------------------------------------------
+    
     // Miscellaneous
-    // -----------------------------------------------------------------------
     NOP,
     HALT
 };
 
-// ---------------------------------------------------------------------------
 // Instruction
-// ---------------------------------------------------------------------------
 
 /**
  * @brief A single bytecode instruction
@@ -184,9 +152,7 @@ struct Instruction {
     Instruction(Opcode o, int32_t arg = 0) : op(o), operand(arg) {}
 };
 
-// ---------------------------------------------------------------------------
 // Chunk
-// ---------------------------------------------------------------------------
 
 /**
  * @brief A compiled code unit (function body, module top-level, etc.)
@@ -196,24 +162,24 @@ struct Instruction {
  * points to another Chunk (wrapped in shared_ptr<void>).
  */
 struct Chunk {
-    // -----------------------------------------------------------------------
+    
     // Metadata
-    // -----------------------------------------------------------------------
+    
     std::string name;       ///< Human-readable name (function name, "<module>", etc.)
     int         arity    = 0;  ///< Number of formal parameters
     int         numLocals = 0; ///< Total local variable slots (includes parameters)
 
-    // -----------------------------------------------------------------------
+    
     // Code and data
-    // -----------------------------------------------------------------------
+    
     std::vector<Instruction> code;       ///< Instruction stream
     std::vector<RhoValue>    constants;  ///< Constant pool
     std::vector<std::string> names;      ///< String pool (globals, member names, etc.)
     std::vector<RhoType>     paramTypes; ///< Optional declared parameter types
 
-    // -----------------------------------------------------------------------
+    
     // Upvalue descriptors (for closures)
-    // -----------------------------------------------------------------------
+    
     struct UpvalueDesc {
         bool isLocal; ///< true  -> captured from enclosing function's local slot
                       ///< false -> captured from enclosing function's upvalue
@@ -221,9 +187,9 @@ struct Chunk {
     };
     std::vector<UpvalueDesc> upvalueDescs;
 
-    // -----------------------------------------------------------------------
+    
     // Builder helpers
-    // -----------------------------------------------------------------------
+    
 
     /**
      * @brief Add a constant to the pool and return its index.
@@ -287,9 +253,9 @@ struct Chunk {
     }
 };
 
-// ---------------------------------------------------------------------------
+// ----
 // RhoIterator
-// ---------------------------------------------------------------------------
+// ----
 
 /**
  * @brief Runtime iterator over any Rhodesia iterable value.
@@ -316,44 +282,44 @@ public:
         std::visit([this](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
 
-            // ---- RangeGenerator (lazy) ----
+            // // ---- RangeGenerator (lazy) // ----
             if constexpr (std::is_same_v<T, std::shared_ptr<RangeGenerator>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RangeGenerator");
                 int64_t start = arg->current();
                 source_ = RangeSource{ start, start + static_cast<int64_t>(arg->size()), start };
             }
 
-            // ---- int64_t treated as range(0, n) (lazy) ----
+            // // ---- int64_t treated as range(0, n) (lazy) // ----
             else if constexpr (std::is_same_v<T, int64_t>) {
                 if (arg < 0)
                     throw RuntimeError("RhoIterator: cannot iterate over negative integer " + std::to_string(arg));
                 source_ = RangeSource{ 0, arg, 0 };
             }
 
-            // ---- Eigen::VectorXd (lazy, index-based) ----
+            // // ---- Eigen::VectorXd (lazy, index-based) // ----
             else if constexpr (std::is_same_v<T, Eigen::VectorXd>) {
                 source_ = VecSource{ arg, 0 };
             }
 
-            // ---- RhoArray (lazy, index-based) ----
+            // // ---- RhoArray (lazy, index-based) // ----
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoArray>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoArray");
                 source_ = ArraySource{ arg, 0 };
             }
 
-            // ---- RhoTuple (lazy, index-based) ----
+            // // ---- RhoTuple (lazy, index-based) // ----
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoTuple>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoTuple");
                 source_ = TupleSource{ arg, 0 };
             }
 
-            // ---- RhoSet (lazy, index-based via internal vector) ----
+            // // ---- RhoSet (lazy, index-based via internal vector) // ----
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoSet>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoSet");
                 source_ = SetSource{ arg, 0 };
             }
 
-            // ---- RhoMap -> materialize keys (unordered_map has no index access) ----
+            // // ---- RhoMap -> materialize keys (unordered_map has no index access) // ----
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoMap>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoMap");
                 std::vector<RhoValue> keys;
@@ -363,7 +329,7 @@ public:
                 source_ = MaterializedSource{ std::move(keys), 0 };
             }
 
-            // ---- Unsupported ----
+            // // ---- Unsupported // ----
             else {
                 throw RuntimeError(
                     "RhoIterator: value of type '" +
@@ -373,9 +339,9 @@ public:
         }, iterable);
     }
 
-    // -----------------------------------------------------------------------
+    
     // Iterator protocol
-    // -----------------------------------------------------------------------
+    
 
     bool hasNext() const {
         return std::visit([](const auto& s) -> bool {

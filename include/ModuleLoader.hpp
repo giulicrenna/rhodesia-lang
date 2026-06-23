@@ -46,6 +46,7 @@ public:
         loadEnvLibraryPath();
         ensureBaseSearchPath();
         ensureRepoLibSearchPath();
+        discoverLibraries();
     }
 
     /**
@@ -55,8 +56,10 @@ public:
     void setBaseDirectory(const std::string& baseDir) {
         baseDirectory_ = std::filesystem::absolute(baseDir);
         repoLibsInitialized_ = false;
+        libraries_.clear();
         ensureBaseSearchPath();
         ensureRepoLibSearchPath();
+        discoverLibraries();
     }
 
     /**
@@ -126,6 +129,7 @@ public:
 private:
     std::filesystem::path baseDirectory_;
     std::unordered_map<std::string, std::unique_ptr<LoadedModule>> moduleCache_;
+    std::unordered_map<std::string, std::filesystem::path> libraries_;
     std::vector<std::filesystem::path> searchPaths_;
     bool repoLibsInitialized_;
     bool basePathRegistered_ = false;
@@ -180,12 +184,50 @@ private:
     }
 
     /**
+     * @brief Walk every libs/ search path and register each immediate subdirectory
+     *        as a library namespace (e.g. "math" -> ".../libs/math"). Resolution
+     *        of a bare name like `include math` later looks up libraries_ first
+     *        and returns `<lib>/index.rho`.
+     */
+    void discoverLibraries() {
+        for (const auto& searchPath : searchPaths_) {
+            // Only treat directories named "libs" as library roots.
+            if (searchPath.filename() != "libs") continue;
+            if (!std::filesystem::exists(searchPath) || !std::filesystem::is_directory(searchPath)) continue;
+
+            std::error_code ec;
+            for (auto it = std::filesystem::directory_iterator(searchPath, ec);
+                 !ec && it != std::filesystem::directory_iterator();
+                 it.increment(ec)) {
+                const auto& entry = *it;
+                if (!entry.is_directory()) continue;
+                const std::string libName = entry.path().filename().string();
+                if (libName.empty() || libName.front() == '.') continue;
+                libraries_[libName] = entry.path();
+            }
+        }
+    }
+
+    /**
      * @brief Resolve module name to file path
      * @param moduleName Name of the module
      * @return Full path to the .rho file
      */
     std::string resolveModulePath(const std::string& moduleName) {
         ensureRepoLibSearchPath();
+
+        // Library namespace: `include math` -> `libs/<lib>/index.rho`.
+        // Only applies when the name is a single segment (no slashes) and
+        // the library was discovered under some libs/ root.
+        if (moduleName.find('/') == std::string::npos) {
+            auto libIt = libraries_.find(moduleName);
+            if (libIt != libraries_.end()) {
+                std::filesystem::path entry = libIt->second / "index.rho";
+                if (std::filesystem::exists(entry)) {
+                    return entry.string();
+                }
+            }
+        }
 
         for (const auto& searchPath : searchPaths_) {
             std::filesystem::path candidate = searchPath / (moduleName + ".rho");

@@ -1,3 +1,10 @@
+---
+title: I/O
+layout: default
+nav_order: 4
+parent: Examples
+---
+
 # Input/Output Examples
 
 This page demonstrates input/output operations in Rhodesia, including file reading/writing, user input, and data persistence.

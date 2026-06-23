@@ -3,7 +3,7 @@
  * @brief Test cases for exception handling (try/catch/throw)
  */
 
-println("=== Testing Exception Handling ===")
+println("Testing Exception Handling")
 println("")
 
 // Test 1: Basic try/catch with division by zero
@@ -160,4 +160,4 @@ try {
 }
 println("")
 
-println("=== All exception tests completed! ===")
+println("All exception tests completed!")

@@ -1,0 +1,16 @@
+// index.rho
+// Entry point for the math library. Loaded by `include math`.
+// Auto-generated from the previous example's includes; this is the single
+// source of truth for the library's exposed symbols.
+
+include core/core
+include core/trigonometry
+include linear_algebra/vectors
+include linear_algebra/matrices
+include linear_algebra/decompositions
+include statistics/descriptive
+include statistics/probability
+include statistics/regression
+include numerical/root_finding
+include numerical/optimization
+include numerical/integration

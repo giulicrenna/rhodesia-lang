@@ -1,3 +1,10 @@
+---
+title: Machine Learning
+layout: default
+nav_order: 5
+parent: Examples
+---
+
 # Machine Learning Examples
 
 This page demonstrates machine learning algorithms implemented in Rhodesia.

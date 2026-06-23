@@ -54,15 +54,14 @@ Add to your VS Code `settings.json`:
 
 ## 📚 Documentation
 
-- [Full Extension Documentation](EXTENSION_DOCUMENTATION.md)
-- [Rhodesia Language Reference](../../documents/Language%20Reference.md)
-- [Standard Library Reference](../../documents/Standard%20Library%20Reference.md)
+- [Rhodesia Language Reference](../../docs/)
+- [Examples](../../examples/)
 
 ## 🔧 Development
 
 ### Requirements
 - Node.js 16+
-- VS Code 1.75+
+- VS Code 1.79+
 - npm or yarn
 
 ### Build

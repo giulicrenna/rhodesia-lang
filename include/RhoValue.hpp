@@ -9,6 +9,19 @@
 #ifndef RHODESIA_RHOVALUE_HPP
 #define RHODESIA_RHOVALUE_HPP
 
+// ponytail: Eigen's SIMD alignment is unsafe when Eigen::VectorXd lives
+// inside std::variant<RhoValue> — std::variant is not aware of Eigen's
+// 16-byte alignment requirement, so allocations (especially on the stack)
+// can be misaligned, producing intermittent segfaults in back-to-back
+// stats calls. Disabling vectorisation costs a little perf but removes
+// the UB. Define BEFORE any Eigen include.
+#ifndef EIGEN_DONT_ALIGN
+  #define EIGEN_DONT_ALIGN
+#endif
+#ifndef EIGEN_DONT_ALIGN_STATICALLY
+  #define EIGEN_DONT_ALIGN_STATICALLY
+#endif
+
 #include <variant>
 #include <string>
 #include <stdexcept>
@@ -657,11 +670,13 @@ public:
     RhoFunction(std::vector<std::string> params,
                 std::shared_ptr<void> bodyNode,
                 bool isExpr,
-                std::unordered_map<std::string, RhoValue> closure = {})
+                std::unordered_map<std::string, RhoValue> closure = {},
+                std::vector<RhoType> paramTypes = {})
         : params_(std::move(params)),
           bodyNode_(std::move(bodyNode)),
           isExpression_(isExpr),
           closure_(std::move(closure)),
+          paramTypes_(std::move(paramTypes)),
           isNative_(false) {}
 
     /**
@@ -674,6 +689,11 @@ public:
      * @brief Get parameter names
      */
     const std::vector<std::string>& params() const { return params_; }
+
+    /**
+     * @brief Get parameter types (may be empty for native or inferred lambdas)
+     */
+    const std::vector<RhoType>& paramTypes() const { return paramTypes_; }
 
     /**
      * @brief Get function body AST node
@@ -715,6 +735,7 @@ private:
     std::shared_ptr<void> bodyNode_;   // Lambda body AST node (ExprNode* or BlockNode*)
     bool isExpression_;                // True for expression lambdas (x -> x*2), false for block lambdas
     std::unordered_map<std::string, RhoValue> closure_;  // Captured variables
+    std::vector<RhoType> paramTypes_;  // Declared parameter types (empty if unknown)
     NativeFunc nativeFunc_;            // Native C++ function
     bool isNative_;                    // Is this a native function?
 };

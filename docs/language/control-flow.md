@@ -1,3 +1,10 @@
+---
+title: Control Flow
+layout: default
+nav_order: 5
+parent: Language Reference
+---
+
 # Control Flow
 
 Rhodesia provides several control flow constructs to manage program execution flow.

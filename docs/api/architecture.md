@@ -1,3 +1,10 @@
+---
+title: Architecture
+layout: default
+nav_order: 1
+parent: API & Architecture
+---
+
 # Rhodesia Architecture
 
 This page describes the internal architecture and design of the Rhodesia language.

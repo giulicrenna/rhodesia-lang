@@ -6,6 +6,9 @@ src/tempCodeRunnerFile.py
 # Build outputs
 build/
 rhodesia
+rhodesia.exe
+*.o
+*.obj
 
 # CMake generated files/directories
 CMakeCache.txt
@@ -18,3 +21,11 @@ Makefile
 # VS Code extension dependencies
 extension/node_modules/
 comment.py
+
+# Installer staging and output
+installer/windows/staging/
+installer/windows/Output/
+
+*.cmake
+CMakeFiles
+*.dll

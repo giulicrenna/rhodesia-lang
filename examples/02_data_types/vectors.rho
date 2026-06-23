@@ -1,9 +1,5 @@
-// ============================================================================
-// vector_demo.rho - Vector Operations Demo
-// Demonstrates vector manipulation in Rhodesia
-// ============================================================================
 
-println("=== Vector Operations Demo ===")
+println("Vector Operations Demo")
 println("")
 
 // Create vectors
@@ -15,7 +11,7 @@ println("Vector b:", b)
 println("")
 
 // Basic arithmetic
-println("=== Basic Arithmetic ===")
+println("Basic Arithmetic")
 println("a + b:", a + b)
 println("a - b:", a - b)
 println("a * 2:", a * 2.0)
@@ -23,12 +19,12 @@ println("a / 2:", a / 2.0)
 println("")
 
 // Vector products
-println("=== Vector Products ===")
+println("Vector Products")
 println("dot(a, b):", math.dot(a, b))
 println("")
 
 // Norms and statistics
-println("=== Statistics ===")
+println("Statistics")
 println("norm(a):", math.norm(a))
 println("sum(a):", math.sum(a))
 println("mean(a):", stats.mean(a))
@@ -36,7 +32,7 @@ println("size(a):", math.size(a))
 println("")
 
 // Mathematical functions (element-wise)
-println("=== Element-wise Functions ===")
+println("Element-wise Functions")
 println("sqrt(a):", math.sqrt(a))
 println("exp(a/5):", math.exp(a / 5.0))
 println("log(a):", math.log(a))
@@ -44,7 +40,7 @@ println("abs(a - 3):", math.abs(a - 3.0 * math.ones(math.size(a))))
 println("")
 
 // Creating vectors
-println("=== Vector Creation ===")
+println("Vector Creation")
 println("zeros(5):", math.zeros(5))
 println("ones(5):", math.ones(5))
 println("range(5):", math.range(5))
@@ -52,14 +48,14 @@ println("range(3, 8):", math.range(3, 8))
 println("")
 
 // Element access
-println("=== Element Access ===")
+println("Element Access")
 println("a[0]:", a[0])
 println("a[2]:", a[2])
 println("a[4]:", a[4])
 println("")
 
 // Vector operations in loop
-println("=== Iterating Over Vectors ===")
+println("Iterating Over Vectors")
 println("Elements of a and their squares:")
 for i in range(math.size(a)) {
     float64: val = a[i]
@@ -79,7 +75,7 @@ fun normalize(vec: v) -> vec {
     return v / n
 }
 
-println("=== Normalized vector a ===")
+println("Normalized vector a")
 vec: a_norm = normalize(a)
 println("normalize(a):", a_norm)
 println("norm(normalize(a)):", math.norm(a_norm))

@@ -8,11 +8,11 @@
 // la conexión o envía "exit". Luego vuelve a esperar la siguiente
 // conexión. Escribe "stop" como mensaje para apagar el servidor.
 
-println("=== Servidor TCP de eco ===")
+println("Servidor TCP de eco")
 println()
 
 str: port_str = io.input("Puerto (ej. 9000): ")
-int: puerto = string.to_int(port_str)
+int: puerto = string.to_int_or(port_str, 9000)
 
 int: server = net.listen(puerto)
 println("Escuchando en 0.0.0.0:", puerto)

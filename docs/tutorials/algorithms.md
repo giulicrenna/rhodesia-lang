@@ -1,3 +1,10 @@
+---
+title: Algorithms
+layout: default
+nav_order: 3
+parent: Tutorials
+---
+
 # Algorithms Tutorial
 
 This tutorial covers implementing numerical algorithms in Rhodesia, focusing on performance and correctness.

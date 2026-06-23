@@ -1,11 +1,5 @@
-// ============================================================================
-// performance.rho - Performance Measurement Benchmark
-// Demonstrates high-precision timing using get_tick()
-// ============================================================================
 
-println("========================================")
-println("  Performance Measurement Benchmark")
-println("========================================")
+println("Performance Measurement Benchmark")
 println("")
 
 /*
@@ -29,8 +23,8 @@ fun measure_loop(int: n) -> float64 {
 println("Testing get_tick() precision and measure_loop() performance:")
 println("")
 println("Note: Each benchmark runs 15 times for reliable averaging.")
-println("      The 'Average time' is per single loop execution.")
-println("      The 'Total time' is for all 15 runs (explains inter-output delays).")
+println("The 'Average time' is per single loop execution.")
+println("The 'Total time' is for all 15 runs (explains inter-output delays).")
 println("")
 
 // Test different loop sizes to demonstrate timing precision
@@ -77,6 +71,4 @@ println("Difference: ", t2 - t1, " seconds")
 println("(This demonstrates the precision of get_tick())")
 println("")
 
-println("========================================")
-println("  Benchmark Complete!")
-println("========================================")
+println("Benchmark Complete!")

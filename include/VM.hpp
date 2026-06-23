@@ -35,9 +35,9 @@
 
 namespace Rhodesia {
 
-// ---------------------------------------------------------------------------
+// ----
 // VMError
-// ---------------------------------------------------------------------------
+// ----
 
 class VMError : public std::runtime_error {
 public:
@@ -45,7 +45,7 @@ public:
         : std::runtime_error("VMError: " + msg) {}
 };
 
-// ---------------------------------------------------------------------------
+// ----
 // Helpers to work with compiled RhoFunction objects
 //
 // Convention used by the Compiler (and expected by the VM):
@@ -62,7 +62,7 @@ public:
 //   upvalues(f)       -> vector<RhoValue>&  (mutable reference)
 //   setUpvalues(f, v) -> store a vector of upvalues into f
 //   isCompiled(f)     -> true if f carries bytecode
-// ---------------------------------------------------------------------------
+// ----
 
 /**
  * @brief A small box that lets us store a mutable vector<RhoValue> as a
@@ -76,10 +76,10 @@ struct UpvalueBox {
     std::vector<RhoValue> values;
 };
 
-// ---------------------------------------------------------------------------
+// ----
 // Global registry for UpvalueBox objects (keyed by a monotonically
 // increasing ID stored in the RhoFunction closure as "__upvalue_id__").
-// ---------------------------------------------------------------------------
+// ----
 
 namespace detail {
 
@@ -168,9 +168,9 @@ inline std::shared_ptr<UpvalueBox> upvalueBoxOf(const RhoFunction& f) {
     return rit->second;
 }
 
-// ---------------------------------------------------------------------------
+// ----
 // CallFrame
-// ---------------------------------------------------------------------------
+// ----
 
 struct CallFrame {
     std::shared_ptr<Chunk>    chunk;    ///< Currently executing chunk
@@ -179,9 +179,9 @@ struct CallFrame {
     std::shared_ptr<RhoFunction> closure; ///< Current closure (nullptr for top-level)
 };
 
-// ---------------------------------------------------------------------------
+// ----
 // TryFrame
-// ---------------------------------------------------------------------------
+// ----
 
 struct TryFrame {
     int32_t catchTarget;  ///< Absolute instruction index of the catch handler
@@ -190,15 +190,15 @@ struct TryFrame {
     std::string catchVar; ///< (informational; actual binding done by CATCH_BIND)
 };
 
-// ---------------------------------------------------------------------------
+// ----
 // VM
-// ---------------------------------------------------------------------------
+// ----
 
 class VM {
 public:
-    // -----------------------------------------------------------------------
+    
     // Public API
-    // -----------------------------------------------------------------------
+    
 
     /**
      * @brief Execute a top-level chunk and return the final value.
@@ -227,18 +227,18 @@ public:
     }
 
 private:
-    // -----------------------------------------------------------------------
+    
     // VM state
-    // -----------------------------------------------------------------------
+    
     std::vector<RhoValue>                    stack_;
     std::vector<CallFrame>                   frames_;
     std::vector<TryFrame>                    tryStack_;
     std::unordered_map<std::string, RhoValue> globals_;
     std::vector<std::shared_ptr<RhoIterator>> iterStack_;
 
-    // -----------------------------------------------------------------------
+    
     // Stack helpers
-    // -----------------------------------------------------------------------
+    
 
     void push(RhoValue v) {
         stack_.push_back(std::move(v));
@@ -260,9 +260,9 @@ private:
         return stack_[stack_.size() - 1 - static_cast<size_t>(dist)];
     }
 
-    // -----------------------------------------------------------------------
+    
     // Frame helpers
-    // -----------------------------------------------------------------------
+    
 
     CallFrame& frame() {
         return frames_.back();
@@ -281,9 +281,9 @@ private:
         return cf.chunk->code[cf.ip++];
     }
 
-    // -----------------------------------------------------------------------
+    
     // isTruthy
-    // -----------------------------------------------------------------------
+    
 
     bool isTruthy(const RhoValue& value) const {
         return std::visit([](const auto& arg) -> bool {
@@ -317,12 +317,12 @@ private:
         }, value);
     }
 
-    // -----------------------------------------------------------------------
+    
     // applyBinaryOp
-    // -----------------------------------------------------------------------
+    
 
     RhoValue applyBinaryOp(Opcode op, const RhoValue& left, const RhoValue& right) {
-        // ---- Comparison opcodes ----
+        // // ---- Comparison opcodes // ----
         if (op == Opcode::EQ || op == Opcode::NE ||
             op == Opcode::LT || op == Opcode::GT ||
             op == Opcode::LE || op == Opcode::GE)
@@ -330,7 +330,7 @@ private:
             return applyComparison(op, left, right);
         }
 
-        // ---- Arithmetic ----
+        // // ---- Arithmetic // ----
         switch (op) {
         case Opcode::ADD: return applyAdd(left, right);
         case Opcode::SUB: return applySub(left, right);
@@ -342,7 +342,7 @@ private:
         }
     }
 
-    // ---- ADD ----
+    // // ---- ADD // ----
     RhoValue applyAdd(const RhoValue& left, const RhoValue& right) {
         // Fast path: most common numeric combinations avoid std::visit overhead
         if (const auto* l = std::get_if<int64_t>(&left)) {
@@ -387,7 +387,7 @@ private:
         }, left, right);
     }
 
-    // ---- SUB ----
+    // // ---- SUB // ----
     RhoValue applySub(const RhoValue& left, const RhoValue& right) {
         if (const auto* l = std::get_if<int64_t>(&left)) {
             if (const auto* r = std::get_if<int64_t>(&right)) return *l - *r;
@@ -421,7 +421,7 @@ private:
         }, left, right);
     }
 
-    // ---- MUL ----
+    // // ---- MUL // ----
     RhoValue applyMul(const RhoValue& left, const RhoValue& right) {
         if (const auto* l = std::get_if<int64_t>(&left)) {
             if (const auto* r = std::get_if<int64_t>(&right)) return *l * *r;
@@ -471,7 +471,7 @@ private:
         }, left, right);
     }
 
-    // ---- DIV ----
+    // // ---- DIV // ----
     RhoValue applyDiv(const RhoValue& left, const RhoValue& right) {
         if (const auto* l = std::get_if<int64_t>(&left)) {
             if (const auto* r = std::get_if<int64_t>(&right)) {
@@ -520,7 +520,7 @@ private:
         }, left, right);
     }
 
-    // ---- MOD ----
+    // // ---- MOD // ----
     RhoValue applyMod(const RhoValue& left, const RhoValue& right) {
         if (!isScalar(left) || !isScalar(right))
             throw VMError("Modulo requires scalar operands");
@@ -529,7 +529,7 @@ private:
         return toInt(left) % r;
     }
 
-    // ---- Comparison ----
+    // // ---- Comparison // ----
     RhoValue applyComparison(Opcode op, const RhoValue& left, const RhoValue& right) {
         // null == null
         if (std::holds_alternative<std::shared_ptr<RhoNull>>(left) &&
@@ -613,9 +613,9 @@ private:
         }
     }
 
-    // -----------------------------------------------------------------------
+    
     // COERCE helper
-    // -----------------------------------------------------------------------
+    
 
     RhoValue coerceValue(const RhoValue& val, RhoType target) {
         RhoType src = getValueType(val);
@@ -639,9 +639,9 @@ private:
         }
     }
 
-    // -----------------------------------------------------------------------
+    
     // callFunction — set up a new CallFrame for a compiled RhoFunction
-    // -----------------------------------------------------------------------
+    
 
     /**
      * @brief Set up a new call frame.
@@ -663,7 +663,7 @@ private:
         if (!func)
             throw VMError("Null function value");
 
-        // ---- Native function ----
+        // // ---- Native function // ----
         if (func->isNative()) {
             std::vector<RhoValue> args;
             args.reserve(static_cast<size_t>(argc));
@@ -679,7 +679,7 @@ private:
             return;
         }
 
-        // ---- Compiled function ----
+        // // ---- Compiled function // ----
         if (isCompiledFunction(*func)) {
             auto chunk = compiledChunk(*func);
             if (!chunk)
@@ -710,7 +710,7 @@ private:
             return;
         }
 
-        // ---- AST-based lambda (non-native, non-compiled) ----
+        // // ---- AST-based lambda (non-native, non-compiled) // ----
         // These are constructed by the Evaluator, not the Compiler.
         // The VM can still call them by forwarding to the Builtins machinery
         // would require the Evaluator, which we cannot run here.
@@ -720,17 +720,17 @@ private:
                       "Only compiled (bytecode) or native functions are supported.");
     }
 
-    // -----------------------------------------------------------------------
+    
     // callBuiltinByName
-    // -----------------------------------------------------------------------
+    
 
     RhoValue callBuiltinByName(const std::string& name, std::vector<RhoValue>& args) {
         return Builtins::instance().call(name, args);
     }
 
-    // -----------------------------------------------------------------------
+    
     // throwException — handle THROW with try-frame unwinding
-    // -----------------------------------------------------------------------
+    
 
     /**
      * @brief Handle a user-thrown exception.
@@ -766,9 +766,9 @@ private:
         return true;
     }
 
-    // -----------------------------------------------------------------------
+    
     // splitDot — split "module.func" into {"module","func"}
-    // -----------------------------------------------------------------------
+    
 
     static std::pair<std::string, std::string> splitDot(const std::string& s) {
         auto pos = s.find('.');
@@ -777,9 +777,9 @@ private:
         return {s.substr(0, pos), s.substr(pos + 1)};
     }
 
-    // -----------------------------------------------------------------------
+    
     // INDEX_GET helpers
-    // -----------------------------------------------------------------------
+    
 
     RhoValue doIndexGet(const RhoValue& container, const RhoValue& idx) {
         return std::visit([&](const auto& c) -> RhoValue {
@@ -856,9 +856,9 @@ private:
         }, container);
     }
 
-    // -----------------------------------------------------------------------
+    
     // INDEX_SET helpers
-    // -----------------------------------------------------------------------
+    
 
     /**
      * @brief Perform indexed assignment.
@@ -936,9 +936,9 @@ private:
         }, container);
     }
 
-    // -----------------------------------------------------------------------
+    
     // SLICE_GET helper
-    // -----------------------------------------------------------------------
+    
 
     RhoValue doSliceGet(const RhoValue& container, bool hasStart, bool hasEnd,
                         int64_t startVal, int64_t endVal) {
@@ -1006,9 +1006,9 @@ private:
         }, container);
     }
 
-    // -----------------------------------------------------------------------
+    
     // MAKE_CLOSURE
-    // -----------------------------------------------------------------------
+    
 
     void doMakeClosure(int32_t constIdx) {
         // The constant at constIdx must be a RhoFunction with a compiledChunk.
@@ -1053,9 +1053,9 @@ private:
         push(RhoValue{newFunc});
     }
 
-    // -----------------------------------------------------------------------
+    
     // Main dispatch loop
-    // -----------------------------------------------------------------------
+    
 
     RhoValue execute() {
         while (true) {
@@ -1066,9 +1066,6 @@ private:
             try {
                 switch (op) {
 
-                // ----------------------------------------------------------
-                // Constants
-                // ----------------------------------------------------------
                 case Opcode::LOAD_CONST: {
                     size_t idx = static_cast<size_t>(operand);
                     if (idx >= chunk().constants.size())
@@ -1086,9 +1083,6 @@ private:
                     push(RhoValue{false});
                     break;
 
-                // ----------------------------------------------------------
-                // Locals
-                // ----------------------------------------------------------
                 case Opcode::LOAD_LOCAL: {
                     size_t slot = frame().bp + static_cast<size_t>(operand);
                     if (slot >= stack_.size())
@@ -1104,9 +1098,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Upvalues
-                // ----------------------------------------------------------
                 case Opcode::LOAD_UPVALUE: {
                     if (!frame().closure)
                         throw VMError("LOAD_UPVALUE: no active closure");
@@ -1132,9 +1123,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Globals
-                // ----------------------------------------------------------
                 case Opcode::LOAD_GLOBAL: {
                     size_t nameIdx = static_cast<size_t>(operand);
                     if (nameIdx >= chunk().names.size())
@@ -1154,9 +1142,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Stack manipulation
-                // ----------------------------------------------------------
                 case Opcode::POP:
                     pop();
                     break;
@@ -1164,9 +1149,6 @@ private:
                     push(peek(0));
                     break;
 
-                // ----------------------------------------------------------
-                // Arithmetic
-                // ----------------------------------------------------------
                 case Opcode::ADD:
                 case Opcode::SUB:
                 case Opcode::MUL:
@@ -1194,9 +1176,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Comparison
-                // ----------------------------------------------------------
                 case Opcode::EQ:
                 case Opcode::NE:
                 case Opcode::LT:
@@ -1209,18 +1188,12 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Logical NOT
-                // ----------------------------------------------------------
                 case Opcode::NOT: {
                     RhoValue v = pop();
                     push(RhoValue{!isTruthy(v)});
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Jumps
-                // ----------------------------------------------------------
                 case Opcode::JUMP:
                     frame().ip = static_cast<size_t>(operand);
                     break;
@@ -1246,9 +1219,6 @@ private:
                         frame().ip = static_cast<size_t>(operand);
                     break;
 
-                // ----------------------------------------------------------
-                // CALL
-                // ----------------------------------------------------------
                 case Opcode::CALL: {
                     int argc = operand;
                     RhoValue callee = stack_[stack_.size() - static_cast<size_t>(argc) - 1];
@@ -1258,9 +1228,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // CALL_BUILTIN
-                // ----------------------------------------------------------
                 case Opcode::CALL_BUILTIN: {
                     // Encoding: (name_idx << 8) | argc
                     int argc    = operand & 0xFF;
@@ -1279,9 +1246,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // CALL_MODULE
-                // ----------------------------------------------------------
                 case Opcode::CALL_MODULE: {
                     // operand = name_idx.  The next instruction encodes argc.
                     int nameIdx = operand;
@@ -1307,9 +1271,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // LOAD_MODULE_CONST
-                // ----------------------------------------------------------
                 case Opcode::LOAD_MODULE_CONST: {
                     int nameIdx = operand;
                     if (nameIdx >= static_cast<int>(chunk().names.size()))
@@ -1323,9 +1284,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // RETURN
-                // ----------------------------------------------------------
                 case Opcode::RETURN: {
                     RhoValue retVal = pop();
                     size_t prevBp = frame().bp;
@@ -1357,16 +1315,10 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // MAKE_CLOSURE
-                // ----------------------------------------------------------
                 case Opcode::MAKE_CLOSURE:
                     doMakeClosure(operand);
                     break;
 
-                // ----------------------------------------------------------
-                // Collection builders
-                // ----------------------------------------------------------
                 case Opcode::BUILD_VEC: {
                     int count = operand;
                     Eigen::VectorXd vec(count);
@@ -1461,9 +1413,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Access
-                // ----------------------------------------------------------
                 case Opcode::INDEX_GET: {
                     RhoValue idx       = pop();
                     RhoValue container = pop();
@@ -1527,9 +1476,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // COERCE
-                // ----------------------------------------------------------
                 case Opcode::COERCE: {
                     RhoType target = static_cast<RhoType>(operand);
                     RhoValue v = pop();
@@ -1537,9 +1483,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Exception handling
-                // ----------------------------------------------------------
                 case Opcode::THROW: {
                     RhoValue exVal = pop();
                     // Convert to string if not already, for display.
@@ -1568,9 +1511,6 @@ private:
                     break;
                 }
 
-                // ----------------------------------------------------------
-                // Iteration
-                // ----------------------------------------------------------
                 case Opcode::MAKE_ITER: {
                     RhoValue iterable = pop();
                     iterStack_.push_back(std::make_shared<RhoIterator>(iterable));
@@ -1592,9 +1532,6 @@ private:
                         iterStack_.pop_back();
                     break;
 
-                // ----------------------------------------------------------
-                // Miscellaneous
-                // ----------------------------------------------------------
                 case Opcode::NOP:
                     break;
 

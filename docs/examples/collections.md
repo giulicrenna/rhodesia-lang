@@ -1,3 +1,10 @@
+---
+title: Collections
+layout: default
+nav_order: 3
+parent: Examples
+---
+
 # Collections Examples
 
 This page demonstrates practical uses of `set`, `tuple`, `record`, and the `match` statement in Rhodesia.

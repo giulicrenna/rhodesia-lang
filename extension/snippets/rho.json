@@ -1,0 +1,89 @@
+{
+  "Function": {
+    "prefix": "fun",
+    "body": [
+      "fun ${1:name}(${2:params}) -> ${3:float64} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Function declaration with return type"
+  },
+  "If": {
+    "prefix": "if",
+    "body": [
+      "if (${1:condition}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If statement"
+  },
+  "IfElse": {
+    "prefix": "ifelse",
+    "body": [
+      "if (${1:condition}) {",
+      "\t$2",
+      "} else {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If-else statement"
+  },
+  "ForLoop": {
+    "prefix": "for",
+    "body": [
+      "for (${1:i} in ${2:range}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "For loop over a range"
+  },
+  "While": {
+    "prefix": "while",
+    "body": [
+      "while (${1:condition}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "While loop"
+  },
+  "Return": {
+    "prefix": "return",
+    "body": "return ${1:value};",
+    "description": "Return statement"
+  },
+  "Include": {
+    "prefix": "include",
+    "body": "include ${1:math/core/core}",
+    "description": "Include a stdlib path"
+  },
+  "Println": {
+    "prefix": "println",
+    "body": "println(${1:value});",
+    "description": "Print with newline"
+  },
+  "Print": {
+    "prefix": "print",
+    "body": "print(${1:value});",
+    "description": "Print without newline"
+  },
+  "VecLiteral": {
+    "prefix": "vec",
+    "body": "vec: ${1:name} = [${2:1.0, 2.0, 3.0}];",
+    "description": "Vector declaration with literal"
+  },
+  "MatLiteral": {
+    "prefix": "mat",
+    "body": "mat: ${1:name} = [[${2:1.0, 0.0}, ${3:0.0, 1.0}]];",
+    "description": "Matrix declaration with literal"
+  },
+  "Main": {
+    "prefix": "main",
+    "body": [
+      "fun main() -> int {",
+      "\t${1:// entry point}",
+      "\treturn 0;",
+      "}"
+    ],
+    "description": "main entry point"
+  }
+}

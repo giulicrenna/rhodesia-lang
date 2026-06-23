@@ -7,7 +7,7 @@
 // cada línea escrita se envía al servidor y la respuesta se imprime.
 // Escribe "exit" o deja la línea vacía para cerrar la conexión.
 
-println("=== Cliente TCP conversacional ===")
+println("Cliente TCP conversacional")
 println()
 
 str: host = io.input("Host: ")

@@ -7,7 +7,7 @@ include math_utils{square, cube, normalize}
 // Importar funciones específicas de stats
 include stats{variance, std_dev, min_value, max_value}
 
-println("=== Demo del Sistema de Módulos de Rhodesia ===")
+println("Demo del Sistema de Módulos de Rhodesia")
 println("")
 
 // Usar funciones de math_utils
@@ -40,4 +40,4 @@ println("Datos al cuadrado:", squared_data)
 println("Desviación estándar de los cuadrados:", std_dev(squared_data))
 println("")
 
-println("=== Demo completada ===")
+println("Demo completada")

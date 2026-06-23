@@ -1,7 +1,7 @@
 // Test file for matrix module methods
 // Testing: matrix.append_row, matrix.append_col, matrix.remove_row, matrix.remove_col
 
-println("=== Mat Module Methods Test ===")
+println("Mat Module Methods Test")
 println("")
 
 // Create initial matrix
@@ -126,4 +126,4 @@ println("After mutable[2, 2] = 777:")
 println(mutable)
 println("")
 
-println("=== All tests completed! ===")
+println("All tests completed!")

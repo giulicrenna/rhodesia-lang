@@ -1,12 +1,9 @@
 // Módulo datetime en Rhodesia
 // Acceso: datetime.funcion() o via include
 
-println("=== Módulo datetime ===")
+println("Módulo datetime")
 println()
 
-// --------------------------------------------------------
-// Fecha y hora actual
-// --------------------------------------------------------
 println("--- Ahora ---")
 
 record: ahora = datetime.now()
@@ -28,9 +25,6 @@ record: hora_actual = datetime.current_time()
 println("Hora actual: ", hora_actual.hour, ":", hora_actual.minute, ":", hora_actual.second)
 println()
 
-// --------------------------------------------------------
-// Formateo
-// --------------------------------------------------------
 println("--- Formateo ---")
 
 record: dt = datetime.now()
@@ -44,9 +38,6 @@ println("Legible:    ", legible)
 println("Solo fecha: ", solo_dia)
 println()
 
-// --------------------------------------------------------
-// Construcción manual
-// --------------------------------------------------------
 println("--- Construcción manual ---")
 
 record: nacimiento  = datetime.make_date(1990, 6, 15)
@@ -60,9 +51,6 @@ println("Evento:     ", s2)
 println("Reunión:    ", reunion.hour, ":", reunion.minute)
 println()
 
-// --------------------------------------------------------
-// Unix timestamp
-// --------------------------------------------------------
 println("--- Timestamps ---")
 
 int: ts_ahora = datetime.timestamp()
@@ -77,9 +65,6 @@ str: milbillones = datetime.format(desde_ts2, "{year}-{month}-{day}")
 println("ts=1000000000:     ", milbillones)
 println()
 
-// --------------------------------------------------------
-// Diferencias entre fechas
-// --------------------------------------------------------
 println("--- Diferencias ---")
 
 record: inicio = datetime.make_date(2020, 1, 1)
@@ -92,9 +77,6 @@ println("Días entre 2020-01-01 y 2026-04-11: ", dias)
 println("En segundos: ", segundos)
 println()
 
-// --------------------------------------------------------
-// include datetime{...}: importar al scope local
-// --------------------------------------------------------
 println("--- include datetime ---")
 
 include datetime{now, today, format, make_date, diff_days}
@@ -109,4 +91,4 @@ str: fmt_hoy = format(t, "Hoy es {day}/{month}/{year}")
 println(fmt_hoy)
 println()
 
-println("=== Fin módulo datetime ===")
+println("Fin módulo datetime")

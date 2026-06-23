@@ -1,3 +1,10 @@
+---
+title: Syntax
+layout: default
+nav_order: 1
+parent: Language Reference
+---
+
 # Rhodesia Language Syntax
 
 This page covers the basic syntax and structure of Rhodesia programs.

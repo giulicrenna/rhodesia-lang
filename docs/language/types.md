@@ -1,3 +1,10 @@
+---
+title: Types
+layout: default
+nav_order: 2
+parent: Language Reference
+---
+
 # Type System
 
 Rhodesia has a static type system with five primitive types designed for numerical computing and data science.

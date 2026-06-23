@@ -9,27 +9,42 @@
 #ifndef RHODESIA_BUILTINS_HPP
 #define RHODESIA_BUILTINS_HPP
 
+// (EIGEN_DONT_ALIGN is set in RhoValue.hpp — it must be defined before
+// any Eigen include, which RhoValue.hpp does.)
+
 #include "RhoValue.hpp"
 #include "Error.hpp"
 #include <unordered_map>
 #include <functional>
+
+// MSVC / MinGW require this define before <cmath> to expose M_PI, M_E, etc.
+// On glibc they're available by default.
+#ifndef _USE_MATH_DEFINES
+    #define _USE_MATH_DEFINES
+#endif
 #include <cmath>
+
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+#ifndef M_E
+    #define M_E 2.71828182845904523536
+#endif
+#ifndef M_SQRT2
+    #define M_SQRT2 1.41421356237309504880
+#endif
+
 #include <iostream>
 #include <iomanip>
 #include <chrono>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <map>
-// POSIX networking (used by NetworkModule.hpp)
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <cerrno>
+#include <random>
+// Socket portability shim (POSIX or Winsock2, depending on platform)
+#include "SocketCompat.hpp"
 
 namespace Rhodesia {
 
@@ -195,9 +210,6 @@ private:
     }
     
     void registerAll() {
-        // ====================================================================
-        // Math Module Functions
-        // ====================================================================
 
         auto& mathModule = modules_["math"];
         auto& mathConstants = moduleConstants_["math"];
@@ -331,9 +343,6 @@ private:
             }, args[0]);
         };
         
-        // ====================================================================
-        // Creation Functions
-        // ====================================================================
         
         // zeros(n) -> vec, zeros(n, m) -> mat
         mathModule["zeros"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
@@ -384,7 +393,7 @@ private:
         };
         
         // range(n) -> RangeGenerator[0..n-1], range(start, end) -> RangeGenerator[start..end-1]
-        functions_["range"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+        mathModule["range"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
             if (args.empty() || args.size() > 2) {
                 throw ArgumentError("range", "expected 1 or 2 arguments", loc);
             }
@@ -408,9 +417,6 @@ private:
             return std::make_shared<RangeGenerator>(start, end);
         };
         
-        // ====================================================================
-        // Math Functions
-        // ====================================================================
         
         // sqrt(x) - scalar or element-wise
         mathModule["sqrt"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
@@ -708,9 +714,6 @@ private:
             return result;
         };
         
-        // ====================================================================
-        // Information Functions
-        // ====================================================================
         
         // rows(mat) -> int
         mathModule["rows"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
@@ -762,9 +765,6 @@ private:
             }, args[0]);
         };
         
-        // ====================================================================
-        // I/O Functions
-        // ====================================================================
         
         // print(value) - print without newline
         functions_["print"] = [](const std::vector<RhoValue>& args, SourceLocation) -> RhoValue {
@@ -785,10 +785,6 @@ private:
             return int64_t(0);  // void
         };
 
-        // ====================================================================
-        // Timing Functions
-        // ====================================================================
-
         // get_tick() -> float64 - high-precision monotonic timestamp
         functions_["get_tick"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
             if (args.size() != 0) {
@@ -801,9 +797,19 @@ private:
             return std::chrono::duration<double>(duration).count();
         };
 
-        // ====================================================================
-        // New Data Types Constructors
-        // ====================================================================
+        // rand() -> float64 - uniform random number in [0, 1)
+        // Used by Monte Carlo integration, simulated annealing, genetic algorithms.
+        // ponytail: thread-local mt19937_64 — each thread gets independent streams.
+        functions_["rand"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 0) {
+                throw ArgumentError::wrongCount("rand", 0, args.size(), loc);
+            }
+            thread_local std::mt19937_64 gen{
+                static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count())
+            };
+            std::uniform_real_distribution<double> dist(0.0, 1.0);
+            return dist(gen);
+        };
 
         // make_complex(real, imag) -> complex - create complex number
         functions_["make_complex"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
@@ -839,10 +845,6 @@ private:
             return std::make_shared<RhoRecord>();
         };
 
-        // ====================================================================
-        // Statistics Module Functions
-        // ====================================================================
-
         auto& statsModule = modules_["stats"];
 
         // std(vec) -> float64, std(mat) -> float64
@@ -859,14 +861,16 @@ private:
                         throw ArgumentError("stats.std", "vector must have at least 2 elements", loc);
                     }
                     double mean_val = arg.mean();
-                    double variance = (arg.array() - mean_val).square().sum() / (arg.size() - 1);
+                    Eigen::ArrayXd centered = arg.array() - mean_val;
+                    double variance = centered.square().sum() / (arg.size() - 1);
                     return std::sqrt(variance);
                 } else if constexpr (std::is_same_v<T, Eigen::MatrixXd>) {
                     if (arg.size() < 2) {
                         throw ArgumentError("stats.std", "matrix must have at least 2 elements", loc);
                     }
                     double mean_val = arg.mean();
-                    double variance = (arg.array() - mean_val).square().sum() / (arg.size() - 1);
+                    Eigen::ArrayXd centered = arg.array() - mean_val;
+                    double variance = centered.square().sum() / (arg.size() - 1);
                     return std::sqrt(variance);
                 } else {
                     throw ArgumentError("stats.std", "argument must be vec or mat", loc);
@@ -888,14 +892,16 @@ private:
                         throw ArgumentError("stats.var", "vector must have at least 2 elements", loc);
                     }
                     double mean_val = arg.mean();
-                    double variance = (arg.array() - mean_val).square().sum() / (arg.size() - 1);
+                    Eigen::ArrayXd centered = arg.array() - mean_val;
+                    double variance = centered.square().sum() / (arg.size() - 1);
                     return variance;
                 } else if constexpr (std::is_same_v<T, Eigen::MatrixXd>) {
                     if (arg.size() < 2) {
                         throw ArgumentError("stats.var", "matrix must have at least 2 elements", loc);
                     }
                     double mean_val = arg.mean();
-                    double variance = (arg.array() - mean_val).square().sum() / (arg.size() - 1);
+                    Eigen::ArrayXd centered = arg.array() - mean_val;
+                    double variance = centered.square().sum() / (arg.size() - 1);
                     return variance;
                 } else {
                     throw ArgumentError("stats.var", "argument must be vec or mat", loc);
@@ -1077,13 +1083,15 @@ private:
             }
 
             double mean_val = vec->mean();
-            double std_val = std::sqrt((vec->array() - mean_val).square().sum() / (vec->size() - 1));
+            // ponytail: materialize to avoid temp-aliasing with previous calls.
+            Eigen::ArrayXd centered = vec->array() - mean_val;
+            double std_val = std::sqrt(centered.square().sum() / (vec->size() - 1));
 
             if (std_val == 0.0) {
                 return 0.0;
             }
 
-            double skew = ((vec->array() - mean_val).cube()).sum() / (vec->size() * std::pow(std_val, 3));
+            double skew = centered.cube().sum() / (vec->size() * std::pow(std_val, 3));
             return skew;
         };
 
@@ -1103,13 +1111,22 @@ private:
             }
 
             double mean_val = vec->mean();
-            double std_val = std::sqrt((vec->array() - mean_val).square().sum() / (vec->size() - 1));
+            // ponytail: materialize the centered array as a local Eigen::ArrayXd
+            // so the chain of temporary ArrayBase objects doesn't alias with
+            // state from a previous stats call. Observed segfault when
+            // skewness/kurtosis and zscore were called back-to-back.
+            Eigen::ArrayXd centered = vec->array() - mean_val;
+            double std_val = std::sqrt(centered.square().sum() / (vec->size() - 1));
 
             if (std_val == 0.0) {
                 return 0.0;
             }
 
-            double kurt = ((vec->array() - mean_val).pow(4)).sum() / (vec->size() * std::pow(std_val, 4)) - 3.0;
+            // Materialize the .pow(4) result too — Eigen's pow() on an
+            // ArrayXd returns an expression template whose temporaries
+            // have been observed to alias with later calls' allocations.
+            Eigen::ArrayXd fourth = centered.pow(4);
+            double kurt = fourth.sum() / (vec->size() * std::pow(std_val, 4)) - 3.0;
             return kurt;
         };
 
@@ -1129,18 +1146,16 @@ private:
             }
 
             double mean_val = vec->mean();
-            double std_val = std::sqrt((vec->array() - mean_val).square().sum() / (vec->size() - 1));
+            // ponytail: materialize to avoid temp-aliasing with previous calls.
+            Eigen::ArrayXd centered = vec->array() - mean_val;
+            double std_val = std::sqrt(centered.square().sum() / (vec->size() - 1));
 
             if (std_val == 0.0) {
                 return Eigen::VectorXd(Eigen::VectorXd::Zero(vec->size()));
             }
 
-            return Eigen::VectorXd((vec->array() - mean_val) / std_val);
+            return Eigen::VectorXd(centered / std_val);
         };
-
-        // ====================================================================
-        // Numerical Module Functions
-        // ====================================================================
 
         auto& numModule = modules_["numerical"];
 
@@ -1520,10 +1535,6 @@ private:
             return coeffs;
         };
 
-        // ====================================================================
-        // Vector Module Functions
-        // ====================================================================
-
         auto& vecModule = modules_["vector"];
 
         // vec.append(vector, value) -> vec
@@ -1682,10 +1693,6 @@ private:
             return static_cast<int64_t>(vec->size());
         };
 
-        // ====================================================================
-        // Matrix Module Functions
-        // ====================================================================
-
         auto& matModule = modules_["matrix"];
 
         // mat.append_row(matrix, row_vector) -> mat
@@ -1833,10 +1840,6 @@ private:
         // mat.size(matrix) -> int
         // Alias de math.size (conveniencia)
         matModule["size"] = mathModule["size"];
-
-        // ====================================================================
-        // String Module Functions
-        // ====================================================================
 
         auto& stringModule = modules_["string"];
 
@@ -2225,6 +2228,28 @@ private:
         };
 
         /**
+         * string.to_int_or(s, default) -> int
+         * Parse a decimal integer string, returning `default` on failure
+         * (empty string, non-numeric, out of range). No exception is thrown.
+         */
+        stringModule["to_int_or"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2)
+                throw ArgumentError::wrongCount("string.to_int_or", 2, args.size(), loc);
+            const auto* s = std::get_if<std::string>(&args[0]);
+            if (!s) throw TypeError("string.to_int_or: first argument must be a string", loc);
+            int64_t dflt = toInt(args[1]);
+            if (s->empty()) return dflt;
+            try {
+                size_t pos = 0;
+                long long v = std::stoll(*s, &pos);
+                if (pos != s->size()) return dflt;  // trailing junk → default
+                return static_cast<int64_t>(v);
+            } catch (...) {
+                return dflt;
+            }
+        };
+
+        /**
          * string.to_float(s) -> float64
          * Parse a floating-point string and return its float64 value.
          * Throws RuntimeError if the string is not a valid number.
@@ -2259,10 +2284,6 @@ private:
             if (start >= end) return std::string{};
             return s->substr(static_cast<size_t>(start), static_cast<size_t>(end - start));
         };
-
-        // ====================================================================
-        // Mapping Module Functions
-        // ====================================================================
 
         auto& mappingModule = modules_["mapping"];
 
@@ -2472,10 +2493,6 @@ private:
         // mapping.remove — alias for mapping.delete (avoids the 'delete' keyword conflict)
         mappingModule["remove"] = mappingModule["delete"];
 
-        // ====================================================================
-        // Array Module Functions
-        // ====================================================================
-
         auto& arrayModule = modules_["array"];
 
         // array.create(size) -> arr (create array with initial size)
@@ -2583,10 +2600,6 @@ private:
             (*arrPtr)->resize(newSize);
             return *arrPtr;
         };
-
-        // ====================================================================
-        // IO Module Functions
-        // ====================================================================
 
         auto& ioModule = modules_["io"];
 
@@ -2957,6 +2970,110 @@ private:
             return result;
         };
 
+        // io.write_file(path, content) -> int64_t bytes_written
+        // Path-based convenience wrapper: open, write, close.
+        ioModule["write_file"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) {
+                throw ArgumentError::wrongCount("io.write_file", 2, args.size(), loc);
+            }
+            auto* path = std::get_if<std::string>(&args[0]);
+            auto* content = std::get_if<std::string>(&args[1]);
+            if (!path || !content) {
+                throw ArgumentError("io.write_file", "expected (path: str, content: str)", loc);
+            }
+            std::ofstream f(*path, std::ios::binary | std::ios::trunc);
+            if (!f.is_open()) {
+                throw RuntimeError("io.write_file: cannot open '" + *path + "'", loc);
+            }
+            f.write(content->data(), static_cast<std::streamsize>(content->size()));
+            if (f.fail()) {
+                throw RuntimeError("io.write_file: write failed for '" + *path + "'", loc);
+            }
+            return static_cast<int64_t>(content->size());
+        };
+
+        // io.read_file(path) -> str
+        // Path-based convenience wrapper: open, read all, close.
+        ioModule["read_file"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("io.read_file", 1, args.size(), loc);
+            }
+            auto* path = std::get_if<std::string>(&args[0]);
+            if (!path) {
+                throw ArgumentError("io.read_file", "path must be string", loc);
+            }
+            std::ifstream f(*path, std::ios::binary);
+            if (!f.is_open()) {
+                throw RuntimeError("io.read_file: cannot open '" + *path + "'", loc);
+            }
+            std::stringstream buffer;
+            buffer << f.rdbuf();
+            return buffer.str();
+        };
+
+        // io.append_file(path, content) -> int64_t bytes_appended
+        ioModule["append_file"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 2) {
+                throw ArgumentError::wrongCount("io.append_file", 2, args.size(), loc);
+            }
+            auto* path = std::get_if<std::string>(&args[0]);
+            auto* content = std::get_if<std::string>(&args[1]);
+            if (!path || !content) {
+                throw ArgumentError("io.append_file", "expected (path: str, content: str)", loc);
+            }
+            std::ofstream f(*path, std::ios::binary | std::ios::app);
+            if (!f.is_open()) {
+                throw RuntimeError("io.append_file: cannot open '" + *path + "'", loc);
+            }
+            f.write(content->data(), static_cast<std::streamsize>(content->size()));
+            if (f.fail()) {
+                throw RuntimeError("io.append_file: write failed for '" + *path + "'", loc);
+            }
+            return static_cast<int64_t>(content->size());
+        };
+
+        // io.file_size(path) -> int64_t bytes
+        ioModule["file_size"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("io.file_size", 1, args.size(), loc);
+            }
+            auto* path = std::get_if<std::string>(&args[0]);
+            if (!path) {
+                throw ArgumentError("io.file_size", "path must be string", loc);
+            }
+            try {
+                return static_cast<int64_t>(std::filesystem::file_size(*path));
+            }
+            catch (const std::filesystem::filesystem_error& e) {
+                throw RuntimeError(std::string("io.file_size: ") + e.what(), loc);
+            }
+        };
+
+        // io.readlines(path) -> int64_t line_count
+        ioModule["readlines"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1) {
+                throw ArgumentError::wrongCount("io.readlines", 1, args.size(), loc);
+            }
+            auto* path = std::get_if<std::string>(&args[0]);
+            if (!path) {
+                throw ArgumentError("io.readlines", "path must be string", loc);
+            }
+            std::ifstream f(*path, std::ios::binary);
+            if (!f.is_open()) {
+                throw RuntimeError("io.readlines: cannot open '" + *path + "'", loc);
+            }
+            int64_t count = 0;
+            char prev = '\0';
+            char c;
+            while (f.get(c)) {
+                if (c == '\n') ++count;
+                prev = c;
+            }
+            // Count trailing line if file does not end with newline.
+            if (prev != '\0' && prev != '\n') ++count;
+            return count;
+        };
+
         // io.stdin() -> str
         // Read all of standard input as a string
         ioModule["stdin"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
@@ -2967,10 +3084,6 @@ private:
                                  std::istreambuf_iterator<char>());
             return content;
         };
-
-        // ====================================================================
-        // DateTime Module Functions
-        // ====================================================================
 
         auto& dtModule = modules_["datetime"];
 

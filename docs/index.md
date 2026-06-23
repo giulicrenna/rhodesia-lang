@@ -1,87 +1,39 @@
+---
+title: Home
+layout: default
+nav_order: 1
+---
+
 # Rhodesia Language Documentation
 
-Welcome to the official documentation for Rhodesia, a high-performance programming language designed for data science and numerical computing.
+A high-performance, strongly-typed programming language designed for **data
+science, numerical computing, and machine learning**. Clean syntax on top of
+[Eigen3](https://eigen.tuxfamily.org/) for vectorized linear algebra.
 
-## About Rhodesia
+## Get Rhodesia
 
-Rhodesia is an imperative, statically-typed language that combines clean syntax with the power of Eigen for high-performance numerical computations. It's designed for:
+[Download Rhodesia 0.1.2 for Windows (.exe)](https://github.com/giulicrenna/rhodesia-lang/releases/latest/download/rhodesia-setup-0.1.2.exe){: .btn .btn-primary }
 
-- **Data Science**: Built-in support for vectors, matrices, and statistical operations
-- **Numerical Computing**: Optimized linear algebra operations
-- **Machine Learning**: Easy implementation of algorithms
-- **Scientific Computing**: High-performance mathematical operations
+**Editor**
 
-## Getting Started
+Install the **Rhodesia Language Support** extension by publisher
+`GiulianoCrenna` from the VS Code Marketplace
+([GiulianoCrenna.RhodesiaLanguage](https://marketplace.visualstudio.com/items?itemName=GiulianoCrenna.RhodesiaLanguage))
+for syntax highlighting, snippets, and language tooling on `.rho` files.
 
-### Installation
+See [Installation & Editor Setup](installation.md) for full instructions,
+verification steps, and offline VSIX install.
 
-```bash
-# Clone the repository
-git clone https://github.com/giulicrenna/rhodesia-lang.git
-cd rhodesia-lang
+## What's Inside
 
-# Build the language
-make
-```
-
-### Run Your First Program
-
-```bash
-# Run the REPL
-./rhodesia
-
-# Run a script file
-./rhodesia examples/hello.rho
-```
-
-## Documentation Sections
-
-### Language Reference
-Learn the syntax, types, and control structures of Rhodesia.
-
-[**Language Basics**](language/syntax.md) - Variables, types, and expressions
-[**Control Flow**](language/control-flow.md) - If statements, loops, and functions
-[**Type System**](language/types.md) - Understanding Rhodesia's type system
-[**Collections**](language/collections.md) - Set, Tuple, and Record types with literal syntax
-[**Match Statement**](language/match.md) - Pattern matching over a single value
-
-### Standard Library
-Explore the built-in functions and data structures.
-
-[**Functions**](standard-library/functions.md) - Built-in mathematical and utility functions
-[**Vectors & Matrices**](standard-library/vectors-matrices.md) - Vector and matrix operations
-[**Built-ins**](standard-library/builtins.md) - Core built-in functions
-[**Net Module**](standard-library/net.md) - TCP sockets and HTTP/1.1 client
-
-### Examples
-Practical code examples to learn by doing.
-
-[**Basic Examples**](examples/basics.md) - Hello World and basic operations
-[**Data Structures**](examples/data-structures.md) - Working with vectors and matrices
-[**Collections**](examples/collections.md) - Set, Tuple, Record, and Match examples
-[**Input/Output**](examples/io.md) - File operations and user input
-[**Machine Learning**](examples/machine-learning.md) - Regression, clustering, and more
-[**Modules**](examples/modules.md) - Code organization with modules
-
-### Tutorials
-Step-by-step guides for common tasks.
-
-[**Basic Tutorial**](tutorials/basics.md) - Getting started with Rhodesia
-[**Data Science**](tutorials/data-science.md) - Statistical analysis and visualization
-[**Algorithms**](tutorials/algorithms.md) - Implementing numerical algorithms
-
-### API & Architecture
-Technical details and performance optimization.
-
-[**Architecture**](api/architecture.md) - System architecture and design
-[**Technical API**](api/technical.md) - Low-level API reference
-[**Performance Guide**](api/performance.md) - Optimization techniques
-
-### Troubleshooting
-Debugging and error handling.
-
-[**Error Reference**](troubleshooting/errors.md) - Common errors and solutions
-[**Debugging Guide**](troubleshooting/debugging.md) - Debugging techniques
+- [Getting Started](getting-started.md) — first program, REPL, build from source.
+- [Installation & Editor Setup](installation.md) — Windows installer + VS Code extension.
+- [Language Reference](language/index.md) — syntax, types, control flow, functions, lambdas, modules, exceptions, etc.
+- [Standard Library](standard-library/index.md) — math, stats, vector, matrix, string, mapping, array, datetime, io, net.
+- [Examples](examples/basics.md) — basics, data structures, collections, I/O, ML, modules.
+- [Tutorials](tutorials/basics.md) — guided walkthroughs + REPL + build.
+- [API & Architecture](api/architecture.md) — internals, technical reference, performance.
+- [Troubleshooting](troubleshooting/errors.md) — errors and debugging.
 
 ## Quick Example
 
@@ -105,19 +57,21 @@ println(C)
 
 ## Features
 
-- **High Performance**: Built on Eigen for optimized numerical operations
-- **Clean Syntax**: Easy to read and write
-- **Type Safety**: Static typing with automatic type inference
-- **Vectorized Operations**: Efficient array operations
-- **Networking**: Built-in `net` module — TCP sockets and HTTP/1.1 client, zero extra dependencies
-- **Extensible**: Easy to add new functions and modules
+- **Vectorized by default** — `vec` and `mat` are Eigen3-typed; loops compile down to SIMD-friendly ops.
+- **Strongly typed** — explicit `type: name = value` declarations for every primitive and collection.
+- **Standard library** — math, stats, numerical, vector, matrix, string, mapping, array, datetime, io, net.
+- **Networking built-in** — TCP sockets and HTTP/1.1 client via the `net` module, zero extra dependencies.
+- **Module system** — `include mod{symbols}` with selective imports and aliases; user libraries discovered via `info.json`.
+- **REPL** — interactive mode with `help`, `vars`, multi-line input via unbalanced braces.
+- **Bytecode VM** — `--vm` flag runs the same code through a small bytecode VM (faster than the tree-walking interpreter).
 
 ## Community
 
 - **GitHub**: [https://github.com/giulicrenna/rhodesia-lang](https://github.com/giulicrenna/rhodesia-lang)
-- **Issues**: Report bugs and request features
-- **Contributions**: Pull requests welcome!
+- **Issues**: [report a bug or request a feature](https://github.com/giulicrenna/rhodesia-lang/issues)
+- **Discussions**: [Q&A and ideas](https://github.com/giulicrenna/rhodesia-lang/discussions)
+- **Contributions**: pull requests welcome.
 
 ---
 
-© 2025 Rhodesia Language Project
+© 2025 Rhodesia Language Project — MIT License.

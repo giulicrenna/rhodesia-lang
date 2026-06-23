@@ -1,3 +1,10 @@
+---
+title: Basics
+layout: default
+nav_order: 1
+parent: Tutorials
+---
+
 # Rhodesia Basics Tutorial
 
 Welcome to the Rhodesia basics tutorial! This guide will walk you through the fundamental concepts of the Rhodesia programming language.

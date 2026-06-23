@@ -1,6 +1,6 @@
 // Test del módulo string en Rhodesia
 
-println("=== Tests del Módulo String ===")
+println("Tests del Módulo String")
 println()
 
 // Test 1: Declaración y length
@@ -118,4 +118,4 @@ println("String:", banana)
 println("Ocurrencias de 'na':", ocurrencias)
 println()
 
-println("=== Todos los tests completados ===")
+println("Todos los tests completados")

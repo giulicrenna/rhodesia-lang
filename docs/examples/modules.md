@@ -1,3 +1,10 @@
+---
+title: Modules
+layout: default
+nav_order: 6
+parent: Examples
+---
+
 # Modules
 
 Rhodesia supports a modular system that allows you to organize code into reusable components. This page demonstrates how to create and use modules.

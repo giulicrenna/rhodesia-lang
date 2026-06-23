@@ -1,31 +1,29 @@
-# GitHub Pages Configuration for Rhodesia Documentation
+# Rhodesia Documentation - just-the-docs configuration
+remote_theme: just-the-docs/just-the-docs@v0.8.0
 
 title: Rhodesia Language Documentation
-description: Official documentation for the Rhodesia programming language
-theme: jekyll-theme-cayman
+description: >-
+  Official documentation for Rhodesia, a strongly-typed imperative language
+  for data science and numerical computing.
 
-# Site settings
-baseurl: "/rhodesia-lang" # Change this to your repository name
-url: "https://giulicrenna.github.io" # Change this to your GitHub Pages URL
+# GitHub Pages
+baseurl: "/rhodesia-lang"
+url: "https://giulicrenna.github.io"
 
-# Navigation
-navigation:
-  - title: Home
-    url: /index.html
-  - title: Getting Started
-    url: /getting-started.html
-  - title: Language
-    url: /language/syntax.html
-  - title: Standard Library
-    url: /standard-library/functions.html
-  - title: Examples
-    url: /examples/basics.html
-  - title: API
-    url: /api/architecture.html
-  - title: Troubleshooting
-    url: /troubleshooting/errors.html
+# Theme features
+color_scheme: light
+search_enabled: true
+search:
+  button: true
+back_to_top: true
+back_to_top:
+  button: true
 
-# Markdown settings
+# Aux link in the header
+aux_links:
+  Rhodesia on GitHub: https://github.com/giulicrenna/rhodesia-lang
+
+# Markdown engine
 markdown: kramdown
 kramdown:
   input: GFM
@@ -34,32 +32,14 @@ kramdown:
     block:
       line_numbers: true
 
-# Plugins
 plugins:
   - jekyll-relative-links
   - jekyll-mermaid
 
-# Collections
-collections:
-  language:
-    output: true
-    permalink: /language/:name
-  standard-library:
-    output: true
-    permalink: /standard-library/:name
-  examples:
-    output: true
-    permalink: /examples/:name
-  api:
-    output: true
-    permalink: /api/:name
-  troubleshooting:
-    output: true
-    permalink: /troubleshooting/:name
-
-# Defaults
-defaults:
-  - scope:
-      path: ""
-    values:
-      layout: "default"
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .sass-cache
+  - .jekyll-cache

@@ -1,14 +1,13 @@
 // Demostración del módulo string de Rhodesia
 // Este archivo muestra todas las capacidades de manipulación de strings
 
-println("╔═══════════════════════════════════════╗")
-println("║   Módulo String de Rhodesia          ║")
-println("╚═══════════════════════════════════════╝")
+println("")
+println("Módulo String de Rhodesia")
+println("")
 println()
 
 // 1. Declaración de strings
 println("1. DECLARACIÓN DE STRINGS")
-println("-------------------------")
 str: lenguaje = "Rhodesia"
 str: descripcion = "Un lenguaje de programación moderno"
 println("Lenguaje:", lenguaje)
@@ -17,7 +16,6 @@ println()
 
 // 2. Información básica
 println("2. INFORMACIÓN BÁSICA")
-println("---------------------")
 int: len_lenguaje = string.length(lenguaje)
 int: len_desc = string.length(descripcion)
 println("Longitud de 'Rhodesia':", len_lenguaje)
@@ -26,7 +24,6 @@ println()
 
 // 3. Transformaciones
 println("3. TRANSFORMACIONES")
-println("-------------------")
 str: texto_mixto = "HoLa MuNdO"
 str: minusculas = string.lower(texto_mixto)
 str: mayusculas = string.upper(texto_mixto)
@@ -37,7 +34,6 @@ println()
 
 // 4. Búsqueda y verificación
 println("4. BÚSQUEDA Y VERIFICACIÓN")
-println("--------------------------")
 str: frase = "Rhodesia es un lenguaje de programación"
 int: posicion = string.find(frase, "lenguaje")
 int: contiene_prog = string.contains(frase, "programación")
@@ -52,7 +48,6 @@ println()
 
 // 5. Extracción
 println("5. EXTRACCIÓN")
-println("-------------")
 str: completo = "Programación en Rhodesia"
 str: parte1 = string.substr(completo, 0, 12)
 str: parte2 = string.substr(completo, 16, 8)
@@ -63,7 +58,6 @@ println()
 
 // 6. Modificación
 println("6. MODIFICACIÓN")
-println("---------------")
 str: original = "Python es genial"
 str: modificado = string.replace(original, "Python", "Rhodesia")
 println("Original:", original)
@@ -72,8 +66,7 @@ println()
 
 // 7. Limpieza
 println("7. LIMPIEZA")
-println("-----------")
-str: sucio = "   espacios en blanco   "
+str: sucio = " espacios en blanco "
 str: limpio = string.trim(sucio)
 println("Con espacios:", sucio)
 println("Limpio:", limpio)
@@ -81,7 +74,6 @@ println()
 
 // 8. Inversión
 println("8. INVERSIÓN")
-println("------------")
 str: palabra = "Rhodesia"
 str: invertida = string.reverse(palabra)
 println("Normal:", palabra)
@@ -90,7 +82,6 @@ println()
 
 // 9. Repetición
 println("9. REPETICIÓN")
-println("-------------")
 str: patron = "Rho"
 str: rep3 = string.repeat(patron, 3)
 str: rep5 = string.repeat("!", 5)
@@ -101,7 +92,6 @@ println()
 
 // 10. Concatenación
 println("10. CONCATENACIÓN")
-println("-----------------")
 str: p1 = "Rho"
 str: p2 = "de"
 str: p3 = "sia"
@@ -112,7 +102,6 @@ println()
 
 // 11. Acceso a caracteres
 println("11. ACCESO A CARACTERES")
-println("-----------------------")
 str: nombre = "Rhodesia"
 str: primera = string.at(nombre, 0)
 str: ultima = string.at(nombre, 7)
@@ -123,7 +112,6 @@ println()
 
 // 12. Conteo de ocurrencias
 println("12. CONTEO DE OCURRENCIAS")
-println("-------------------------")
 str: texto_rep = "banana manzana banana"
 int: cuantas_banana = string.count(texto_rep, "banana")
 int: cuantas_a = string.count(texto_rep, "a")
@@ -134,7 +122,6 @@ println()
 
 // 13. Caso de uso real: Validación de archivo
 println("13. CASO DE USO: VALIDACIÓN DE ARCHIVO")
-println("---------------------------------------")
 str: archivo1 = "programa.rho"
 str: archivo2 = "documento.txt"
 
@@ -145,6 +132,6 @@ println("Archivo:", archivo1, "-> Es Rhodesia:", es_rho1)
 println("Archivo:", archivo2, "-> Es Rhodesia:", es_rho2)
 println()
 
-println("╔═══════════════════════════════════════╗")
-println("║   Demostración completada             ║")
-println("╚═══════════════════════════════════════╝")
+println("")
+println("Demostración completada")
+println("")

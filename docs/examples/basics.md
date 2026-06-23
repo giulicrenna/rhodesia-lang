@@ -1,3 +1,10 @@
+---
+title: Basics
+layout: default
+nav_order: 1
+parent: Examples
+---
+
 # Basic Rhodesia Examples
 
 This page contains basic examples to help you get started with Rhodesia programming.

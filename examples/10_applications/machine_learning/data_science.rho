@@ -1,18 +1,11 @@
-// ============================================================================
-// data_science.rho - Complete Data Science Example
-// Demonstrates a typical ML workflow in Rhodesia
-// ============================================================================
 
-println("========================================")
-println("  Data Science Pipeline with Rhodesia")
-println("========================================")
+println("Data Science Pipeline with Rhodesia")
 println("")
 
 /*
  1. DATA PREPARATION
 */
 println("1. Data Preparation")
-println("-------------------")
 
 // Simulated dataset: Features (X) and targets (y)
 // Features: [intercept, x1, x2]
@@ -42,7 +35,6 @@ println("")
  2. TRAIN/TEST SPLIT (manual 80/20)
 */
 println("2. Train/Test Split (80/20)")
-println("---------------------------")
 
 // First 8 samples for training, last 2 for testing
 mat: X_train = [
@@ -73,7 +65,6 @@ println("")
  3. MODEL TRAINING (OLS)
 */
 println("3. Model Training (Ordinary Least Squares)")
-println("------------------------------------------")
 
 fun fit_ols(mat: X, vec: y) -> vec {
     mat: xt = math.transpose(X)
@@ -86,16 +77,15 @@ fun fit_ols(mat: X, vec: y) -> vec {
 vec: weights = fit_ols(X_train, y_train)
 
 println("Learned weights:")
-println("  w0 (intercept): ", weights[0])
-println("  w1 (feature 1): ", weights[1])
-println("  w2 (feature 2): ", weights[2])
+println("w0 (intercept): ", weights[0])
+println("w1 (feature 1): ", weights[1])
+println("w2 (feature 2): ", weights[2])
 println("")
 
 /*
  4. PREDICTIONS
 */
 println("4. Predictions")
-println("--------------")
 
 fun predict(mat: X, vec: w) -> vec {
     return X * w
@@ -126,7 +116,6 @@ println("")
  5. MODEL EVALUATION
 */
 println("5. Model Evaluation")
-println("-------------------")
 
 // Mean Squared Error
 fun mse(vec: y_true, vec: y_pred) -> float64 {
@@ -158,24 +147,23 @@ fun r_squared(vec: y_true, vec: y_pred) -> float64 {
 }
 
 println("Training metrics:")
-println("  MSE:  ", mse(y_train, y_train_pred))
-println("  RMSE: ", rmse(y_train, y_train_pred))
-println("  MAE:  ", mae(y_train, y_train_pred))
-println("  R²:   ", r_squared(y_train, y_train_pred))
+println("MSE:  ", mse(y_train, y_train_pred))
+println("RMSE: ", rmse(y_train, y_train_pred))
+println("MAE:  ", mae(y_train, y_train_pred))
+println("R²:   ", r_squared(y_train, y_train_pred))
 println("")
 
 println("Test metrics:")
-println("  MSE:  ", mse(y_test, y_test_pred))
-println("  RMSE: ", rmse(y_test, y_test_pred))
-println("  MAE:  ", mae(y_test, y_test_pred))
-println("  R²:   ", r_squared(y_test, y_test_pred))
+println("MSE:  ", mse(y_test, y_test_pred))
+println("RMSE: ", rmse(y_test, y_test_pred))
+println("MAE:  ", mae(y_test, y_test_pred))
+println("R²:   ", r_squared(y_test, y_test_pred))
 println("")
 
 /*
  6. FEATURE IMPORTANCE (normalized weights)
 */
 println("6. Feature Importance")
-println("---------------------")
 
 // Compute absolute weights (skip intercept)
 float64: w1_abs = math.abs(weights[1])
@@ -183,10 +171,8 @@ float64: w2_abs = math.abs(weights[2])
 float64: total = w1_abs + w2_abs
 
 println("Relative importance:")
-println("  Feature 1: ", w1_abs / total * 100, "%")
-println("  Feature 2: ", w2_abs / total * 100, "%")
+println("Feature 1: ", w1_abs / total * 100, "%")
+println("Feature 2: ", w2_abs / total * 100, "%")
 println("")
 
-println("========================================")
-println("  Pipeline Complete!")
-println("========================================")
+println("Pipeline Complete!")

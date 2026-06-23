@@ -1,6 +1,6 @@
 // Test builtin modules: math, stats, numerical
 
-println("=== Testing Math Module ===")
+println("Testing Math Module")
 
 // Constants
 println("PI =", math.PI)
@@ -41,7 +41,7 @@ println("rad2deg(PI) =", math.rad2deg(math.PI))
 println("factorial(5) =", math.factorial(5))
 
 println("")
-println("=== Testing Statistics Module ===")
+println("Testing Statistics Module")
 
 vec: data2 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -70,7 +70,7 @@ vec: normalized = stats.zscore([10, 20, 30, 40, 50])
 println("zscore([10,20,30,40,50]) =", normalized)
 
 println("")
-println("=== Testing Numerical Module ===")
+println("Testing Numerical Module")
 
 // Quadratic equation solver
 vec: roots = numerical.solve_quadratic(1.0, -5.0, 6.0)

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.1.2-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/C++-20-green.svg" alt="C++20">
   <img src="https://img.shields.io/badge/backend-Eigen3-orange.svg" alt="Eigen3">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey.svg" alt="License">
@@ -73,6 +73,9 @@ cmake --build build -j$(nproc)
 
 # Or build explicitly with make
 make -C build -j$(nproc)
+
+# For windows
+ninja
 ```
 
 ### Running Rhodesia

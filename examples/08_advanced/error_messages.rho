@@ -3,7 +3,7 @@
  * @brief Test improved error messages
  */
 
-println("=== Testing Improved Error Messages ===")
+println("Testing Improved Error Messages")
 println("")
 
 // Test division by zero error message
@@ -53,4 +53,4 @@ try {
 }
 println("")
 
-println("=== All error message tests completed! ===")
+println("All error message tests completed!")

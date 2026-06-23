@@ -1,3 +1,10 @@
+---
+title: Debugging
+layout: default
+nav_order: 2
+parent: Troubleshooting
+---
+
 # Debugging Guide
 
 This guide covers debugging techniques and common issues in Rhodesia programs.

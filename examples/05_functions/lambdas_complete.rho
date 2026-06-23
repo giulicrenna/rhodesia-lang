@@ -70,18 +70,20 @@ print(squared)
 // Test 8: Filter-like operation
 print("\n8. Filter-like operation:")
 fun filterVec(function: predicate, vec: v) -> vec {
-    arr: temp = arr(0)
+    // Count matches first, then build a vec of exactly that size.
+    int: count = 0
     for x in v {
         if predicate(x) {
-            temp.push(x)
+            count = count + 1
         }
     }
-    // Convert array to vector
-    vec: result = math.zeros(temp.size())
+    vec: result = math.zeros(count)
     int: i = 0
-    for x in temp {
-        result[i] = x
-        i = i + 1
+    for x in v {
+        if predicate(x) {
+            result[i] = x
+            i = i + 1
+        }
     }
     return result
 }

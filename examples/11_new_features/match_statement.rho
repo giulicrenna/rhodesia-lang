@@ -1,11 +1,4 @@
-// ============================================================
-// Ejemplos: Match Statement
-// Sintaxis: match expr { patron -> { cuerpo } ... _ -> { default } }
-// ============================================================
 
-// ------------------------------------------------------------
-// Caso 1: Match sobre entero — estado HTTP
-// ------------------------------------------------------------
 fun describir_http(int: codigo) -> str {
     match codigo {
         200 -> { return "OK" }
@@ -24,9 +17,6 @@ println(describir_http(200))   // OK
 println(describir_http(404))   // Not Found
 println(describir_http(418))   // Codigo desconocido
 
-// ------------------------------------------------------------
-// Caso 2: Match sobre string — dias laborables
-// ------------------------------------------------------------
 fun tipo_dia(str: dia) -> str {
     match dia {
         "lunes"    -> { return "inicio de semana" }
@@ -42,9 +32,6 @@ println(tipo_dia("lunes"))    // inicio de semana
 println(tipo_dia("martes"))   // dia laboral normal
 println(tipo_dia("sabado"))   // fin de semana
 
-// ------------------------------------------------------------
-// Caso 3: Match sobre bool — evaluacion simple
-// ------------------------------------------------------------
 fun evaluar(bool: aprobado) -> str {
     match aprobado {
         true  -> { return "Aprobado" }
@@ -57,10 +44,6 @@ fun evaluar(bool: aprobado) -> str {
 println(evaluar(true))   // Aprobado
 println(evaluar(false))  // Reprobado
 
-// ------------------------------------------------------------
-// Caso 4: Match con logica en el cuerpo del brazo
-// La funcion recibe nota como entero (0-10)
-// ------------------------------------------------------------
 fun clasificar_nota(int: nota) -> str {
     match nota {
         10 -> { return "Sobresaliente perfecto" }
@@ -83,9 +66,6 @@ println(clasificar_nota(9))   // Sobresaliente
 println(clasificar_nota(7))   // Bien
 println(clasificar_nota(4))   // Suspenso
 
-// ------------------------------------------------------------
-// Caso 5: Match sobre estado de maquina — state machine
-// ------------------------------------------------------------
 fun siguiente_estado(str: estado, str: evento) -> str {
     match estado {
         "idle" -> {
@@ -138,9 +118,6 @@ println("Tras error:", estado)        // error
 estado = siguiente_estado(estado, "reset")
 println("Tras reset:", estado)        // idle
 
-// ------------------------------------------------------------
-// Caso 6: Match combinado con record y tuple
-// ------------------------------------------------------------
 record: operacion = { tipo: "suma", a: 10, b: 20 }
 
 fun ejecutar(record: op) -> int {
@@ -159,9 +136,6 @@ fun ejecutar(record: op) -> int {
 int: resultado = ejecutar(operacion)
 println("Resultado de", operacion.tipo, ":", resultado)  // 30
 
-// ------------------------------------------------------------
-// Caso 7: Match sobre null — manejo de ausencia de valor
-// ------------------------------------------------------------
 fun procesar(str: valor) -> str {
     match valor {
         null -> { return "valor ausente" }

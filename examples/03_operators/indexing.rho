@@ -1,6 +1,6 @@
 // Test de indexado con variables y expresiones
 
-println("=== Pruebas de Indexado con Variables y Expresiones ===")
+println("Pruebas de Indexado con Variables y Expresiones")
 
 // Test 1: Indexado de vector con variables
 vec: v = [10.0, 20.0, 30.0, 40.0, 50.0]

@@ -1,6 +1,6 @@
 // Test del operador ternario (cond ? expr1 : expr2)
 
-println("=== Pruebas del Operador Ternario ===")
+println("Pruebas del Operador Ternario")
 
 // Test 1: Básico con enteros
 int: x = 5

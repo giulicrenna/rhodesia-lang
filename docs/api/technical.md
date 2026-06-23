@@ -1,3 +1,10 @@
+---
+title: Technical API
+layout: default
+nav_order: 2
+parent: API & Architecture
+---
+
 # Technical API
 
 This page provides technical details about Rhodesia's internal architecture and low-level API.

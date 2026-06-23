@@ -1,9 +1,5 @@
-// ============================================================================
-// control_flow.rho - Control Flow Demo
-// Demonstrates if/else, for, while, break, continue
-// ============================================================================
 
-println("=== Control Flow Demo ===")
+println("Control Flow Demo")
 println("")
 
 /*

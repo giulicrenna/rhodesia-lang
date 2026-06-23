@@ -1053,12 +1053,55 @@ const moduleDescriptors = {
             { label: 'diff_seconds',   detail: 'datetime.diff_seconds(a: datetime, b: datetime) -> float64',    documentation: 'Signed difference in seconds: a - b.' },
             { label: 'diff_days',      detail: 'datetime.diff_days(a: datetime, b: datetime) -> float64',       documentation: 'Signed difference in days: a - b (may be fractional).' }
         ]
+    },
+
+    net: {
+        functions: [
+            { label: 'socket',    detail: 'net.socket(host: str, port: int) -> int',                 documentation: 'Create a TCP socket for the given host and port (not connected).' },
+            { label: 'connect',   detail: 'net.connect(handle: int)',                                documentation: 'Connect the socket to its stored host and port.' },
+            { label: 'send',      detail: 'net.send(handle: int, data: str)',                       documentation: 'Write bytes to a connected socket.' },
+            { label: 'recv',      detail: 'net.recv(handle: int, size: int) -> str',                documentation: 'Read up to `size` bytes (may return fewer than requested).' },
+            { label: 'recv_all',  detail: 'net.recv_all(handle: int) -> str',                        documentation: 'Read from a connected socket until remote closes (EOF).' },
+            { label: 'close',     detail: 'net.close(handle: int)',                                  documentation: 'Close a socket and release its handle. Works for both client and server sockets.' },
+            { label: 'listen',    detail: 'net.listen(port: int [, backlog: int]) -> int',           documentation: 'Bind a server socket on 0.0.0.0:port. Returns the server handle.' },
+            { label: 'accept',    detail: 'net.accept(handle: int) -> int',                          documentation: 'Block until a client connects to the listening socket.' },
+            { label: 'peer',      detail: 'net.peer(handle: int) -> record',                         documentation: 'Return the remote peer address as {host, port}.' },
+            { label: 'http_get',  detail: 'net.http_get(url: str) -> record',                        documentation: 'Perform an HTTP/1.1 GET. Returns {status, headers, body}.' },
+            { label: 'http_post', detail: 'net.http_post(url: str [, body: str]) -> record',         documentation: 'Perform an HTTP/1.1 POST. Returns {status, headers, body}.' }
+        ]
     }
 };
 
 const { buildModuleDescriptors, buildBuiltinFunctions } = require('./doxygenParser');
+const { parseBuiltins } = require('./cppSourceParser');
+
+// Auto-fill: any function defined in Builtins.hpp but missing from the
+// hand-written descriptors below gets a generic entry (label + module prefix
+// signature). Rich docs stay curated; this only catches the "added a new
+// function to C++ and forgot to update the JS" drift.
+function fillFromCpp(baseDescriptors) {
+    const cppMods = parseBuiltins();
+    const out = { ...baseDescriptors };
+    for (const [modName, fnNames] of Object.entries(cppMods)) {
+        const existing = out[modName] || {};
+        const existingLabels = new Set((existing.functions || []).map(f => f.label));
+        const missing = fnNames.filter(n => !existingLabels.has(n));
+        if (missing.length === 0) continue;
+        const filled = missing.map(label => ({
+            label,
+            detail: `${modName}.${label}(...)`,
+            documentation: `Auto-extracted from Builtins.hpp. Add documentation in builtinDescriptors.js.`,
+            _auto: true
+        }));
+        out[modName] = {
+            ...existing,
+            functions: [...(existing.functions || []), ...filled]
+        };
+    }
+    return out;
+}
 
 module.exports = {
     builtinFunctions: buildBuiltinFunctions(builtinFunctions),
-    moduleDescriptors: buildModuleDescriptors(moduleDescriptors)
+    moduleDescriptors: fillFromCpp(buildModuleDescriptors(moduleDescriptors))
 };

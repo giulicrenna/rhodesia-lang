@@ -11,17 +11,17 @@
 
 /**
     Implementado:
-        ✓ Tipos enteros adicionales (int8, int16, int32, uint8, uint16, uint32, uint64, byte)
-        ✓ Tipo Complex para números complejos con make_complex()
-        ✓ Tipo Set (conjunto sin duplicados) con make_set()
-        ✓ Tipo Tuple (tupla inmutable) con make_tuple()
-        ✓ Tipo Record (estructura con campos nombrados) con make_record()
-        ✓ Tipo Enum (enumeraciones)
-        ✓ Valor Null explícito
-        ✓ Módulo Time (Date, Time, DateTime, Duration, Timestamp)
-        ✓ Parser completo para nuevos tipos de datos
-        ✓ Evaluator con conversiones automáticas y soporte completo
-        ✓ Funciones built-in para crear tipos complejos
+        Tipos enteros adicionales (int8, int16, int32, uint8, uint16, uint32, uint64, byte)
+        Tipo Complex para números complejos con make_complex()
+        Tipo Set (conjunto sin duplicados) con make_set()
+        Tipo Tuple (tupla inmutable) con make_tuple()
+        Tipo Record (estructura con campos nombrados) con make_record()
+        Tipo Enum (enumeraciones)
+        Valor Null explícito
+        Módulo Time (Date, Time, DateTime, Duration, Timestamp)
+        Parser completo para nuevos tipos de datos
+        Evaluator con conversiones automáticas y soporte completo
+        Funciones built-in para crear tipos complejos
 
     Pendiente:
         - Sintaxis literal para complex, set, tuple, record
@@ -33,6 +33,13 @@
         - Sistema de logging integrado (log, warn, error)
         - Integración del módulo Time con sistema de módulos
         - Métodos adicionales para manipular tipos complejos
+
+    Setups:
+        Window:
+        choco install -y mingw
+        choco install -y cmake
+        choco install -y eigen
+        choco install -y innosetup
 */
 
 #include "Lexer.hpp"
@@ -40,6 +47,8 @@
 #include "Evaluator.hpp"
 #include "Compiler.hpp"
 #include "VM.hpp"
+#include "SocketCompat.hpp"
+#include <Eigen/Core>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -264,65 +273,78 @@ int runRepl() {
  * @brief Main entry point
  */
 int main(int argc, char* argv[]) {
+    // Initialise the socket library (no-op on POSIX, WSAStartup on Windows).
+    socket_init();
+
+    // ponytail: force single-threaded Eigen. Multithreaded Eigen with
+    // expression templates has been observed to corrupt memory in
+    // back-to-back stats calls (skewness/kurtosis/zscore) on Windows.
+    Eigen::setNbThreads(1);
+
+    int exitCode = 0;
     if (argc == 1) {
         // REPL mode
-        return runRepl();
+        exitCode = runRepl();
     }
-    
-    if (argc >= 2) {
+    else if (argc >= 2) {
         std::string arg1 = argv[1];
 
         // Help flag
         if (arg1 == "-h" || arg1 == "--help") {
             printUsage(argv[0]);
-            return 0;
+            exitCode = 0;
         }
-
         // VM mode
-        if (arg1 == "--vm") {
+        else if (arg1 == "--vm") {
             if (argc >= 4 && std::string(argv[2]) == "-e") {
-                return executeVM(argv[3], true);
+                exitCode = executeVM(argv[3], true);
             }
-            if (argc >= 3) {
+            else if (argc >= 3) {
                 try {
                     std::string source = readFile(argv[2]);
-                    return executeVM(source);
+                    exitCode = executeVM(source);
                 } catch (const std::exception& e) {
                     std::cerr << "Error: " << e.what() << std::endl;
-                    return 1;
+                    exitCode = 1;
                 }
             }
-            printUsage(argv[0]);
-            return 1;
-        }
-
-        // Execute code from command line
-        if (arg1 == "-e" && argc >= 3) {
-            Evaluator evaluator;
-            return execute(argv[2], evaluator, true);
-        }
-
-        // Execute file
-        try {
-            std::string source = readFile(arg1);
-            Evaluator evaluator;
-
-            // Set module loader base directory to the directory of the executed file
-            std::filesystem::path filePath(arg1);
-            std::filesystem::path baseDir = filePath.parent_path();
-            if (baseDir.empty()) {
-                baseDir = std::filesystem::current_path();
+            else {
+                printUsage(argv[0]);
+                exitCode = 1;
             }
-            evaluator.moduleLoader().setBaseDirectory(baseDir.string());
-
-            return execute(source, evaluator);
         }
-        catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
-            return 1;
+        // Execute code from command line
+        else if (arg1 == "-e" && argc >= 3) {
+            Evaluator evaluator;
+            exitCode = execute(argv[2], evaluator, true);
+        }
+        // Execute file
+        else {
+            try {
+                std::string source = readFile(arg1);
+                Evaluator evaluator;
+
+                // Set module loader base directory to the directory of the executed file
+                std::filesystem::path filePath(arg1);
+                std::filesystem::path baseDir = filePath.parent_path();
+                if (baseDir.empty()) {
+                    baseDir = std::filesystem::current_path();
+                }
+                evaluator.moduleLoader().setBaseDirectory(baseDir.string());
+
+                exitCode = execute(source, evaluator);
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Error: " << e.what() << std::endl;
+                exitCode = 1;
+            }
         }
     }
-    
-    printUsage(argv[0]);
-    return 1;
+    else {
+        printUsage(argv[0]);
+        exitCode = 1;
+    }
+
+    socket_cleanup();
+    return exitCode;
 }

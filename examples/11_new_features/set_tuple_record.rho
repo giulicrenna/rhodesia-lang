@@ -2,10 +2,6 @@
  Ejemplos: Set, Tuple y Record con sintaxis literal
 */
 
-// ------------------------------------------------------------
-// SET: coleccion sin duplicados, sin orden
-// ------------------------------------------------------------
-
 // Creacion con sintaxis literal {}
 set: colores = {"rojo", "verde", "azul"}
 println("Set inicial:", colores)
@@ -31,10 +27,6 @@ fun palabras_unicas(arr: tokens) -> set {
 // Verificar membresia
 set: primos = {2, 3, 5, 7, 11, 13}
 println("5 en primos:", primos)   // el modulo set maneja contains()
-
-// ------------------------------------------------------------
-// TUPLE: coleccion inmutable y heterogenea
-// ------------------------------------------------------------
 
 // Sintaxis: (val1, val2, ...)
 tuple: punto2d = (3.0, 7.5)
@@ -77,10 +69,6 @@ tuple: rojo  = (255, 0, 0)
 tuple: verde = (0, 255, 0)
 tuple: azul  = (0, 0, 255)
 println("Color rojo  R:", rojo[0], "G:", rojo[1], "B:", rojo[2])
-
-// ------------------------------------------------------------
-// RECORD: estructura con campos nombrados
-// ------------------------------------------------------------
 
 // Sintaxis: { campo: valor, campo: valor, ... }
 record: empleado = {

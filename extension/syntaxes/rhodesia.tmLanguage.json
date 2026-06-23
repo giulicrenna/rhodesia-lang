@@ -25,9 +25,6 @@
       "include": "#declarations"
     },
     {
-      "include": "#functions"
-    },
-    {
       "include": "#variables"
     },
     {
@@ -120,14 +117,6 @@
         {
           "name": "keyword.other.rho",
           "match": "\\b(return)\\b"
-        }
-      ]
-    },
-    "functions": {
-      "patterns": [
-        {
-          "name": "support.function.builtin.rho",
-          "match": "\\b(norm|dot|transpose|inv|sum|mean|zeros|ones|eye|range|sqrt|exp|log|abs|sin|cos|tan|rows|cols|size|print|println)\\b"
         }
       ]
     },
