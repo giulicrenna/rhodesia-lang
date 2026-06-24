@@ -1,0 +1,20 @@
+// basic_line.rho - simplest plot example
+// Generates basic_line.svg in CWD
+
+include plot
+
+println("=== Basic line plot ===")
+
+// y = sqrt(x), x in [0, 10]
+vec: x = numerical.linspace(0.0, 10.0, 50)
+vec: y = math.sqrt(x)
+
+figure(800, 510)
+line(x, y, "sqrt(x)", "blue")
+title("Square root")
+xlabel("x")
+ylabel("sqrt(x)")
+legend(1)
+
+int: bytes = savefig("basic_line.svg")
+println("Wrote ", bytes, " bytes to basic_line.svg")

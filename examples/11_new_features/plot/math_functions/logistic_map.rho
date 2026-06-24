@@ -1,0 +1,11 @@
+include plot
+println("=== logistic_map ===")
+fun f(float64: x) -> float64 { return 4 * x * (1 - x) }
+figure(800, 510)
+plot(f, 0, 1, "f(x)", "blue")
+title("logistic_map")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("logistic_map.svg")
+println("Wrote ", bytes, " bytes to logistic_map.svg")

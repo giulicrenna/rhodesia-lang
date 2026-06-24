@@ -1,0 +1,30 @@
+include plot
+
+println("=== .map() element-wise user fn ===")
+
+vec: x = numerical.linspace(-3.14, 3.14, 200)
+
+fun gauss_bump(float64: xx) -> float64 {
+    return math.exp(-(xx * xx) / 2.0)
+}
+
+// element-wise via user fn (no C++ element-wise builtin involved)
+vec: y = x.map(gauss_bump)
+
+// also verify the applyDiv fix: scalar / vec now works
+vec: z = 1.0 / x
+
+// inline lambda form also works
+vec: w = x.map(fn(t) -> t * t + 1.0)
+
+figure(800, 510)
+line(x, y, "gauss",    "purple")
+line(x, z, "1/x",      "gray")
+line(x, w, "x^2 + 1",  "teal")
+title("User fn via .map() + 1.0/vec")
+xlabel("x")
+ylabel("y")
+legend(1)
+
+int: bytes = savefig("map_demo.svg")
+println("Wrote ", bytes, " bytes to map_demo.svg")

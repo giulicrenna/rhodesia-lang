@@ -1,0 +1,226 @@
+// libs/flash/aggregations/group_by.rho
+// group_by(df, col) -> GroupBy (un record con {col, values, indices})
+// group_agg(gb, agg_col, op) -> df con {col, agg_col}
+//   op ∈ {"sum", "mean", "median", "min", "max", "count", "std"}
+
+fun group_by(record: df, str: col) -> record {
+    return _gb_init(df, col)
+}
+
+// group_by_keys(df, csv) — group by multiple cols (compound key).
+// Devuelve un GroupBy con col = "<k1>|<k2>|..." y groups como strings compuestos.
+fun group_by_keys(record: df, str: csv) -> record {
+    arr: keys = _gb_split(csv, ",")
+    int: i = 0
+    int: nk = array.size(keys)
+    while i < nk {
+        _check_col(df, keys[i])
+        i = i + 1
+    }
+    arr: groups = array.create(0)
+    arr: idxs = array.create(0)
+    int: nr = df._nrows
+    int: r = 0
+    while r < nr {
+        str: v = ""
+        i = 0
+        while i < nk {
+            if i > 0 { v = string.concat(v, "") }
+            record: c = mapping.get(df._cols, keys[i])
+            if c.kind == "vec" {
+                vec: vv = c.data
+                if r < math.size(vv) { v = string.concat(v, _float_to_str(vv[r])) }
+            } else {
+                arr: a = c.data
+                if r < array.size(a) { v = string.concat(v, a[r]) }
+            }
+            i = i + 1
+        }
+        int: pos = _arr_pos(groups, v)
+        if pos < 0 {
+            array.push(groups, v)
+            arr: new_idx = array.create(0)
+            array.push(new_idx, r)
+            array.push(idxs, new_idx)
+        } else {
+            arr: existing = idxs[pos]
+            array.push(existing, r)
+        }
+        r = r + 1
+    }
+    return { col: csv, groups: groups, idxs: idxs, _parent_df: df }
+}
+
+fun group_agg(record: gb, str: agg_col, str: op) -> record {
+    str: gcol = gb.col
+    arr: groups = gb.groups
+    arr: idxs = gb.idxs
+    int: ng = array.size(groups)
+    record: out = _new_df()
+    arr: group_vals = array.create(0)
+    vec: agg_vals = math.zeros(ng)
+    int: g = 0
+    while g < ng {
+        array.push(group_vals, groups[g])
+        arr: gi = idxs[g]
+        int: ni = array.size(gi)
+        float64: val = 0.0
+        if op == "count" {
+            val = ni * 1.0
+        } else if op == "sum" {
+            val = _agg_sum(gb, agg_col, gi)
+        } else if op == "mean" {
+            if ni == 0 { val = 0.0 }
+            else { val = _agg_sum(gb, agg_col, gi) / ni }
+        } else if op == "min" {
+            val = _agg_min(gb, agg_col, gi)
+        } else if op == "max" {
+            val = _agg_max(gb, agg_col, gi)
+        } else if op == "std" {
+            val = _agg_std(gb, agg_col, gi)
+        } else if op == "median" {
+            val = _agg_median(gb, agg_col, gi)
+        } else {
+            _err(string.concat("group_agg: unknown op '", op, "'"))
+        }
+        agg_vals[g] = val
+        g = g + 1
+    }
+    out = _set_col(out, gcol, _wrap_arr(group_vals), "str")
+    out = _set_col(out, agg_col, _wrap_vec(agg_vals), "float")
+    return out
+}
+
+fun _agg_sum(record: gb, str: col, arr: idxs) -> float64 {
+    // gb no tiene el df, pero podemos reconstruir: usamos el atajo de tener
+    // el df guardado en gb. (Reescribimos gb abajo para incluir df.)
+    // Como workaround: gb.parent_df
+    vec: v = _get_vec(gb._parent_df, col)
+    float64: s = 0.0
+    int: i = 0
+    int: n = array.size(idxs)
+    while i < n {
+        s = s + v[idxs[i]]
+        i = i + 1
+    }
+    return s
+}
+
+fun _agg_min(record: gb, str: col, arr: idxs) -> float64 {
+    vec: v = _get_vec(gb._parent_df, col)
+    int: n = array.size(idxs)
+    if n == 0 { return 0.0 }
+    float64: m = v[idxs[0]]
+    int: i = 1
+    while i < n {
+        if v[idxs[i]] < m { m = v[idxs[i]] }
+        i = i + 1
+    }
+    return m
+}
+
+fun _agg_max(record: gb, str: col, arr: idxs) -> float64 {
+    vec: v = _get_vec(gb._parent_df, col)
+    int: n = array.size(idxs)
+    if n == 0 { return 0.0 }
+    float64: m = v[idxs[0]]
+    int: i = 1
+    while i < n {
+        if v[idxs[i]] > m { m = v[idxs[i]] }
+        i = i + 1
+    }
+    return m
+}
+
+fun _agg_std(record: gb, str: col, arr: idxs) -> float64 {
+    if array.size(idxs) < 2 { return 0.0 }
+    float64: mu = _agg_sum(gb, col, idxs) / array.size(idxs)
+    vec: v = _get_vec(gb._parent_df, col)
+    float64: s2 = 0.0
+    int: i = 0
+    int: n = array.size(idxs)
+    while i < n {
+        float64: d = v[idxs[i]] - mu
+        s2 = s2 + d * d
+        i = i + 1
+    }
+    return math.sqrt(s2 / (n - 1))
+}
+
+fun _agg_median(record: gb, str: col, arr: idxs) -> float64 {
+    vec: v = _get_vec(gb._parent_df, col)
+    int: n = array.size(idxs)
+    if n == 0 { return 0.0 }
+    vec: s = math.zeros(n)
+    int: i = 0
+    while i < n {
+        s[i] = v[idxs[i]]
+        i = i + 1
+    }
+    int: swapped = 1
+    while swapped == 1 {
+        swapped = 0
+        i = 0
+        while i < n - 1 {
+            if s[i] > s[i + 1] {
+                float64: t = s[i]
+                s[i] = s[i + 1]
+                s[i + 1] = t
+                swapped = 1
+            }
+            i = i + 1
+        }
+    }
+    int: mid = _flash_intify(n / 2)
+    if n - 2 * mid == 1 { return (s[mid - 1] + s[mid]) / 2.0 }
+    return s[mid]
+}
+
+// patch: group_by incluye el df padre para que group_agg pueda acceder a otras cols
+// Reescribimos group_by para guardar _parent_df en el record
+fun _gb_init(record: df, str: col) -> record {
+    arr: groups = array.create(0)
+    arr: idxs = array.create(0)
+    int: n = df._nrows
+    int: i = 0
+    while i < n {
+        record: at = _at_raw(df, col, i)
+        str: v = ""
+        if at.kind == "str" { v = at.val }
+        else { v = _float_to_str(at.val) }
+        int: pos = _arr_pos(groups, v)
+        if pos < 0 {
+            array.push(groups, v)
+            arr: new_idx = array.create(0)
+            array.push(new_idx, i)
+            array.push(idxs, new_idx)
+        } else {
+            arr: existing = idxs[pos]
+            array.push(existing, i)
+        }
+        i = i + 1
+    }
+    return { col: col, groups: groups, idxs: idxs, _parent_df: df }
+}
+
+// _gb_split(s, sep) — split local (string.split nativo es placeholder).
+// Definido localmente porque group_by.rho puede cargarse antes que sstring.rho.
+fun _gb_split(str: s, str: sep) -> arr {
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = string.length(s)
+    int: sl = string.length(sep)
+    str: cur = ""
+    while i < n {
+        if _starts_at(s, sep, i) {
+            array.push(out, cur)
+            cur = ""
+            i = i + sl
+            continue
+        }
+        cur = string.concat(cur, string.slice(s, i, i + 1))
+        i = i + 1
+    }
+    array.push(out, cur)
+    return out
+}

@@ -1,0 +1,33 @@
+// libs/flash/missing/dropna.rho
+// dropna(df)       — drop filas con CUALQUIER valor missing
+// dropna_col(df, col) — drop filas donde esa col es missing
+
+fun dropna(record: df) -> record {
+    arr: mask = array.create(0)
+    int: r = 0
+    while r < df._nrows {
+        int: any_missing = 0
+        int: ci = 0
+        int: nn = array.size(df._names)
+        while ci < nn {
+            if _is_missing_value(df, df._names[ci], r) == 1 { any_missing = 1 }
+            ci = ci + 1
+        }
+        if any_missing == 1 { array.push(mask, 0) }
+        else { array.push(mask, 1) }
+        r = r + 1
+    }
+    return _apply_filter(df, mask)
+}
+
+fun dropna_col(record: df, str: col) -> record {
+    _check_col(df, col)
+    arr: mask = array.create(0)
+    int: r = 0
+    while r < df._nrows {
+        if _is_missing_value(df, col, r) == 1 { array.push(mask, 0) }
+        else { array.push(mask, 1) }
+        r = r + 1
+    }
+    return _apply_filter(df, mask)
+}

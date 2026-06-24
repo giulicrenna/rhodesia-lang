@@ -1,0 +1,51 @@
+// examples/11_new_features/flash/03_group_by.rho
+// group_by + group_agg + describe + value_counts.
+
+include flash
+
+println("=== flash: group_by + aggregations ===")
+println()
+
+str: csv = "city,sales,visits\nBA,1500,200\nBA,2300,310\nMAD,1800,250\nMAD,2100,280\nBA,1100,150\nNY,3500,400\nNY,2800,360\nMAD,1700,230\nNY,4000,450\n"
+io.write_file("sales.csv", csv)
+
+record: df = read_csv("sales.csv")
+
+println("Data:")
+show_df(df)
+println()
+
+// group_by city, agregate sales (sum, mean, count)
+record: gb = group_by(df, "city")
+println("Sum of sales by city:")
+show_df(group_agg(gb, "sales", "sum"))
+println()
+
+println("Mean of sales by city:")
+show_df(group_agg(gb, "sales", "mean"))
+println()
+
+println("Count of visits by city:")
+show_df(group_agg(gb, "visits", "count"))
+println()
+
+println("Max sales by city:")
+show_df(group_agg(gb, "sales", "max"))
+println()
+
+println("Std of sales by city:")
+show_df(group_agg(gb, "sales", "std"))
+println()
+
+// describe
+println("Describe:")
+show_df(describe(df))
+println()
+
+// value_counts
+println("Value counts for city:")
+show_df(value_counts(df, "city"))
+println()
+
+io.remove("sales.csv")
+println("Done.")

@@ -1,0 +1,6 @@
+// libs/flash/reshape/unstack.rho
+// unstack(df, index, columns, values) — long → wide (inverso de pivot).
+
+fun unstack(record: df, str: index_col, str: cols_col, str: vals_col) -> record {
+    return pivot(df, index_col, cols_col, vals_col)
+}

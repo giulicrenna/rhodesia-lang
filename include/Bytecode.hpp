@@ -253,9 +253,9 @@ struct Chunk {
     }
 };
 
-// ----
+
 // RhoIterator
-// ----
+
 
 /**
  * @brief Runtime iterator over any Rhodesia iterable value.
@@ -282,44 +282,44 @@ public:
         std::visit([this](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
 
-            // // ---- RangeGenerator (lazy) // ----
+            //  RangeGenerator (lazy) 
             if constexpr (std::is_same_v<T, std::shared_ptr<RangeGenerator>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RangeGenerator");
                 int64_t start = arg->current();
                 source_ = RangeSource{ start, start + static_cast<int64_t>(arg->size()), start };
             }
 
-            // // ---- int64_t treated as range(0, n) (lazy) // ----
+            //  int64_t treated as range(0, n) (lazy) 
             else if constexpr (std::is_same_v<T, int64_t>) {
                 if (arg < 0)
                     throw RuntimeError("RhoIterator: cannot iterate over negative integer " + std::to_string(arg));
                 source_ = RangeSource{ 0, arg, 0 };
             }
 
-            // // ---- Eigen::VectorXd (lazy, index-based) // ----
+            //  Eigen::VectorXd (lazy, index-based) 
             else if constexpr (std::is_same_v<T, Eigen::VectorXd>) {
                 source_ = VecSource{ arg, 0 };
             }
 
-            // // ---- RhoArray (lazy, index-based) // ----
+            //  RhoArray (lazy, index-based) 
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoArray>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoArray");
                 source_ = ArraySource{ arg, 0 };
             }
 
-            // // ---- RhoTuple (lazy, index-based) // ----
+            //  RhoTuple (lazy, index-based) 
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoTuple>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoTuple");
                 source_ = TupleSource{ arg, 0 };
             }
 
-            // // ---- RhoSet (lazy, index-based via internal vector) // ----
+            //  RhoSet (lazy, index-based via internal vector) 
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoSet>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoSet");
                 source_ = SetSource{ arg, 0 };
             }
 
-            // // ---- RhoMap -> materialize keys (unordered_map has no index access) // ----
+            //  RhoMap -> materialize keys (unordered_map has no index access) 
             else if constexpr (std::is_same_v<T, std::shared_ptr<RhoMap>>) {
                 if (!arg) throw RuntimeError("RhoIterator: null RhoMap");
                 std::vector<RhoValue> keys;
@@ -329,7 +329,7 @@ public:
                 source_ = MaterializedSource{ std::move(keys), 0 };
             }
 
-            // // ---- Unsupported // ----
+            //  Unsupported 
             else {
                 throw RuntimeError(
                     "RhoIterator: value of type '" +

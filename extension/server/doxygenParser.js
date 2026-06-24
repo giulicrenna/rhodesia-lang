@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { findPep8Doc } = require('./docstringParser');
 
 const LIBS_BASE = path.resolve(__dirname, '../../libs');
 
@@ -78,6 +79,11 @@ function findPrecedingDoc(lines, i) {
             }
         }
         break; // First non-empty line is not */, no doc
+    }
+    // Fallback to PEP8-style docstring
+    const pep8 = findPep8Doc(lines, i);
+    if (pep8) {
+        return { summary: pep8, paramDocs: {}, returns: '' };
     }
     return null;
 }

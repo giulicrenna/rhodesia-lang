@@ -1,0 +1,14 @@
+// libs/flash/reshape/stack.rho
+// stack(df) — wide → long; conserva todas las columnas como values apilados.
+// Equivalente a melt con todas las cols como values.
+
+fun stack(record: df) -> record {
+    int: nn = array.size(df._names)
+    arr: value_vars = array.create(0)
+    int: i = 0
+    while i < nn {
+        array.push(value_vars, df._names[i])
+        i = i + 1
+    }
+    return melt(df, array.create(0), value_vars, "variable", "value")
+}

@@ -293,14 +293,29 @@ public:
 };
 
 /**
- * @brief Function call: norm(v), inv(m)
+ * @brief One argument in a function call: either positional (name empty)
+ *        or keyword (name set). When keyword, value is the expression on
+ *        the right-hand side of `name: value`.
+ */
+struct CallArg {
+    std::string name;     // empty if positional
+    /// Argument expression. shared_ptr so CallArg is copyable (used in
+    /// vectors that may be re-copied during argument resolution).
+    std::shared_ptr<ExprNode> value;
+
+    CallArg() = default;
+    CallArg(std::string n, std::shared_ptr<ExprNode> v) : name(std::move(n)), value(std::move(v)) {}
+};
+
+/**
+ * @brief Function call: norm(v), inv(m), greet(name: "Ana")
  */
 class FunctionCallNode : public ExprNode {
 public:
     std::string name;
-    std::vector<ExprPtr> arguments;
+    std::vector<CallArg> arguments;
 
-    FunctionCallNode(std::string n, std::vector<ExprPtr> args, SourceLocation loc = {})
+    FunctionCallNode(std::string n, std::vector<CallArg> args, SourceLocation loc = {})
         : ExprNode(loc), name(std::move(n)), arguments(std::move(args)) {}
 
     void accept(ASTVisitor& visitor) override;
@@ -313,10 +328,10 @@ class MemberAccessNode : public ExprNode {
 public:
     std::string object;              // "math" or record variable name
     std::string member;              // "zeros" or field name
-    std::vector<ExprPtr> arguments;  // Function arguments if it's a call
+    std::vector<CallArg> arguments;  // Function arguments if it's a call
     bool isCalled = false;           // true when () was present (rec.fn() vs rec.fn)
 
-    MemberAccessNode(std::string obj, std::string memb, std::vector<ExprPtr> args = {},
+    MemberAccessNode(std::string obj, std::string memb, std::vector<CallArg> args = {},
                      SourceLocation loc = {}, bool called = false)
         : ExprNode(loc), object(std::move(obj)), member(std::move(memb)),
           arguments(std::move(args)), isCalled(called) {}
@@ -332,11 +347,11 @@ class ChainedMemberAccessNode : public ExprNode {
 public:
     ExprPtr object;                  // any expression
     std::string field;               // field name
-    std::vector<ExprPtr> arguments;  // arguments when called as a method
+    std::vector<CallArg> arguments;  // arguments when called as a method
     bool isCalled = false;           // true when () was present
 
     ChainedMemberAccessNode(ExprPtr obj, std::string fld,
-                             std::vector<ExprPtr> args = {},
+                             std::vector<CallArg> args = {},
                              SourceLocation loc = {}, bool called = false)
         : ExprNode(loc), object(std::move(obj)), field(std::move(fld)),
           arguments(std::move(args)), isCalled(called) {}
@@ -389,10 +404,14 @@ public:
  */
 struct LambdaParam {
     std::string name;
-    std::optional<RhoType> type;  // Optional type annotation
+    std::optional<RhoType> type;       // Optional type annotation
+    /// Default-value expression (parsed lazily). nullptr if no default.
+    std::shared_ptr<ExprNode> defaultValue;
+    bool isVariadic = false;           // true if "*type: name" form
 
+    LambdaParam() : defaultValue(nullptr) {}
     LambdaParam(std::string n, std::optional<RhoType> t = std::nullopt)
-        : name(std::move(n)), type(t) {}
+        : name(std::move(n)), type(t), defaultValue(nullptr) {}
 };
 
 /**
@@ -517,6 +536,13 @@ struct FunctionParam {
     RhoType type;
     std::string name;
     SourceLocation location;
+    /// Default-value expression (parsed lazily). nullptr if no default.
+    /// Shared (not unique) so FunctionParam can be copied into SymbolTable
+    /// and other vectors without move-only restrictions.
+    std::shared_ptr<ExprNode> defaultValue;
+    bool isVariadic = false;          // true if "*type: name" form
+
+    FunctionParam() : defaultValue(nullptr) {}
 };
 
 /**

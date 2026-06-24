@@ -1,0 +1,65 @@
+// libs/flash/filter/isin.rho
+// filter_isin(df, col, arr) — filas donde la columna está en arr.
+
+fun filter_isin(record: df, str: col, arr: values) -> record {
+    _check_col(df, col)
+    int: n = df._nrows
+    arr: mask = array.create(n)
+    int: i = 0
+    while i < n {
+        record: at = _at_raw(df, col, i)
+        int: hit = 0
+        if at.kind == "str" {
+            str: v = at.val
+            int: j = 0
+            int: vn = array.size(values)
+            while j < vn {
+                if values[j] == v { hit = 1 }
+                j = j + 1
+            }
+        } else {
+            float64: v = at.val
+            int: j = 0
+            int: vn = array.size(values)
+            while j < vn {
+                if _str_to_float_v2(values[j]) == v { hit = 1 }
+                j = j + 1
+            }
+        }
+        array.push(mask, hit)
+        i = i + 1
+    }
+    return _apply_filter(df, mask)
+}
+
+fun filter_notin(record: df, str: col, arr: values) -> record {
+    _check_col(df, col)
+    int: n = df._nrows
+    arr: mask = array.create(n)
+    int: i = 0
+    while i < n {
+        record: at = _at_raw(df, col, i)
+        int: hit = 0
+        if at.kind == "str" {
+            str: v = at.val
+            int: j = 0
+            int: vn = array.size(values)
+            while j < vn {
+                if values[j] == v { hit = 1 }
+                j = j + 1
+            }
+        } else {
+            float64: v = at.val
+            int: j = 0
+            int: vn = array.size(values)
+            while j < vn {
+                if _str_to_float_v2(values[j]) == v { hit = 1 }
+                j = j + 1
+            }
+        }
+        if hit == 0 { array.push(mask, 1) }
+        else { array.push(mask, 0) }
+        i = i + 1
+    }
+    return _apply_filter(df, mask)
+}

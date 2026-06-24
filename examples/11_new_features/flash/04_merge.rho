@@ -1,0 +1,63 @@
+// examples/11_new_features/flash/04_merge.rho
+// merge de dos DataFrames + concat.
+
+include flash
+
+println("=== flash: merge + concat ===")
+println()
+
+str: users_csv = "id,name\n1,Ana\n2,Beto\n3,Carla\n4,Dario\n"
+str: orders_csv = "id,total\n1,500\n2,800\n1,200\n3,350\n5,900\n"
+
+io.write_file("users.csv", users_csv)
+io.write_file("orders.csv", orders_csv)
+
+record: users = read_csv("users.csv")
+record: orders = read_csv("orders.csv")
+
+println("Users:")
+show_df(users)
+println("Orders:")
+show_df(orders)
+println()
+
+println("Inner merge on id:")
+record: m = merge(users, orders, "id", "inner")
+show_df(m)
+println()
+
+println("Left merge on id:")
+record: ml = merge(users, orders, "id", "left")
+show_df(ml)
+println()
+
+println("Outer merge on id:")
+record: mo = merge(users, orders, "id", "outer")
+show_df(mo)
+println()
+
+// concat vertical (mismo esquema)
+record: c1 = head(users, 2)
+record: c2 = tail(users, 2)
+arr: dfs = array.create(0)
+array.push(dfs, c1)
+array.push(dfs, c2)
+println("Concat vertical:")
+show_df(concat(dfs, "vertical"))
+println()
+
+// concat horizontal (mismas filas, columnas distintas)
+record: a = read_csv("users.csv")
+arr: arr_yes = array.create(0)
+array.push(arr_yes, "yes")
+array.push(arr_yes, "no")
+array.push(arr_yes, "yes")
+array.push(arr_yes, "no")
+record: b = add_col(a, "active", _wrap_arr(arr_yes), "str")
+println("After add_col (concat-like):")
+show_df(b)
+println()
+
+io.remove("users.csv")
+io.remove("orders.csv")
+println("Done.")

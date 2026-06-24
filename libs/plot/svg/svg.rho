@@ -1,0 +1,600 @@
+// svg/svg.rho - Master SVG document and coordinate-mapping helpers.
+// One figure, one or more panels (subplot grid). Each panel is rendered into
+// its own grid cell with its own axes / title / legend.
+
+fun _x_to_px(float64: xv, float64: xmin, float64: xrange, int: pw) -> float64 {
+    if xrange == 0.0 { return 0.0 }
+    return (xv - xmin) / xrange * pw
+}
+
+fun _y_to_px(float64: yv, float64: ymin, float64: yrange, int: ph) -> float64 {
+    if yrange == 0.0 { return 0.0 }
+    return ph - (yv - ymin) / yrange * ph
+}
+
+// --- Axis ticks for a single panel ---
+// horiz: 1 = x-axis ticks (axis_pos = y-pixel of the x-axis line),
+//        0 = y-axis ticks (axis_pos = x-pixel of the y-axis line).
+fun _axis_ticks(int: pw, int: ph, float64: vmin, float64: vmax, int: horiz, float64: axis_pos) -> str {
+    str: out = ""
+    int: n = 5
+    if vmax == vmin { vmax = vmin + 1.0 }
+    int: i = 0
+    while i <= n {
+        float64: t = vmin + (vmax - vmin) * i / n
+        if horiz == 1 {
+            float64: px = (t - vmin) / (vmax - vmin) * pw
+            str: tick = "<line x1=\""
+            tick = string.concat(tick, _num_to_str(px))
+            tick = string.concat(tick, "\" y1=\"")
+            tick = string.concat(tick, _num_to_str(axis_pos))
+            tick = string.concat(tick, "\" x2=\"")
+            tick = string.concat(tick, _num_to_str(px))
+            tick = string.concat(tick, "\" y2=\"")
+            tick = string.concat(tick, _num_to_str(axis_pos + 5))
+            tick = string.concat(tick, "\" stroke=\"")
+            tick = string.concat(tick, _AXIS_COLOR)
+            tick = string.concat(tick, "\"/>")
+            out = string.concat(out, tick)
+            str: lab = "<text x=\""
+            lab = string.concat(lab, _num_to_str(px))
+            lab = string.concat(lab, "\" y=\"")
+            lab = string.concat(lab, _num_to_str(axis_pos + 18))
+            lab = string.concat(lab, "\" text-anchor=\"middle\" font-size=\"10\" font-family=\"sans-serif\" fill=\"")
+            lab = string.concat(lab, _FG_COLOR)
+            lab = string.concat(lab, "\">")
+            lab = string.concat(lab, _num_to_str(t))
+            lab = string.concat(lab, "</text>")
+            out = string.concat(out, lab)
+        } else {
+            float64: py = ph - (t - vmin) / (vmax - vmin) * ph
+            str: tick = "<line x1=\""
+            tick = string.concat(tick, _num_to_str(axis_pos - 5))
+            tick = string.concat(tick, "\" y1=\"")
+            tick = string.concat(tick, _num_to_str(py))
+            tick = string.concat(tick, "\" x2=\"")
+            tick = string.concat(tick, _num_to_str(axis_pos))
+            tick = string.concat(tick, "\" y2=\"")
+            tick = string.concat(tick, _num_to_str(py))
+            tick = string.concat(tick, "\" stroke=\"")
+            tick = string.concat(tick, _AXIS_COLOR)
+            tick = string.concat(tick, "\"/>")
+            out = string.concat(out, tick)
+            str: lab = "<text x=\""
+            lab = string.concat(lab, _num_to_str(axis_pos - 8))
+            lab = string.concat(lab, "\" y=\"")
+            lab = string.concat(lab, _num_to_str(py + 3))
+            lab = string.concat(lab, "\" text-anchor=\"end\" font-size=\"10\" font-family=\"sans-serif\" fill=\"")
+            lab = string.concat(lab, _FG_COLOR)
+            lab = string.concat(lab, "\">")
+            lab = string.concat(lab, _num_to_str(t))
+            lab = string.concat(lab, "</text>")
+            out = string.concat(out, lab)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// ponytail: deleted unused _build_panel placeholder.
+
+// Helper: get the series arr for a given panel.
+fun _panel_series(map: panel) -> arr {
+    return mapping.get(panel, "series")
+}
+
+// Compute extent for a given panel.
+fun _panel_extent(map: panel) -> vec {
+    arr: series = _panel_series(panel)
+    if array.size(series) == 0 {
+        vec: z = [0.0, 1.0, 0.0, 1.0]
+        return z
+    }
+    map: s0 = series[0]
+    str: k0 = mapping.get(s0, "kind")
+    if k0 == "stacked_area" {
+        return _extent_stacked(series)
+    }
+    if k0 == "stack_bars" {
+        // Compute per-category totals across all layers for the y range.
+        // x range covers the category indices.
+        vec: xs = mapping.get(s0, "x")
+        int: nc = math.size(xs)
+        arr: layers = mapping.get(s0, "layers")
+        int: nl = array.size(layers)
+        vec: total = math.zeros(nc)
+        int: li = 0
+        while li < nl {
+            map: lyr = layers[li]
+            vec: yv = mapping.get(lyr, "y")
+            int: i = 0
+            while i < nc {
+                total[i] = total[i] + yv[i]
+                i = i + 1
+            }
+            li = li + 1
+        }
+        float64: bxmin = 0.0
+        float64: bxmax = 1.0
+        if nc > 1 { bxmax = nc - 1.0 }
+        vec: z = [bxmin, bxmax, 0.0, _vmax(total)]
+        return z
+    }
+    if k0 == "heatmap" {
+        vec: z = [0.0, 1.0, 0.0, 1.0]
+        return z
+    }
+    if k0 == "radar" {
+        vec: z = [0.0, 1.0, 0.0, 1.0]
+        return z
+    }
+    if k0 == "boxplot" {
+        // Compute true range across all groups: the value axis spans
+        // [min-of-all, max-of-all]; the category axis is [0, ng-1] so
+        // _render_boxplot can slot groups at integer positions.
+        arr: groups = mapping.get(s0, "groups")
+        int: ng = array.size(groups)
+        float64: bxmin = 0.0
+        float64: bxmax = 1.0
+        float64: bymin = 0.0
+        float64: bymax = 1.0
+        int: binit = 0
+        int: gi = 0
+        while gi < ng {
+            vec: g = groups[gi]
+            float64: gmin = _vmin(g)
+            float64: gmax = _vmax(g)
+            if binit == 0 {
+                bxmin = 0.0
+                bxmax = ng - 1.0
+                if ng < 2 { bxmax = 1.0 }
+                bymin = gmin
+                bymax = gmax
+                binit = 1
+            } else {
+                if gmin < bymin { bymin = gmin }
+                if gmax > bymax { bymax = gmax }
+            }
+            gi = gi + 1
+        }
+        vec: z = [bxmin, bxmax, bymin, bymax]
+        return z
+    }
+    float64: xmin = 0.0
+    float64: xmax = 1.0
+    float64: ymin = 0.0
+    float64: ymax = 1.0
+    int: ns = array.size(series)
+    int: si = 0
+    int: init = 0
+    while si < ns {
+        map: s = series[si]
+        str: k = mapping.get(s, "kind")
+        if k == "stacked_area" {
+            si = si + 1
+        } else {
+            if k == "stack_bars" {
+                si = si + 1
+            } else {
+            if k == "heatmap" {
+                si = si + 1
+            } else {
+                if k == "radar" {
+                    si = si + 1
+                } else {
+                    if k == "boxplot" {
+                        si = si + 1
+                    } else {
+                    vec: xs = mapping.get(s, "x")
+                    float64: axmin = _vmin(xs)
+                    float64: axmax = _vmax(xs)
+                    // For histograms the bar edges span the full data range,
+                    // not just the bin centers (cx). Use vmin/vmax so the
+                    // bars stay inside the plot area after padding.
+                    if k == "hist" {
+                        axmin = mapping.get(s, "vmin")
+                        axmax = mapping.get(s, "vmax")
+                    }
+                    float64: aymin = 0.0
+                    float64: aymax = 0.0
+                    if k == "fill_between" {
+                        vec: y1 = mapping.get(s, "y1")
+                        vec: y2 = mapping.get(s, "y2")
+                        if _vmin(y1) < _vmin(y2) { aymin = _vmin(y1) }
+                        if _vmin(y1) >= _vmin(y2) { aymin = _vmin(y2) }
+                        if _vmax(y1) > _vmax(y2) { aymax = _vmax(y1) }
+                        if _vmax(y1) <= _vmax(y2) { aymax = _vmax(y2) }
+                    } else {
+                        vec: ys = mapping.get(s, "y")
+                        // For ordinary line/scatter/area, use a robust extent
+                        // so asymptote spikes (1/sin(x), exp blow-ups) don't
+                        // crush the rest of the curve into a thin band. For
+                        // errorbar we still want y±err, so we use _vmin/_vmax
+                        // there.
+                        if k == "errorbar" {
+                            aymin = _vmin(ys)
+                            aymax = _vmax(ys)
+                        } else {
+                            vec: yre = _robust_extent(ys)
+                            aymin = yre[0]
+                            aymax = yre[1]
+                        }
+                        if k == "errorbar" {
+                            // Include y ± err in the panel range so the
+                            // error caps stay inside the plot area.
+                            vec: errs = mapping.get(s, "err")
+                            int: en = math.size(errs)
+                            int: ei = 0
+                            while ei < en {
+                                float64: lo_v = ys[ei] - errs[ei]
+                                float64: hi_v = ys[ei] + errs[ei]
+                                if lo_v < aymin { aymin = lo_v }
+                                if hi_v > aymax { aymax = hi_v }
+                                ei = ei + 1
+                            }
+                        }
+                    }
+                    if init == 0 {
+                        xmin = axmin
+                        xmax = axmax
+                        ymin = aymin
+                        ymax = aymax
+                        init = 1
+                    } else {
+                        if axmin < xmin { xmin = axmin }
+                        if axmax > xmax { xmax = axmax }
+                        if aymin < ymin { ymin = aymin }
+                        if aymax > ymax { ymax = aymax }
+                    }
+                    si = si + 1
+                    }
+                }
+            }
+        }
+        }
+    }
+    vec: e = [xmin, xmax, ymin, ymax]
+    return e
+}
+
+// Apply user xlim/ylim and padding, plus base_zero clamp for hist/bar.
+fun _panel_resolve_range(map: panel) -> vec {
+    vec: e = _panel_extent(panel)
+    float64: xmin = e[0]
+    float64: xmax = e[1]
+    float64: ymin = e[2]
+    float64: ymax = e[3]
+    int: has_xl = mapping.get(panel, "has_xl")
+    if has_xl == 1 {
+        xmin = mapping.get(panel, "xl_lo")
+        xmax = mapping.get(panel, "xl_hi")
+    }
+    int: has_yl = mapping.get(panel, "has_yl")
+    if has_yl == 1 {
+        ymin = mapping.get(panel, "yl_lo")
+        ymax = mapping.get(panel, "yl_hi")
+    }
+    // base_zero: any hist/bar series must keep ymin <= 0 so bars don't overflow
+    arr: series = _panel_series(panel)
+    int: ns = array.size(series)
+    int: si = 0
+    int: needs_zero = 0
+    while si < ns {
+        map: s = series[si]
+        str: k = mapping.get(s, "kind")
+        if k == "hist" {
+            needs_zero = 1
+        }
+        if k == "bar" {
+            needs_zero = 1
+        }
+        if k == "stack_bars" {
+            needs_zero = 1
+        }
+        si = si + 1
+    }
+    if needs_zero == 1 {
+        if ymin > 0.0 { ymin = 0.0 }
+    }
+    if has_xl == 0 {
+        float64: pad = (xmax - xmin) * 0.05
+        if pad == 0.0 { pad = 1.0 }
+        xmin = xmin - pad
+        xmax = xmax + pad
+    }
+    if has_yl == 0 {
+        float64: pad = (ymax - ymin) * 0.05
+        if pad == 0.0 { pad = 1.0 }
+        // hist/bar: never pad below 0 - keep ymin=0 so the x-axis line
+        // meets the bar bases inside the plot area.
+        if needs_zero == 1 {
+            ymax = ymax + pad
+        } else {
+            ymin = ymin - pad
+            ymax = ymax + pad
+        }
+    }
+    vec: r = [xmin, xmax, ymin, ymax]
+    return r
+}
+
+// Detect if all series in this panel are polar (radar). When true, the panel
+// renders without rectangular axes/ticks - just the title and centered radar.
+fun _panel_is_polar(map: panel) -> int {
+    arr: series = _panel_series(panel)
+    int: ns = array.size(series)
+    if ns < 1 { return 0 }
+    int: si = 0
+    while si < ns {
+        map: s = series[si]
+        str: k = mapping.get(s, "kind")
+        if k != "radar" { return 0 }
+        si = si + 1
+    }
+    return 1
+}
+
+// Detect if all series in this panel are boxplot. Used for horizontal layout.
+fun _panel_is_boxplot(map: panel) -> int {
+    arr: series = _panel_series(panel)
+    int: ns = array.size(series)
+    if ns < 1 { return 0 }
+    int: si = 0
+    while si < ns {
+        map: s = series[si]
+        str: k = mapping.get(s, "kind")
+        if k != "boxplot" { return 0 }
+        si = si + 1
+    }
+    return 1
+}
+
+// Render one panel's contents (axes + ticks + series + legend + axis labels).
+// Returns the SVG string for the panel.
+fun _render_panel(map: panel, int: cell_x, int: cell_y, int: cell_w, int: cell_h) -> str {
+    str: title = mapping.get(panel, "title")
+    str: xlabel = mapping.get(panel, "xlabel")
+    str: ylabel = mapping.get(panel, "ylabel")
+    int: legend = mapping.get(panel, "legend")
+    int: is_polar = _panel_is_polar(panel)
+
+    int: lm = 50
+    int: rm = 20
+    int: tm = 30
+    int: bm = 40
+    // Polar panels get a smaller margin so the radar fills the cell.
+    if is_polar == 1 {
+        lm = 70
+        rm = 70
+        tm = 50
+        bm = 50
+    }
+    int: pw = cell_w - lm - rm
+    int: ph = cell_h - tm - bm
+
+    vec: r = _panel_resolve_range(panel)
+    float64: xmin = r[0]
+    float64: xmax = r[1]
+    float64: ymin = r[2]
+    float64: ymax = r[3]
+    float64: xrange = xmax - xmin
+    float64: yrange = ymax - ymin
+
+    str: gopen = "<g transform=\"translate("
+    gopen = string.concat(gopen, _int_to_str(cell_x))
+    gopen = string.concat(gopen, ", ")
+    gopen = string.concat(gopen, _int_to_str(cell_y))
+    gopen = string.concat(gopen, ")\">")
+
+    str: out = gopen
+    if string.length(title) > 0 {
+        str: t = "<text x=\""
+        t = string.concat(t, _int_to_str(cell_w / 2))
+        t = string.concat(t, "\" y=\"18\" text-anchor=\"middle\" font-size=\"14\" font-family=\"sans-serif\" fill=\"")
+        t = string.concat(t, _FG_COLOR)
+        t = string.concat(t, "\">")
+        t = string.concat(t, title)
+        t = string.concat(t, "</text>")
+        out = string.concat(out, t)
+    }
+
+    str: inner_open = "<g transform=\"translate("
+    inner_open = string.concat(inner_open, _int_to_str(lm))
+    inner_open = string.concat(inner_open, ", ")
+    inner_open = string.concat(inner_open, _int_to_str(tm))
+    inner_open = string.concat(inner_open, ")\">")
+    out = string.concat(out, inner_open)
+
+    // Axes + ticks only for non-polar panels.
+    if is_polar == 0 {
+        // axes_at_origin: cross at (0,0) in data space. Default: bottom/left.
+        // x_axis_at(y) / y_axis_at(x): explicit data-space override, wins
+        // over both defaults and axes_at_origin.
+        int: at_origin = mapping.get(panel, "axes_at_origin")
+        int: has_xa_pos = mapping.get(panel, "has_xa_pos")
+        int: has_ya_pos = mapping.get(panel, "has_ya_pos")
+        float64: x_axis_y = ph - 0.0
+        float64: y_axis_x = 0.0
+        if has_xa_pos == 1 {
+            if yrange != 0.0 { x_axis_y = _y_to_px(mapping.get(panel, "xa_pos"), ymin, yrange, ph) }
+        } else {
+            if at_origin != 0 {
+                if yrange != 0.0 { x_axis_y = _y_to_px(0.0, ymin, yrange, ph) }
+            }
+        }
+        if has_ya_pos == 1 {
+            if xrange != 0.0 { y_axis_x = _x_to_px(mapping.get(panel, "ya_pos"), xmin, xrange, pw) }
+        } else {
+            if at_origin != 0 {
+                if xrange != 0.0 { y_axis_x = _x_to_px(0.0, xmin, xrange, pw) }
+            }
+        }
+        str: ax1 = "<line x1=\""
+        ax1 = string.concat(ax1, _num_to_str(y_axis_x))
+        ax1 = string.concat(ax1, "\" y1=\"0\" x2=\"")
+        ax1 = string.concat(ax1, _num_to_str(y_axis_x))
+        ax1 = string.concat(ax1, "\" y2=\"")
+        ax1 = string.concat(ax1, _int_to_str(ph))
+        ax1 = string.concat(ax1, "\" stroke=\"")
+        ax1 = string.concat(ax1, _AXIS_COLOR)
+        ax1 = string.concat(ax1, "\"/>")
+        out = string.concat(out, ax1)
+        str: ax2 = "<line x1=\"0\" y1=\""
+        ax2 = string.concat(ax2, _num_to_str(x_axis_y))
+        ax2 = string.concat(ax2, "\" x2=\"")
+        ax2 = string.concat(ax2, _int_to_str(pw))
+        ax2 = string.concat(ax2, "\" y2=\"")
+        ax2 = string.concat(ax2, _num_to_str(x_axis_y))
+        ax2 = string.concat(ax2, "\" stroke=\"")
+        ax2 = string.concat(ax2, _AXIS_COLOR)
+        ax2 = string.concat(ax2, "\"/>")
+        out = string.concat(out, ax2)
+        // For boxplot panels the category axis is [0, ng-1] on x (vertical)
+        // or y (horizontal); the renderer draws the category labels there,
+        // so suppress ticks on that axis. The value axis keeps its ticks.
+        int: is_bp = _panel_is_boxplot(panel)
+        int: bp_orient = 0
+        if is_bp == 1 {
+            arr: bp_series = _panel_series(panel)
+            map: bp_s0 = bp_series[0]
+            bp_orient = mapping.get(bp_s0, "orient")
+        }
+        if is_bp == 1 {
+            if bp_orient == 0 {
+                // vertical: value on y, category on x (suppress x ticks)
+                out = string.concat(out, _axis_ticks(pw, ph, ymin, ymax, 0, 0.0))
+            } else {
+                // horizontal: value on x (use data ymin/ymax), category on y (suppress)
+                out = string.concat(out, _axis_ticks(pw, ph, ymin, ymax, 1, ph - 0.0))
+            }
+        } else {
+            out = string.concat(out, _axis_ticks(pw, ph, xmin, xmax, 1, x_axis_y))
+            out = string.concat(out, _axis_ticks(pw, ph, ymin, ymax, 0, y_axis_x))
+        }
+    }
+
+    arr: series = _panel_series(panel)
+    int: ns = array.size(series)
+    int: si = 0
+    while si < ns {
+        map: s = series[si]
+        str: k = mapping.get(s, "kind")
+        if k == "line" {
+            out = string.concat(out, _render_line(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "scatter" {
+            out = string.concat(out, _render_scatter(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "bar" {
+            out = string.concat(out, _render_bar(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "hist" {
+            out = string.concat(out, _render_hist(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "area" {
+            out = string.concat(out, _render_area(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "fill_between" {
+            out = string.concat(out, _render_fill_between(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "stacked_area" {
+            out = string.concat(out, _render_stacked_area(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "errorbar" {
+            out = string.concat(out, _render_errorbar(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "heatmap" {
+            out = string.concat(out, _render_heatmap(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "radar" {
+            out = string.concat(out, _render_radar(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "boxplot" {
+            out = string.concat(out, _render_boxplot(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        if k == "stack_bars" {
+            out = string.concat(out, _render_stack_bars(s, xmin, xrange, ymin, yrange, pw, ph))
+        }
+        si = si + 1
+    }
+
+    // Axis labels
+    if string.length(xlabel) > 0 {
+        str: xl = "<text x=\""
+        xl = string.concat(xl, _int_to_str(pw / 2))
+        xl = string.concat(xl, "\" y=\"")
+        xl = string.concat(xl, _int_to_str(ph + 32))
+        xl = string.concat(xl, "\" text-anchor=\"middle\" font-size=\"11\" font-family=\"sans-serif\" fill=\"")
+        xl = string.concat(xl, _FG_COLOR)
+        xl = string.concat(xl, "\">")
+        xl = string.concat(xl, xlabel)
+        xl = string.concat(xl, "</text>")
+        out = string.concat(out, xl)
+    }
+    if string.length(ylabel) > 0 {
+        str: yl = "<text x=\"-45\" y=\"-8\" font-size=\"11\" font-family=\"sans-serif\" fill=\""
+        yl = string.concat(yl, _FG_COLOR)
+        yl = string.concat(yl, "\">")
+        yl = string.concat(yl, ylabel)
+        yl = string.concat(yl, "</text>")
+        out = string.concat(out, yl)
+    }
+
+    // Close inner group
+    out = string.concat(out, "</g>")
+
+    // Legend
+    if legend == 1 {
+        out = string.concat(out, _legend_block(panel, pw))
+    }
+
+    // Close panel group
+    out = string.concat(out, "</g>")
+    return out
+}
+
+// --- Master to_svg ---
+
+fun to_svg() -> str {
+    int: nrows = _NROWS
+    int: ncols = _NCOLS
+    int: np = nrows * ncols
+    int: cell_w = _intify(_W / ncols)
+    int: cell_h = _intify(_H / nrows)
+
+    str: svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\""
+    svg = string.concat(svg, _int_to_str(_W))
+    svg = string.concat(svg, "\" height=\"")
+    svg = string.concat(svg, _int_to_str(_H))
+    svg = string.concat(svg, "\" viewBox=\"0 0 ")
+    svg = string.concat(svg, _int_to_str(_W))
+    svg = string.concat(svg, " ")
+    svg = string.concat(svg, _int_to_str(_H))
+    svg = string.concat(svg, "\">")
+
+    str: bg = "<rect width=\""
+    bg = string.concat(bg, _int_to_str(_W))
+    bg = string.concat(bg, "\" height=\"")
+    bg = string.concat(bg, _int_to_str(_H))
+    bg = string.concat(bg, "\" fill=\"")
+    bg = string.concat(bg, _BG_COLOR)
+    bg = string.concat(bg, "\"/>")
+    svg = string.concat(svg, bg)
+
+    // Render each panel
+    int: pi = 0
+    while pi < np {
+        if pi < array.size(_PANELS) {
+            map: panel = _PANELS[pi]
+            int: row = _intify(pi / ncols)
+            int: col = pi - row * ncols
+            int: cx = col * cell_w
+            int: cy = row * cell_h
+            svg = string.concat(svg, _render_panel(panel, cx, cy, cell_w, cell_h))
+        }
+        pi = pi + 1
+    }
+
+    svg = string.concat(svg, "</svg>")
+    return svg
+}

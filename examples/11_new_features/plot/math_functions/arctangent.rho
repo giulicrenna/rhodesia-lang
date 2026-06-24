@@ -1,0 +1,11 @@
+include plot
+println("=== arctangent ===")
+fun f(float64: x) -> float64 { return math.atan(x) }
+figure(800, 510)
+plot(f, -5, 5, "f(x)", "blue")
+title("arctangent")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("arctangent.svg")
+println("Wrote ", bytes, " bytes to arctangent.svg")

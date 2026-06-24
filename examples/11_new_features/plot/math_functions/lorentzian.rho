@@ -1,0 +1,13 @@
+include plot
+println("=== lorentzian ===")
+fun f(float64: x) -> float64 { return 1 / (math.PI * (1 + x*x)) }
+figure(800, 510)
+x_axis_at(0)
+y_axis_at(0)
+plot(f, -50, 50, "f(x)", "blue")
+title("lorentzian")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("lorentzian.svg")
+println("Wrote ", bytes, " bytes to lorentzian.svg")

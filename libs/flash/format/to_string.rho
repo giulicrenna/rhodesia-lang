@@ -1,0 +1,146 @@
+// libs/flash/format/to_string.rho
+// to_string(df) — convierte un DataFrame a string formateado (tabla ASCII).
+// Usado internamente por show(). Se exporta también para uso directo.
+
+// _pad(s, width) — paddea con espacios a la derecha hasta width.
+fun _pad(str: s, int: width) -> str {
+    int: n = string.length(s)
+    if n >= width { return s }
+    int: diff = width - n
+    str: out = s
+    int: i = 0
+    while i < diff {
+        out = string.concat(out, " ")
+        i = i + 1
+    }
+    return out
+}
+
+// _pad_left(s, width) — paddea con espacios a la izquierda.
+fun _pad_left(str: s, int: width) -> str {
+    int: n = string.length(s)
+    if n >= width { return s }
+    int: diff = width - n
+    str: out = s
+    int: i = 0
+    while i < diff {
+        out = string.concat(" ", out)
+        i = i + 1
+    }
+    return out
+}
+
+// _truncate(s, width) — trunca s a width (con "..." si fue truncado).
+fun _truncate(str: s, int: width) -> str {
+    int: n = string.length(s)
+    if n <= width { return s }
+    if width <= 3 { return string.slice(s, 0, width) }
+    return string.concat(string.slice(s, 0, width - 3), "...")
+}
+
+// _cell_to_display(df, col, row) — celda como string para mostrar.
+fun _cell_to_display(record: df, str: col, int: row) -> str {
+    record: c = mapping.get(df._cols, col)
+    if _is_na(c, row) == 1 { return "NA" }
+    if c.kind == "arr" {
+        arr: a = c.data
+        if row >= array.size(a) { return "" }
+        return a[row]
+    }
+    vec: v = c.data
+    if row >= math.size(v) { return "" }
+    float64: x = v[row]
+    // formato corto: 6 decimales, strip trailing
+    if x < 0.0 { return string.concat("-", _float_disp(-x)) }
+    return _float_disp(x)
+}
+
+fun _float_disp(float64: x) -> str {
+    int: ip = _intify_f(x)
+    float64: frac = x - ip
+    float64: scaled = frac * 100.0 + 0.5
+    int: iscaled = _intify_f(scaled)
+    if iscaled >= 100 { ip = ip + 1
+    iscaled = 0 }
+    if iscaled == 0 { return _int_str(ip) }
+    str: fstr = _int_str(iscaled)
+    if iscaled < 10 { fstr = string.concat("0", fstr) }
+    // strip trailing zero
+    if string.slice(fstr, 1, 2) == "0" { fstr = string.slice(fstr, 0, 1) }
+    return string.concat(string.concat(_int_str(ip), "."), fstr)
+}
+
+// _col_width(df, col, max_rows, max_w) — ancho máximo del contenido de la col.
+fun _col_width(record: df, str: col, int: max_rows, int: max_w) -> int {
+    int: name_w = string.length(col)
+    int: w = name_w
+    if w < 4 { w = 4 }   // ancho mínimo
+    int: r = 0
+    while r < max_rows and r < df._nrows {
+        str: s = _cell_to_display(df, col, r)
+        if string.length(s) > w { w = string.length(s) }
+        if w > max_w { return max_w }
+        r = r + 1
+    }
+    return w
+}
+
+fun to_string(record: df) -> str {
+    int: nc = df._ncols
+    if nc == 0 {
+        return string.concat("Empty DataFrame\n[", _int_str(df._nrows), " rows x 0 cols]\n")
+    }
+    int: max_rows = 20
+    if df._nrows < max_rows { max_rows = df._nrows }
+    int: max_w = 24
+    arr: widths = array.create(0)
+    int: i = 0
+    while i < nc {
+        int: w = _col_width(df, df._names[i], max_rows, max_w)
+        array.push(widths, w)
+        i = i + 1
+    }
+    // header
+    str: out = ""
+    i = 0
+    while i < nc {
+        if i > 0 { out = string.concat(out, " | ") }
+        out = string.concat(out, _truncate(_pad(df._names[i], widths[i]), widths[i]))
+        i = i + 1
+    }
+    out = string.concat(out, "\n")
+    // separador
+    i = 0
+    while i < nc {
+        if i > 0 { out = string.concat(out, "-+-") }
+        int: j = 0
+        while j < widths[i] {
+            out = string.concat(out, "-")
+            j = j + 1
+        }
+        i = i + 1
+    }
+    out = string.concat(out, "\n")
+    // filas
+    int: r = 0
+    while r < max_rows {
+        i = 0
+        while i < nc {
+            if i > 0 { out = string.concat(out, " | ") }
+            str: cell = _truncate(_cell_to_display(df, df._names[i], r), widths[i])
+            out = string.concat(out, _pad(cell, widths[i]))
+            i = i + 1
+        }
+        out = string.concat(out, "\n")
+        r = r + 1
+    }
+    if df._nrows > max_rows {
+        out = string.concat(out, "... (",
+                            _int_str(df._nrows - max_rows),
+                            " more rows)\n")
+    }
+    out = string.concat(out, "\n[",
+                        _int_str(df._nrows), " rows x ",
+                        _int_str(df._ncols), " cols]\n")
+    return out
+}

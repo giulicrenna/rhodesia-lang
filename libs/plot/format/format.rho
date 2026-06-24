@@ -1,0 +1,42 @@
+// format/format.rho - Number-to-string formatting helpers.
+// ponytail: no built-in number formatter; pure .rho implementation.
+// Float-to-int via the int-param coercion trick (Evaluator.hpp:213):
+// declaring the param `int:` truncates the bound float at call time.
+
+str: _DIGIT_STR = "0123456789"
+
+fun _intify(int: v) -> int {
+    return v
+}
+
+fun _digit_str(int: d) -> str {
+    return string.slice(_DIGIT_STR, d, d + 1)
+}
+
+fun _int_to_str(int: n) -> str {
+    if n == 0 { return "0" }
+    if n < 0  { return string.concat("-", _int_to_str(-n)) }
+    str: out = ""
+    int: x = n
+    while x > 0 {
+        int: d = x % 10
+        out = string.concat(_digit_str(d), out)
+        x = _intify(x / 10.0)
+    }
+    return out
+}
+
+// Format a non-negative float as "ip" or "ip.f" (1 decimal).
+fun _num_to_str(float64: x) -> str {
+    if x < 0.0 { return string.concat("-", _num_to_str(-x)) }
+    int: ip = _intify(x)
+    float64: frac = x - ip
+    if frac * 10.0 < 0.5 { return _int_to_str(ip) }
+    int: f = _intify(frac * 10.0 + 0.5)
+    if f == 10 {
+        ip = ip + 1
+        f = 0
+    }
+    if f == 0 { return _int_to_str(ip) }
+    return string.concat(string.concat(_int_to_str(ip), "."), _int_to_str(f))
+}

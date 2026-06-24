@@ -1,0 +1,107 @@
+// svg/render_grid.rho - SVG generator for heatmap series.
+// Each cell is a <rect> with a fill color interpolated from the theme's
+// first palette color (high) toward the theme background (low).
+
+// Convert a single hex digit char ("0".."9", "a".."f") to its 0..15 value.
+fun _hex_digit(str: c) -> int {
+    str: table = "0123456789abcdef"
+    int: i = 0
+    while i < 16 {
+        if string.slice(table, i, i + 1) == c { return i }
+        i = i + 1
+    }
+    return 0
+}
+
+// Convert a 2-char hex string ("00".."ff") to 0..255.
+fun _hex_byte(str: h) -> int {
+    int: hi = _hex_digit(string.slice(h, 0, 1))
+    int: lo = _hex_digit(string.slice(h, 1, 2))
+    return hi * 16 + lo
+}
+
+// Interpolate two hex colors (#rrggbb) by fraction f in [0, 1].
+fun _lerp_hex(str: c0, str: c1, float64: f) -> str {
+    float64: f0 = 1.0 - f
+    int: r0 = _hex_byte(string.slice(c0, 1, 2))
+    int: g0 = _hex_byte(string.slice(c0, 3, 4))
+    int: b0 = _hex_byte(string.slice(c0, 5, 6))
+    int: r1 = _hex_byte(string.slice(c1, 1, 2))
+    int: g1 = _hex_byte(string.slice(c1, 3, 4))
+    int: b1 = _hex_byte(string.slice(c1, 5, 6))
+    float64: fr = r0 * f0 + r1 * f
+    float64: fg = g0 * f0 + g1 * f
+    float64: fb = b0 * f0 + b1 * f
+    int: ri = _intify(fr)
+    int: gi = _intify(fg)
+    int: bi = _intify(fb)
+    if ri < 0 { ri = 0 }
+    if ri > 255 { ri = 255 }
+    if gi < 0 { gi = 0 }
+    if gi > 255 { gi = 255 }
+    if bi < 0 { bi = 0 }
+    if bi > 255 { bi = 255 }
+    str: hex = "#"
+    hex = string.concat(hex, _hex2(ri))
+    hex = string.concat(hex, _hex2(gi))
+    hex = string.concat(hex, _hex2(bi))
+    return hex
+}
+
+// Convert int 0..255 to a 2-char hex string.
+fun _hex2(int: v) -> str {
+    int: hi = _intify(v / 16)
+    int: lo = v - hi * 16
+    str: h = ""
+    str: table = "0123456789abcdef"
+    h = string.concat(h, string.slice(table, hi, hi + 1))
+    h = string.concat(h, string.slice(table, lo, lo + 1))
+    return h
+}
+
+fun _render_heatmap(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    arr: rows_arr = mapping.get(s, "rows")
+    int: nrows = array.size(rows_arr)
+    if nrows < 1 { return "" }
+    vec: row0 = rows_arr[0]
+    int: ncols = math.size(row0)
+    if ncols < 1 { return "" }
+    float64: mn = _heatmap_min(s)
+    float64: mx = _heatmap_max(s)
+    if mx == mn { mx = mn + 1.0 }
+    str: hi_color = _PALETTE[0]
+    str: lo_color = _BG_COLOR
+    if string.length(_HMAP_HI) > 0 { hi_color = _HMAP_HI }
+    if string.length(_HMAP_LO) > 0 { lo_color = _HMAP_LO }
+    float64: cw = pw / ncols
+    float64: ch = ph / nrows
+    str: out = ""
+    int: r = 0
+    while r < nrows {
+        vec: rr = rows_arr[r]
+        int: c = 0
+        while c < ncols {
+            float64: v = rr[c]
+            float64: t = (v - mn) / (mx - mn)
+            str: col = _lerp_hex(lo_color, hi_color, t)
+            float64: px = c * cw
+            float64: py = r * ch
+            out = string.concat(out, "<rect x=\"")
+            out = string.concat(out, _num_to_str(px))
+            out = string.concat(out, "\" y=\"")
+            out = string.concat(out, _num_to_str(py))
+            out = string.concat(out, "\" width=\"")
+            out = string.concat(out, _num_to_str(cw - 1.0))
+            out = string.concat(out, "\" height=\"")
+            out = string.concat(out, _num_to_str(ch - 1.0))
+            out = string.concat(out, "\" fill=\"")
+            out = string.concat(out, col)
+            out = string.concat(out, "\" stroke=\"")
+            out = string.concat(out, _BG_COLOR)
+            out = string.concat(out, "\" stroke-width=\"0.5\"/>")
+            c = c + 1
+        }
+        r = r + 1
+    }
+    return out
+}

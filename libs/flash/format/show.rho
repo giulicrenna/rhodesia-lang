@@ -1,0 +1,20 @@
+// libs/flash/format/show.rho
+// show(df) — imprime el DataFrame a stdout.
+// show(df, int: max_rows) — con cantidad de filas customizable.
+
+fun show_df(record: df) -> int {
+    print(to_string(df))
+    return 0
+}
+
+fun show_n(record: df, int: max_rows) -> int {
+    int: orig_n = df._nrows
+    if max_rows >= orig_n {
+        show(df)
+        return 0
+    }
+    // Generar un df truncado
+    record: sub = head(df, max_rows)
+    print(to_string(sub))
+    return 0
+}

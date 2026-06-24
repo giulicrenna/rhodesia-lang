@@ -1,0 +1,53 @@
+// examples/11_new_features/flash/02_filter_sort.rho
+// Filtros encadenados + sort + select + query.
+
+include flash
+
+println("=== flash: filter + sort + query ===")
+println()
+
+str: csv = "name,dept,salary,years\nAna,Eng,85000,3\nBeto,Eng,92000,5\nCarla,Sales,65000,2\nDario,Sales,72000,4\nElena,Eng,110000,8\nFer,Sales,58000,1\nGus,HR,70000,6\nHel,HR,80000,9\n"
+io.write_file("employees.csv", csv)
+
+record: df = read_csv("employees.csv")
+
+println("All employees:")
+show_df(df)
+println()
+
+// filter_gt_f: salary > 75000
+record: rich = filter_gt_f(df, "salary", 75000.0)
+println("Salary > 75000 (", nrow(rich), " rows):")
+show_df(rich)
+println()
+
+// filter + select_cols
+record: f2 = filter_gt_f(df, "salary", 70000.0)
+arr: names = array.create(0)
+array.push(names, "name")
+array.push(names, "salary")
+record: view = select_cols(f2, names)
+println("Selected cols (salary > 70000):")
+show_df(view)
+println()
+
+// filter_and: años > 2 AND dept == "Eng"
+record: eng_senior = filter_and(filter_gt_f(df, "years", 2.0), filter_eq(df, "dept", "Eng"))
+println("Eng with years > 2:")
+show_df(eng_senior)
+println()
+
+// query()
+record: q = query(df, "salary > 70000 AND dept == \"Eng\"")
+println("query(): salary > 70000 AND dept == Eng")
+show_df(q)
+println()
+
+// sort
+record: sorted = sort_by(df, "salary", "desc")
+println("Sorted by salary desc:")
+show_df(sorted)
+println()
+
+io.remove("employees.csv")
+println("Done.")

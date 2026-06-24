@@ -1,0 +1,39 @@
+// libs/flash/aggregations/unique.rho
+// Funciones unique helper — la principal está en value_counts.rho
+// Aquí agregamos unique_rows y drop_duplicates.
+
+fun drop_duplicates(record: df) -> record {
+    arr: seen = array.create(0)
+    arr: mask = array.create(0)
+    int: n = df._nrows
+    int: i = 0
+    while i < n {
+        str: sig = _row_signature(df, i)
+        if _arr_pos(seen, sig) < 0 {
+            array.push(seen, sig)
+            array.push(mask, 1)
+        } else {
+            array.push(mask, 0)
+        }
+        i = i + 1
+    }
+    return _apply_filter(df, mask)
+}
+
+fun duplicated(record: df) -> arr {
+    arr: seen = array.create(0)
+    arr: out = array.create(0)
+    int: n = df._nrows
+    int: i = 0
+    while i < n {
+        str: sig = _row_signature(df, i)
+        if _arr_pos(seen, sig) < 0 {
+            array.push(seen, sig)
+            array.push(out, 0)
+        } else {
+            array.push(out, 1)
+        }
+        i = i + 1
+    }
+    return out
+}

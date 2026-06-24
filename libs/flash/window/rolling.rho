@@ -1,0 +1,124 @@
+// libs/flash/window/rolling.rho
+// rolling_mean(df, col, w) -> vec
+// rolling_std(df, col, w)  -> vec
+// rolling_sum(df, col, w)  -> vec
+// rolling_min/max análogos.
+
+fun rolling_mean(record: df, str: col, int: w) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    if w < 1 { w = 1 }
+    if w > n { w = n }
+    int: i = 0
+    while i < n {
+        int: from = i - w + 1
+        if from < 0 { from = 0 }
+        float64: s = 0.0
+        int: k = from
+        while k <= i {
+            s = s + v[k]
+            k = k + 1
+        }
+        int: cnt = i - from + 1
+        out[i] = s / cnt
+        i = i + 1
+    }
+    return out
+}
+
+fun rolling_std(record: df, str: col, int: w) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    if w < 2 { return out }
+    if w > n { w = n }
+    int: i = 0
+    while i < n {
+        int: from = i - w + 1
+        if from < 0 { from = 0 }
+        float64: s = 0.0
+        int: k = from
+        while k <= i {
+            s = s + v[k]
+            k = k + 1
+        }
+        int: cnt = i - from + 1
+        float64: mean = s / cnt
+        float64: s2 = 0.0
+        k = from
+        while k <= i {
+            float64: d = v[k] - mean
+            s2 = s2 + d * d
+            k = k + 1
+        }
+        if cnt < 2 { out[i] = 0.0 }
+        else { out[i] = math.sqrt(s2 / (cnt - 1)) }
+        i = i + 1
+    }
+    return out
+}
+
+fun rolling_sum(record: df, str: col, int: w) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    if w < 1 { w = 1 }
+    if w > n { w = n }
+    int: i = 0
+    while i < n {
+        int: from = i - w + 1
+        if from < 0 { from = 0 }
+        float64: s = 0.0
+        int: k = from
+        while k <= i {
+            s = s + v[k]
+            k = k + 1
+        }
+        out[i] = s
+        i = i + 1
+    }
+    return out
+}
+
+fun rolling_min(record: df, str: col, int: w) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    if w < 1 { w = 1 }
+    int: i = 0
+    while i < n {
+        int: from = i - w + 1
+        if from < 0 { from = 0 }
+        float64: m = v[from]
+        int: k = from + 1
+        while k <= i {
+            if v[k] < m { m = v[k] }
+            k = k + 1
+        }
+        out[i] = m
+        i = i + 1
+    }
+    return out
+}
+
+fun rolling_max(record: df, str: col, int: w) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    if w < 1 { w = 1 }
+    int: i = 0
+    while i < n {
+        int: from = i - w + 1
+        if from < 0 { from = 0 }
+        float64: m = v[from]
+        int: k = from + 1
+        while k <= i {
+            if v[k] > m { m = v[k] }
+            k = k + 1
+        }
+        out[i] = m
+        i = i + 1
+    }
+    return out
+}

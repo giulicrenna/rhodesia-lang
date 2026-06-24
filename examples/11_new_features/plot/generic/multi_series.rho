@@ -1,0 +1,19 @@
+// multi_series.rho - Two functions on the same axes, with a legend.
+
+include plot
+
+fun _sin(float64: x) -> float64 { return math.sin(x) }
+fun _cos(float64: x) -> float64 { return math.cos(x) }
+
+println("=== Multi-series plot ===")
+
+figure(800, 510)
+plot(_sin, 0.0, 2.0 * math.PI, "sin(x)", "blue")
+plot(_cos, 0.0, 2.0 * math.PI, "cos(x)", "red")
+title("Sine and cosine")
+xlabel("x (radians)")
+ylabel("f(x)")
+legend(1)
+
+int: bytes = savefig("multi_series.svg")
+println("Wrote ", bytes, " bytes to multi_series.svg")

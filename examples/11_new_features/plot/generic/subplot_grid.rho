@@ -1,0 +1,70 @@
+// subplot_grid.rho - 2x2 grid of subplots, one chart type per panel.
+
+include plot
+
+println("=== subplot_grid (2x2) ===")
+
+figure(1000, 800)
+
+// Panel 1: line
+subplot(2, 2, 1)
+vec: x1 = numerical.linspace(0.0, 2.0 * math.PI, 50)
+vec: y1 = math.zeros(50)
+int: i1 = 0
+while i1 < 50 {
+    y1[i1] = math.sin(x1[i1])
+    i1 = i1 + 1
+}
+line(x1, y1, "sin(x)", "blue")
+title("Line")
+xlabel("x")
+ylabel("y")
+legend(1)
+
+// Panel 2: scatter
+subplot(2, 2, 2)
+vec: x2 = numerical.linspace(0.0, 10.0, 40)
+vec: y2 = math.zeros(40)
+int: i2 = 0
+while i2 < 40 {
+    y2[i2] = math.sqrt(x2[i2]) + (rand() - 0.5) * 0.4
+    i2 = i2 + 1
+}
+scatter(x2, y2, "sqrt(x) + noise", "crimson")
+title("Scatter")
+xlabel("x")
+ylabel("y")
+legend(1)
+
+// Panel 3: bar
+subplot(2, 2, 3)
+arr: bar_labels = array.create(0)
+array.push(bar_labels, "A")
+array.push(bar_labels, "B")
+array.push(bar_labels, "C")
+array.push(bar_labels, "D")
+array.push(bar_labels, "E")
+vec: bar_vals = [12.0, 18.0, 7.0, 22.0, 14.0]
+bar(bar_labels, bar_vals, "score", "seagreen")
+title("Bar")
+xlabel("category")
+ylabel("value")
+legend(1)
+
+// Panel 4: hist
+subplot(2, 2, 4)
+vec: samples = math.zeros(500)
+int: is = 0
+while is < 500 {
+    samples[is] = rand() * 6.0 - 3.0
+    is = is + 1
+}
+hist(samples, 20, "samples", "steelblue")
+title("Histogram")
+xlabel("value")
+ylabel("count")
+legend(1)
+
+int: bytes = savefig("subplot_grid.svg")
+println("Wrote ", bytes, " bytes to subplot_grid.svg")
+println("current panel is ", current_subplot())

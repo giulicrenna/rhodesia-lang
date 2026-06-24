@@ -1,0 +1,35 @@
+// Keyword arguments at the call site
+// Syntax: f(name: value) — colon separates name and value
+// Works for both user-defined fun/lambda and registered builtins.
+
+fun makeRecord(str: name, int: age, str: city) -> str {
+    return string.concat(name, " (", string.from(age), ") from ", city)
+}
+
+// Pure positional (still works)
+print("--- positional ---")
+print(makeRecord("Ana", 30, "Madrid"))
+
+// All keyword — order doesn't matter
+print("--- all keyword ---")
+print(makeRecord(city: "Lima", age: 25, name: "Luis"))
+
+// Mixed: positional first, then keyword to skip optional params
+print("--- mixed ---")
+print(makeRecord("Ana", city: "Bogotá", age: 40))
+
+// Builtin: math.sqrt with keyword arg
+print("--- builtins ---")
+print("sqrt(x: 16)  =", math.sqrt(x: 16))
+print("sqrt(25)     =", math.sqrt(25))
+print("sum(v)       =", math.sum(v: [1.0, 2.0, 3.0, 4.0]))
+print("length('hi') =", string.length(s: "hi"))
+print("upper('rho') =", string.upper(s: "rho"))
+print("dot(a, b)    =", math.dot(a: [1.0, 2.0], b: [3.0, 4.0]))
+print("pow(2, 10)   =", math.pow(base: 2.0, exp: 10))
+
+// Vector module
+vec: data = [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0]
+print("math.sum(v)    =", math.sum(v: data))
+print("math.norm(v)   =", math.norm(v: data))
+print("math.mean(v)   =", math.mean(v: data))

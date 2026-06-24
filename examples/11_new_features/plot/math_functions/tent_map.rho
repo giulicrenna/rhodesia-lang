@@ -1,0 +1,11 @@
+include plot
+println("=== tent_map ===")
+fun f(float64: x) -> float64 { return x < 0.5 ? 2 * x : 2 * (1 - x) }
+figure(800, 510)
+plot(f, 0, 1, "f(x)", "blue")
+title("tent_map")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("tent_map.svg")
+println("Wrote ", bytes, " bytes to tent_map.svg")

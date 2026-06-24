@@ -1,0 +1,160 @@
+// svg/render_polar.rho - SVG generator for radar (spider) charts.
+// Each radar series is a closed polygon drawn inside the (now axis-free)
+// panel area, centered on (pw/2, ph/2). Spokes + axis labels are emitted
+// once per panel (every series in a polar panel is radar).
+
+// Sort the panel's radar series so spokes+labels are emitted only on the
+// first call. We detect by passing through a tiny "did we draw spokes"
+// flag via the first series' "spokes_drawn" key - simpler: emit spokes
+// inside _render_radar but suppress duplicates by checking if any prior
+// radar series in the same render call already drew them. To keep v1
+// simple and avoid global state, spokes are drawn once per panel above
+// the series loop (see _render_panel polar branch). Here we only draw
+// the polygon + its concentric grid ring.
+
+fun _render_radar(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    arr: axes = mapping.get(s, "axes")
+    vec: values = mapping.get(s, "values")
+    str: color = mapping.get(s, "color")
+    int: n = array.size(axes)
+    if n < 3 { return "" }
+    if math.size(values) < n { return "" }
+    float64: cx = pw / 2.0
+    float64: cy = ph / 2.0
+    // Pick radius = min(pw,ph)/2 - leave a bit of room for axis labels.
+    float64: radius = pw / 2.0
+    if ph / 2.0 < radius { radius = ph / 2.0 }
+    radius = radius - 24.0
+    if radius < 30.0 { radius = 30.0 }
+
+    float64: vmax = _vmax(values)
+    if vmax <= 0.0 { vmax = 1.0 }
+
+    str: out = ""
+
+    // Concentric ring guides (at 25%, 50%, 75%, 100% of radius) - subtle.
+    int: ring = 1
+    while ring < 4 {
+        float64: rr = radius * ring / 4.0
+        str: rp = ""
+        int: ai = 0
+        while ai < n {
+            float64: ang = (ai / n) * 2.0 * 3.14159265 - 1.5707963
+            float64: px = cx + math.cos(ang) * rr
+            float64: py = cy + math.sin(ang) * rr
+            if ai > 0 { rp = string.concat(rp, " ") }
+            rp = string.concat(rp, _num_to_str(px))
+            rp = string.concat(rp, ",")
+            rp = string.concat(rp, _num_to_str(py))
+            ai = ai + 1
+        }
+        str: ring_svg = "<polygon points=\""
+        ring_svg = string.concat(ring_svg, rp)
+        ring_svg = string.concat(ring_svg, "\" fill=\"none\" stroke=\"")
+        ring_svg = string.concat(ring_svg, _GRID_COLOR)
+        ring_svg = string.concat(ring_svg, "\" stroke-width=\"0.5\" stroke-opacity=\"0.5\"/>")
+        out = string.concat(out, ring_svg)
+        ring = ring + 1
+    }
+
+    // Spokes from center to each axis tip
+    int: ai = 0
+    while ai < n {
+        float64: ang = (ai / n) * 2.0 * 3.14159265 - 1.5707963
+        float64: px = cx + math.cos(ang) * radius
+        float64: py = cy + math.sin(ang) * radius
+        str: sp = "<line x1=\""
+        sp = string.concat(sp, _num_to_str(cx))
+        sp = string.concat(sp, "\" y1=\"")
+        sp = string.concat(sp, _num_to_str(cy))
+        sp = string.concat(sp, "\" x2=\"")
+        sp = string.concat(sp, _num_to_str(px))
+        sp = string.concat(sp, "\" y2=\"")
+        sp = string.concat(sp, _num_to_str(py))
+        sp = string.concat(sp, "\" stroke=\"")
+        sp = string.concat(sp, _GRID_COLOR)
+        sp = string.concat(sp, "\" stroke-width=\"0.5\" stroke-opacity=\"0.6\"/>")
+        out = string.concat(out, sp)
+        // Axis label
+        float64: lx = cx + math.cos(ang) * (radius + 16.0)
+        float64: ly = cy + math.sin(ang) * (radius + 16.0)
+        // Anchor adjustment: top/bottom center, sides left/right of label
+        str: anchor = "middle"
+        float64: cos_a = math.cos(ang)
+        if cos_a > 0.3 { anchor = "start" }
+        if cos_a < -0.3 { anchor = "end" }
+        str: lab = "<text x=\""
+        lab = string.concat(lab, _num_to_str(lx))
+        lab = string.concat(lab, "\" y=\"")
+        lab = string.concat(lab, _num_to_str(ly + 4.0))
+        lab = string.concat(lab, "\" text-anchor=\"")
+        lab = string.concat(lab, anchor)
+        lab = string.concat(lab, "\" font-size=\"12\" font-family=\"sans-serif\" font-weight=\"bold\" fill=\"")
+        lab = string.concat(lab, _FG_COLOR)
+        lab = string.concat(lab, "\">")
+        lab = string.concat(lab, axes[ai])
+        lab = string.concat(lab, "</text>")
+        out = string.concat(out, lab)
+        ai = ai + 1
+    }
+
+    // Polygon for this series
+    str: pts = ""
+    int: i = 0
+    while i < n {
+        float64: ang = (i / n) * 2.0 * 3.14159265 - 1.5707963
+        float64: r = values[i] / vmax
+        if r > 1.0 { r = 1.0 }
+        if r < 0.0 { r = 0.0 }
+        float64: rr = r * radius
+        float64: px = cx + math.cos(ang) * rr
+        float64: py = cy + math.sin(ang) * rr
+        if i > 0 { pts = string.concat(pts, " ") }
+        pts = string.concat(pts, _num_to_str(px))
+        pts = string.concat(pts, ",")
+        pts = string.concat(pts, _num_to_str(py))
+        i = i + 1
+    }
+    // Close the polygon back to the first vertex
+    float64: ang0 = -1.5707963
+    float64: r0 = values[0] / vmax
+    if r0 > 1.0 { r0 = 1.0 }
+    if r0 < 0.0 { r0 = 0.0 }
+    pts = string.concat(pts, " ")
+    pts = string.concat(pts, _num_to_str(cx + math.cos(ang0) * r0 * radius))
+    pts = string.concat(pts, ",")
+    pts = string.concat(pts, _num_to_str(cy + math.sin(ang0) * r0 * radius))
+
+    out = string.concat(out, "<polygon points=\"")
+    out = string.concat(out, pts)
+    out = string.concat(out, "\" fill=\"")
+    out = string.concat(out, color)
+    out = string.concat(out, "\" fill-opacity=\"")
+    out = string.concat(out, _num_to_str(_SERIES_ALPHA))
+    out = string.concat(out, "\" stroke=\"")
+    out = string.concat(out, color)
+    out = string.concat(out, "\" stroke-width=\"")
+    out = string.concat(out, _num_to_str(_LINE_WIDTH))
+    out = string.concat(out, "\"/>")
+
+    // Markers at each vertex
+    i = 0
+    while i < n {
+        float64: ang = (i / n) * 2.0 * 3.14159265 - 1.5707963
+        float64: r = values[i] / vmax
+        if r > 1.0 { r = 1.0 }
+        if r < 0.0 { r = 0.0 }
+        float64: rr = r * radius
+        float64: px = cx + math.cos(ang) * rr
+        float64: py = cy + math.sin(ang) * rr
+        out = string.concat(out, "<circle cx=\"")
+        out = string.concat(out, _num_to_str(px))
+        out = string.concat(out, "\" cy=\"")
+        out = string.concat(out, _num_to_str(py))
+        out = string.concat(out, "\" r=\"3\" fill=\"")
+        out = string.concat(out, color)
+        out = string.concat(out, "\"/>")
+        i = i + 1
+    }
+    return out
+}

@@ -1,0 +1,124 @@
+// libs/flash/missing/fillna.rho
+// fillna(df, str: value)  — rellena TODAS las cols str con value
+// fillna_col(df, col, str: value) — rellena una col
+// fillna_f(df, float64: value)     — rellena numéricas (donde la máscara NA está activa)
+// fillna_col_f(df, col, float64: value)
+// Al rellenar, también limpiamos la máscara NA (la celda ya no es missing).
+
+fun fillna(record: df, str: value) -> record {
+    record: out = _copy_df(df)
+    int: i = 0
+    int: nn = array.size(df._names)
+    while i < nn {
+        str: nm = df._names[i]
+        str: dt = mapping.get(df._dtypes, nm)
+        if dt == "str" or dt == "datetime" {
+            record: c = mapping.get(out._cols, nm)
+            arr: a = c.data
+            arr: na = c.na
+            int: r = 0
+            while r < array.size(a) {
+                if (r < array.size(na) and na[r] == "1") or
+                   (r >= array.size(na) and string.length(a[r]) == 0) {
+                    a[r] = value
+                }
+                r = r + 1
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fun fillna_col(record: df, str: col, str: value) -> record {
+    _check_col(df, col)
+    record: out = _copy_df(df)
+    record: c = mapping.get(out._cols, col)
+    if c.kind == "arr" {
+        arr: a = c.data
+        arr: na = c.na
+        int: r = 0
+        while r < array.size(a) {
+            if (r < array.size(na) and na[r] == "1") or
+               (r >= array.size(na) and string.length(a[r]) == 0) {
+                a[r] = value
+            }
+            r = r + 1
+        }
+    }
+    return out
+}
+
+fun fillna_f(record: df, float64: value) -> record {
+    record: out = _copy_df(df)
+    int: i = 0
+    int: nn = array.size(df._names)
+    while i < nn {
+        str: nm = df._names[i]
+        str: dt = mapping.get(df._dtypes, nm)
+        if dt != "str" and dt != "datetime" {
+            record: c = mapping.get(out._cols, nm)
+            vec: v = c.data
+            arr: na = c.na
+            int: r = 0
+            while r < math.size(v) {
+                if r < array.size(na) and na[r] == "1" { v[r] = value }
+                r = r + 1
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fun fillna_col_f(record: df, str: col, float64: value) -> record {
+    _check_col(df, col)
+    record: out = _copy_df(df)
+    record: c = mapping.get(out._cols, col)
+    if c.kind == "vec" {
+        vec: v = c.data
+        arr: na = c.na
+        int: r = 0
+        while r < math.size(v) {
+            if r < array.size(na) and na[r] == "1" { v[r] = value }
+            r = r + 1
+        }
+    }
+    return out
+}
+
+// interpolate_linear(df, col) — rellena NA con interpolación lineal
+//   entre vecinos numéricos no-faltantes. Si la col es string, devuelve igual.
+fun interpolate_linear(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: out = _copy_df(df)
+    record: c = mapping.get(out._cols, col)
+    if c.kind != "arr" { return out }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    int: i = 0
+    int: last_valid = -1
+    while i < n {
+        int: is_present = 1
+        if i < array.size(na) and na[i] == "1" { is_present = 0 }
+        if i >= array.size(na) and string.length(a[i]) == 0 { is_present = 0 }
+        if is_present == 1 {
+            if last_valid >= 0 and i - last_valid > 1 {
+                float64: prev = _str_to_float_v2(a[last_valid])
+                float64: next = _str_to_float_v2(a[i])
+                int: gap = i - last_valid
+                int: k = 1
+                while k < gap {
+                    float64: frac = k * 1.0 / gap
+                    float64: interpolated = prev + frac * (next - prev)
+                    a[last_valid + k] = _float_to_str(interpolated)
+                    k = k + 1
+                }
+            }
+            last_valid = i
+        }
+        i = i + 1
+    }
+    return out
+}

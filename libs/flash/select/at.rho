@@ -1,0 +1,32 @@
+// libs/flash/select/at.rho
+// Acceso a celdas individuales:
+//   at(df, col, row)   -> string repr del valor
+//   iat(df, i, j)      -> string repr (i=índice de fila, j=índice de columna)
+
+fun at(record: df, str: col, int: row) -> str {
+    return _cell_to_display(df, col, row)
+}
+
+fun iat(record: df, int: i, int: j) -> str {
+    if j < 0 or j >= df._ncols {
+        _err("iat: column index out of range")
+    }
+    if i < 0 or i >= df._nrows {
+        _err("iat: row index out of range")
+    }
+    return at(df, df._names[j], i)
+}
+
+// _at_raw(df, col, row) -> valor crudo (float64 o str según dtype).
+//   Wrapper que decide tipo en runtime.
+fun _at_raw(record: df, str: col, int: row) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind == "arr" {
+        arr: a = c.data
+        str: v = a[row]
+        return { kind: "str", val: v }
+    }
+    vec: v = c.data
+    return { kind: "float", val: v[row] }
+}

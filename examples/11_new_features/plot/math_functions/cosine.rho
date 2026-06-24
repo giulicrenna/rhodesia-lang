@@ -1,0 +1,11 @@
+include plot
+println("=== cosine ===")
+fun f(float64: x) -> float64 { return math.cos(x) }
+figure(800, 510)
+plot(f, -6.283185, 6.283185, "f(x)", "blue")
+title("cosine")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("cosine.svg")
+println("Wrote ", bytes, " bytes to cosine.svg")

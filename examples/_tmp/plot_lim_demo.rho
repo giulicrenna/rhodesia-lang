@@ -1,0 +1,26 @@
+include plot
+
+println("=== plot() with optional ymin/ymax ===")
+
+fun sinc(float64: t) -> float64 {
+    if t == 0.0 { return 1.0 }
+    return math.sin(t) / t
+}
+
+// 1. Auto y range (existing call site, defaults kick in)
+figure(800, 510)
+plot(sinc, -20.0, 20.0, "sinc auto", "gray")
+
+// 2. Explicit y range, positional
+plot(sinc, -20.0, 20.0, "sinc ±1.1", "blue", -1.1, 1.1)
+
+// 3. Explicit y range, keyword
+plot(sinc, -20.0, 20.0, "sinc ±0.3", "red", ymin: -0.3, ymax: 0.3)
+
+title("sinc(x) — auto vs explicit ylim via plot()")
+xlabel("x")
+ylabel("sinc(x)")
+legend(1)
+
+int: bytes = savefig("plot_lim.svg")
+println("Wrote ", bytes, " bytes to plot_lim.svg")

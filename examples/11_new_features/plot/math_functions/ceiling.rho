@@ -1,0 +1,11 @@
+include plot
+println("=== ceiling ===")
+fun f(float64: x) -> float64 { return math.ceil(x) }
+figure(800, 510)
+plot(f, -3, 3, "f(x)", "blue")
+title("ceiling")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("ceiling.svg")
+println("Wrote ", bytes, " bytes to ceiling.svg")

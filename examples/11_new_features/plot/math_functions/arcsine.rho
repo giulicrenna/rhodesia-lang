@@ -1,0 +1,11 @@
+include plot
+println("=== arcsine ===")
+fun f(float64: x) -> float64 { return math.asin(x) }
+figure(800, 510)
+plot(f, -1, 1, "f(x)", "blue")
+title("arcsine")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("arcsine.svg")
+println("Wrote ", bytes, " bytes to arcsine.svg")

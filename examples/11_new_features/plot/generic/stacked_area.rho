@@ -1,0 +1,52 @@
+// stacked_area.rho - Stacked area chart: three layered series.
+// Each "layer" is its own vec with the same x axis. The renderer sums them
+// and paints each band separately.
+
+include plot
+
+println("=== stacked_area ===")
+
+vec: x = numerical.linspace(0.0, 10.0, 40)
+vec: a = math.zeros(40)
+vec: b = math.zeros(40)
+vec: c = math.zeros(40)
+int: i = 0
+while i < 40 {
+    float64: xx = x[i]
+    a[i] = 0.4 * math.exp(-((xx - 3.0) * (xx - 3.0)) / 4.0)
+    b[i] = 0.6 * math.exp(-((xx - 6.0) * (xx - 6.0)) / 6.0)
+    c[i] = 0.3 * math.exp(-((xx - 8.0) * (xx - 8.0)) / 8.0)
+    i = i + 1
+}
+
+arr: layers = array.create(0)
+arr: labels_in = array.create(0)
+arr: colors_in = array.create(0)
+
+map: la = mapping.create()
+mapping.put(la, "y", a)
+array.push(layers, la)
+array.push(labels_in, "peak A")
+array.push(colors_in, "#1f77b4")
+
+map: lb = mapping.create()
+mapping.put(lb, "y", b)
+array.push(layers, lb)
+array.push(labels_in, "peak B")
+array.push(colors_in, "#ff7f0e")
+
+map: lc = mapping.create()
+mapping.put(lc, "y", c)
+array.push(layers, lc)
+array.push(labels_in, "peak C")
+array.push(colors_in, "#2ca02c")
+
+figure(800, 510)
+stacked_area(x, layers, labels_in, colors_in)
+title("Stacked area (three peaks)")
+xlabel("x")
+ylabel("y")
+legend(1)
+
+int: bytes = savefig("stacked_area.svg")
+println("Wrote ", bytes, " bytes to stacked_area.svg")

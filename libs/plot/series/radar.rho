@@ -1,0 +1,22 @@
+// series/radar.rho - Radar (spider) chart: one polygon per series over N axes.
+
+fun radar(arr: axis_labels, vec: values, str: label, str: color) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "radar")
+    mapping.put(s, "axes", axis_labels)
+    mapping.put(s, "values", values)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+// Number of axes in a radar series.
+fun _radar_naxes(map: s) -> int {
+    arr: axes = mapping.get(s, "axes")
+    return array.size(axes)
+}

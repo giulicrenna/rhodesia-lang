@@ -1,0 +1,11 @@
+include plot
+println("=== cube ===")
+fun f(float64: x) -> float64 { return x * x * x }
+figure(800, 510)
+plot(f, -2, 2, "f(x)", "blue")
+title("cube")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("cube.svg")
+println("Wrote ", bytes, " bytes to cube.svg")

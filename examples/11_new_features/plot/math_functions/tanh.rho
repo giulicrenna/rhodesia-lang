@@ -1,0 +1,11 @@
+include plot
+println("=== tanh ===")
+fun f(float64: x) -> float64 { return math.tanh(x) }
+figure(800, 510)
+plot(f, -3, 3, "f(x)", "blue")
+title("tanh")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("tanh.svg")
+println("Wrote ", bytes, " bytes to tanh.svg")

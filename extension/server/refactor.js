@@ -48,7 +48,7 @@ async function provideRenameEdits(document, position, newName, token) {
 /**
  * CodeLens provider: shows "N references" above every `fun` declaration.
  * Reference count is for the current document only — cross-file counting is
- * a future optimisation. ponytail: O(n) scan on demand, add a cache when
+ * a future optimisation. O(n) scan on demand, add a cache when
  * keystroke-perf matters.
  */
 function provideCodeLenses(document, token) {

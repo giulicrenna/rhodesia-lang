@@ -1,0 +1,11 @@
+include plot
+println("=== coth ===")
+fun f(float64: x) -> float64 { return 1 / math.tanh(x) }
+figure(800, 510)
+plot(f, 0.1, 3, "f(x)", "blue")
+title("coth")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("coth.svg")
+println("Wrote ", bytes, " bytes to coth.svg")

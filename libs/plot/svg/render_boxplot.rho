@@ -1,0 +1,441 @@
+// svg/render_boxplot.rho - SVG generator for box plots.
+// Multiple groups laid out side-by-side along the category axis. Each group
+// draws: whiskers (line from min to max), box (Q1..Q3 rect or notched waist),
+// median line, outlier circles.
+//
+// Vertical (orient=0): value axis is y. y uses _y_to_px so higher data
+//   ends up HIGHER on screen (smaller pixel y). Category slots are along x.
+// Horizontal (orient=1): value axis is x. x uses direct mapping
+//   (smaller data -> smaller pixel x). Category slots are along y.
+//
+// Notch shape (when notch=1): the box keeps a flat top and bottom edge.
+// Between the notch CI bounds (med +- nhalf), the box's sides angle inward
+// to a waist at the median line. If nhalf > (q3-med) or nhalf > (med-q1),
+// the notch bound is clamped to the box edge so the polygon stays convex.
+//
+// Why this matters: the previous version drew V-shaped spikes attached to
+// the top and bottom edges of the box, producing a butterfly/bowtie shape
+// instead of a notched box. The notch is a waist on the SIDES, not spikes
+// on the ENDS.
+
+fun _render_boxplot(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    arr: groups = mapping.get(s, "groups")
+    arr: labels = mapping.get(s, "labels")
+    int: orient = mapping.get(s, "orient")
+    int: notch = mapping.get(s, "notch")
+    str: color = mapping.get(s, "color")
+    int: ng = array.size(groups)
+    if ng < 1 { return "" }
+
+    str: out = ""
+    int: gi = 0
+    while gi < ng {
+        vec: g = groups[gi]
+        vec: stats = _box_stats(g)
+        float64: lo = stats[0]
+        float64: q1 = stats[1]
+        float64: med = stats[2]
+        float64: q3 = stats[3]
+        float64: hi = stats[4]
+        float64: nhalf = stats[5]
+
+        if orient == 0 {
+            // Vertical: data -> y_pixel via _y_to_px; category slot -> x_pixel.
+            float64: slot_w = pw / ng
+            float64: cat_center = slot_w * gi + slot_w / 2.0
+            float64: bw = slot_w * 0.6
+            float64: cap = bw * 0.4
+            float64: x_left = cat_center - bw / 2.0
+            float64: x_right = cat_center + bw / 2.0
+            float64: y_lo = _y_to_px(lo, ymin, yrange, ph)
+            float64: y_q1 = _y_to_px(q1, ymin, yrange, ph)
+            float64: y_med = _y_to_px(med, ymin, yrange, ph)
+            float64: y_q3 = _y_to_px(q3, ymin, yrange, ph)
+            float64: y_hi = _y_to_px(hi, ymin, yrange, ph)
+            float64: y_nhi = _y_to_px(med + nhalf, ymin, yrange, ph)
+            float64: y_nlo = _y_to_px(med - nhalf, ymin, yrange, ph)
+            // Clamp notch CI to box edges (smaller pixel y = higher on screen).
+            float64: y_nhi_c = y_nhi
+            if y_nhi_c < y_q3 { y_nhi_c = y_q3 }
+            float64: y_nlo_c = y_nlo
+            if y_nlo_c > y_q1 { y_nlo_c = y_q1 }
+
+            // Lower whisker line
+            str: s1 = "<line x1=\""
+            s1 = string.concat(s1, _num_to_str(cat_center))
+            s1 = string.concat(s1, "\" y1=\"")
+            s1 = string.concat(s1, _num_to_str(y_lo))
+            s1 = string.concat(s1, "\" x2=\"")
+            s1 = string.concat(s1, _num_to_str(cat_center))
+            s1 = string.concat(s1, "\" y2=\"")
+            s1 = string.concat(s1, _num_to_str(y_q1))
+            s1 = string.concat(s1, "\" stroke=\"")
+            s1 = string.concat(s1, color)
+            s1 = string.concat(s1, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, s1)
+            // Upper whisker line
+            str: s2 = "<line x1=\""
+            s2 = string.concat(s2, _num_to_str(cat_center))
+            s2 = string.concat(s2, "\" y1=\"")
+            s2 = string.concat(s2, _num_to_str(y_q3))
+            s2 = string.concat(s2, "\" x2=\"")
+            s2 = string.concat(s2, _num_to_str(cat_center))
+            s2 = string.concat(s2, "\" y2=\"")
+            s2 = string.concat(s2, _num_to_str(y_hi))
+            s2 = string.concat(s2, "\" stroke=\"")
+            s2 = string.concat(s2, color)
+            s2 = string.concat(s2, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, s2)
+            // Lower whisker cap
+            str: c1 = "<line x1=\""
+            c1 = string.concat(c1, _num_to_str(cat_center - cap / 2.0))
+            c1 = string.concat(c1, "\" y1=\"")
+            c1 = string.concat(c1, _num_to_str(y_lo))
+            c1 = string.concat(c1, "\" x2=\"")
+            c1 = string.concat(c1, _num_to_str(cat_center + cap / 2.0))
+            c1 = string.concat(c1, "\" y2=\"")
+            c1 = string.concat(c1, _num_to_str(y_lo))
+            c1 = string.concat(c1, "\" stroke=\"")
+            c1 = string.concat(c1, color)
+            c1 = string.concat(c1, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, c1)
+            // Upper whisker cap
+            str: c2 = "<line x1=\""
+            c2 = string.concat(c2, _num_to_str(cat_center - cap / 2.0))
+            c2 = string.concat(c2, "\" y1=\"")
+            c2 = string.concat(c2, _num_to_str(y_hi))
+            c2 = string.concat(c2, "\" x2=\"")
+            c2 = string.concat(c2, _num_to_str(cat_center + cap / 2.0))
+            c2 = string.concat(c2, "\" y2=\"")
+            c2 = string.concat(c2, _num_to_str(y_hi))
+            c2 = string.concat(c2, "\" stroke=\"")
+            c2 = string.concat(c2, color)
+            c2 = string.concat(c2, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, c2)
+            // Box
+            if notch == 1 {
+                // Pinch width: how far the box sides angle inward at the waist.
+                float64: pinch = bw * 0.3
+                float64: x_wl = x_left + pinch
+                float64: x_wr = x_right - pinch
+                // Notch polygon: flat top/bottom, waist on sides at y_med.
+                // Going clockwise starting at top-left.
+                str: pts = ""
+                // Top-left
+                pts = string.concat(pts, _num_to_str(x_left))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_q3))
+                pts = string.concat(pts, " ")
+                // Top-right (flat top)
+                pts = string.concat(pts, _num_to_str(x_right))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_q3))
+                pts = string.concat(pts, " ")
+                // Down right side to upper notch bound
+                pts = string.concat(pts, _num_to_str(x_right))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_nhi_c))
+                pts = string.concat(pts, " ")
+                // Angle in to waist at median
+                pts = string.concat(pts, _num_to_str(x_wr))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_med))
+                pts = string.concat(pts, " ")
+                // Angle out to lower notch bound
+                pts = string.concat(pts, _num_to_str(x_right))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_nlo_c))
+                pts = string.concat(pts, " ")
+                // Down to bottom-right
+                pts = string.concat(pts, _num_to_str(x_right))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_q1))
+                pts = string.concat(pts, " ")
+                // Bottom-left (flat bottom)
+                pts = string.concat(pts, _num_to_str(x_left))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_q1))
+                pts = string.concat(pts, " ")
+                // Up left side to lower notch bound
+                pts = string.concat(pts, _num_to_str(x_left))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_nlo_c))
+                pts = string.concat(pts, " ")
+                // Angle in to waist at median
+                pts = string.concat(pts, _num_to_str(x_wl))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_med))
+                pts = string.concat(pts, " ")
+                // Angle out to upper notch bound
+                pts = string.concat(pts, _num_to_str(x_left))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_nhi_c))
+                out = string.concat(out, "<polygon points=\"")
+                out = string.concat(out, pts)
+                out = string.concat(out, "\" fill=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" fill-opacity=\"0.5\" stroke=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" stroke-width=\"1\"/>")
+            } else {
+                // Regular rectangular box (no notch).
+                float64: bh = y_q1 - y_q3
+                if bh < 0.0 { bh = 0.0 }
+                out = string.concat(out, "<rect x=\"")
+                out = string.concat(out, _num_to_str(x_left))
+                out = string.concat(out, "\" y=\"")
+                out = string.concat(out, _num_to_str(y_q3))
+                out = string.concat(out, "\" width=\"")
+                out = string.concat(out, _num_to_str(bw))
+                out = string.concat(out, "\" height=\"")
+                out = string.concat(out, _num_to_str(bh))
+                out = string.concat(out, "\" fill=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" fill-opacity=\"0.5\" stroke=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" stroke-width=\"1\"/>")
+            }
+            // Median (horizontal line across the box at y_med).
+            str: ml = "<line x1=\""
+            ml = string.concat(ml, _num_to_str(x_left))
+            ml = string.concat(ml, "\" y1=\"")
+            ml = string.concat(ml, _num_to_str(y_med))
+            ml = string.concat(ml, "\" x2=\"")
+            ml = string.concat(ml, _num_to_str(x_right))
+            ml = string.concat(ml, "\" y2=\"")
+            ml = string.concat(ml, _num_to_str(y_med))
+            ml = string.concat(ml, "\" stroke=\"")
+            ml = string.concat(ml, _AXIS_COLOR)
+            ml = string.concat(ml, "\" stroke-width=\"2\"/>")
+            out = string.concat(out, ml)
+            // Outliers
+            vec: outl = _box_outliers(g)
+            int: on = math.size(outl)
+            int: oi = 0
+            while oi < on {
+                float64: ov = _y_to_px(outl[oi], ymin, yrange, ph)
+                str: oc = "<circle cx=\""
+                oc = string.concat(oc, _num_to_str(cat_center))
+                oc = string.concat(oc, "\" cy=\"")
+                oc = string.concat(oc, _num_to_str(ov))
+                oc = string.concat(oc, "\" r=\"4\" fill=\"")
+                oc = string.concat(oc, color)
+                oc = string.concat(oc, "\" fill-opacity=\"0.6\" stroke=\"")
+                oc = string.concat(oc, color)
+                oc = string.concat(oc, "\" stroke-width=\"1\"/>")
+                out = string.concat(out, oc)
+                oi = oi + 1
+            }
+            // Category label below
+            if gi < array.size(labels) {
+                float64: ly = ph + 18.0
+                str: lt = "<text x=\""
+                lt = string.concat(lt, _num_to_str(cat_center))
+                lt = string.concat(lt, "\" y=\"")
+                lt = string.concat(lt, _num_to_str(ly))
+                lt = string.concat(lt, "\" text-anchor=\"middle\" font-size=\"11\" font-family=\"sans-serif\" fill=\"")
+                lt = string.concat(lt, _FG_COLOR)
+                lt = string.concat(lt, "\">")
+                lt = string.concat(lt, labels[gi])
+                lt = string.concat(lt, "</text>")
+                out = string.concat(out, lt)
+            }
+        } else {
+            // Horizontal: data -> x_pixel (direct mapping); category slot -> y_pixel.
+            float64: slot_h = ph / ng
+            float64: cat_center = slot_h * gi + slot_h / 2.0
+            float64: bw = slot_h * 0.6
+            float64: cap = bw * 0.4
+            float64: y_top = cat_center - bw / 2.0
+            float64: y_bot = cat_center + bw / 2.0
+            float64: x_lo = (lo - ymin) / yrange * pw
+            float64: x_q1 = (q1 - ymin) / yrange * pw
+            float64: x_med = (med - ymin) / yrange * pw
+            float64: x_q3 = (q3 - ymin) / yrange * pw
+            float64: x_hi = (hi - ymin) / yrange * pw
+            float64: x_nhi = (med + nhalf - ymin) / yrange * pw
+            float64: x_nlo = (med - nhalf - ymin) / yrange * pw
+            // Clamp notch CI to box edges.
+            float64: x_nhi_c = x_nhi
+            if x_nhi_c > x_q3 { x_nhi_c = x_q3 }
+            float64: x_nlo_c = x_nlo
+            if x_nlo_c < x_q1 { x_nlo_c = x_q1 }
+
+            // Left whisker
+            str: s1 = "<line x1=\""
+            s1 = string.concat(s1, _num_to_str(x_lo))
+            s1 = string.concat(s1, "\" y1=\"")
+            s1 = string.concat(s1, _num_to_str(cat_center))
+            s1 = string.concat(s1, "\" x2=\"")
+            s1 = string.concat(s1, _num_to_str(x_q1))
+            s1 = string.concat(s1, "\" y2=\"")
+            s1 = string.concat(s1, _num_to_str(cat_center))
+            s1 = string.concat(s1, "\" stroke=\"")
+            s1 = string.concat(s1, color)
+            s1 = string.concat(s1, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, s1)
+            // Right whisker
+            str: s2 = "<line x1=\""
+            s2 = string.concat(s2, _num_to_str(x_q3))
+            s2 = string.concat(s2, "\" y1=\"")
+            s2 = string.concat(s2, _num_to_str(cat_center))
+            s2 = string.concat(s2, "\" x2=\"")
+            s2 = string.concat(s2, _num_to_str(x_hi))
+            s2 = string.concat(s2, "\" y2=\"")
+            s2 = string.concat(s2, _num_to_str(cat_center))
+            s2 = string.concat(s2, "\" stroke=\"")
+            s2 = string.concat(s2, color)
+            s2 = string.concat(s2, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, s2)
+            // Whisker caps
+            str: c1 = "<line x1=\""
+            c1 = string.concat(c1, _num_to_str(x_lo))
+            c1 = string.concat(c1, "\" y1=\"")
+            c1 = string.concat(c1, _num_to_str(cat_center - cap / 2.0))
+            c1 = string.concat(c1, "\" x2=\"")
+            c1 = string.concat(c1, _num_to_str(x_lo))
+            c1 = string.concat(c1, "\" y2=\"")
+            c1 = string.concat(c1, _num_to_str(cat_center + cap / 2.0))
+            c1 = string.concat(c1, "\" stroke=\"")
+            c1 = string.concat(c1, color)
+            c1 = string.concat(c1, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, c1)
+            str: c2 = "<line x1=\""
+            c2 = string.concat(c2, _num_to_str(x_hi))
+            c2 = string.concat(c2, "\" y1=\"")
+            c2 = string.concat(c2, _num_to_str(cat_center - cap / 2.0))
+            c2 = string.concat(c2, "\" x2=\"")
+            c2 = string.concat(c2, _num_to_str(x_hi))
+            c2 = string.concat(c2, "\" y2=\"")
+            c2 = string.concat(c2, _num_to_str(cat_center + cap / 2.0))
+            c2 = string.concat(c2, "\" stroke=\"")
+            c2 = string.concat(c2, color)
+            c2 = string.concat(c2, "\" stroke-width=\"1\"/>")
+            out = string.concat(out, c2)
+            // Box
+            if notch == 1 {
+                float64: pinch = bw * 0.3
+                float64: y_wt = y_top + pinch
+                float64: y_wb = y_bot - pinch
+                // Notch polygon: flat left/right edges, waist on top/bottom at x_med.
+                str: pts = ""
+                // Top-left
+                pts = string.concat(pts, _num_to_str(x_q1))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_top))
+                pts = string.concat(pts, " ")
+                // Move right along top edge to notch indent
+                pts = string.concat(pts, _num_to_str(x_nlo_c))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_top))
+                pts = string.concat(pts, " ")
+                // Angle down to waist at median x
+                pts = string.concat(pts, _num_to_str(x_med))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_wt))
+                pts = string.concat(pts, " ")
+                // Angle up to top edge
+                pts = string.concat(pts, _num_to_str(x_nhi_c))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_top))
+                pts = string.concat(pts, " ")
+                // Top-right corner
+                pts = string.concat(pts, _num_to_str(x_q3))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_top))
+                pts = string.concat(pts, " ")
+                // Bottom-right corner (flat right edge)
+                pts = string.concat(pts, _num_to_str(x_q3))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_bot))
+                pts = string.concat(pts, " ")
+                // Move left along bottom edge to notch indent
+                pts = string.concat(pts, _num_to_str(x_nhi_c))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_bot))
+                pts = string.concat(pts, " ")
+                // Angle up to waist at median x
+                pts = string.concat(pts, _num_to_str(x_med))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_wb))
+                pts = string.concat(pts, " ")
+                // Angle down to bottom edge
+                pts = string.concat(pts, _num_to_str(x_nlo_c))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_bot))
+                pts = string.concat(pts, " ")
+                // Bottom-left corner
+                pts = string.concat(pts, _num_to_str(x_q1))
+                pts = string.concat(pts, ",")
+                pts = string.concat(pts, _num_to_str(y_bot))
+                out = string.concat(out, "<polygon points=\"")
+                out = string.concat(out, pts)
+                out = string.concat(out, "\" fill=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" fill-opacity=\"0.5\" stroke=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" stroke-width=\"1\"/>")
+            } else {
+                float64: bw_box = x_q3 - x_q1
+                if bw_box < 0.0 { bw_box = 0.0 }
+                out = string.concat(out, "<rect x=\"")
+                out = string.concat(out, _num_to_str(x_q1))
+                out = string.concat(out, "\" y=\"")
+                out = string.concat(out, _num_to_str(y_top))
+                out = string.concat(out, "\" width=\"")
+                out = string.concat(out, _num_to_str(bw_box))
+                out = string.concat(out, "\" height=\"")
+                out = string.concat(out, _num_to_str(bw))
+                out = string.concat(out, "\" fill=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" fill-opacity=\"0.5\" stroke=\"")
+                out = string.concat(out, color)
+                out = string.concat(out, "\" stroke-width=\"1\"/>")
+            }
+            // Median (vertical line at x_med)
+            str: ml = "<line x1=\""
+            ml = string.concat(ml, _num_to_str(x_med))
+            ml = string.concat(ml, "\" y1=\"")
+            ml = string.concat(ml, _num_to_str(y_top))
+            ml = string.concat(ml, "\" x2=\"")
+            ml = string.concat(ml, _num_to_str(x_med))
+            ml = string.concat(ml, "\" y2=\"")
+            ml = string.concat(ml, _num_to_str(y_bot))
+            ml = string.concat(ml, "\" stroke=\"")
+            ml = string.concat(ml, _AXIS_COLOR)
+            ml = string.concat(ml, "\" stroke-width=\"2\"/>")
+            out = string.concat(out, ml)
+            // Outliers
+            vec: outl = _box_outliers(g)
+            int: on = math.size(outl)
+            int: oi = 0
+            while oi < on {
+                float64: oh = (outl[oi] - ymin) / yrange * pw
+                str: oc = "<circle cx=\""
+                oc = string.concat(oc, _num_to_str(oh))
+                oc = string.concat(oc, "\" cy=\"")
+                oc = string.concat(oc, _num_to_str(cat_center))
+                oc = string.concat(oc, "\" r=\"4\" fill=\"")
+                oc = string.concat(oc, color)
+                oc = string.concat(oc, "\" fill-opacity=\"0.6\" stroke=\"")
+                oc = string.concat(oc, color)
+                oc = string.concat(oc, "\" stroke-width=\"1\"/>")
+                out = string.concat(out, oc)
+                oi = oi + 1
+            }
+            // Category label left
+            if gi < array.size(labels) {
+                str: lt = "<text x=\"-8\" y=\""
+                lt = string.concat(lt, _num_to_str(cat_center + 3))
+                lt = string.concat(lt, "\" text-anchor=\"end\" font-size=\"11\" font-family=\"sans-serif\" fill=\"")
+                lt = string.concat(lt, _FG_COLOR)
+                lt = string.concat(lt, "\">")
+                lt = string.concat(lt, labels[gi])
+                lt = string.concat(lt, "</text>")
+                out = string.concat(out, lt)
+            }
+        }
+        gi = gi + 1
+    }
+    return out
+}

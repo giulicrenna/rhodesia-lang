@@ -1,0 +1,25 @@
+// area.rho - Filled area chart: y vs x with fill down to y=0.
+// Uses a Gaussian-like curve to make a recognizable hump shape.
+
+include plot
+
+println("=== Area chart ===")
+
+vec: x = numerical.linspace(-3.0, 3.0, 60)
+vec: y = math.zeros(60)
+int: i = 0
+while i < 60 {
+    float64: xx = x[i]
+    y[i] = 1.5 * math.exp(-(xx * xx) / 2.0)
+    i = i + 1
+}
+
+figure(800, 510)
+area(x, y, "Gaussian", "steelblue")
+title("Area chart (Gaussian bump)")
+xlabel("x")
+ylabel("y")
+legend(1)
+
+int: bytes = savefig("area.svg")
+println("Wrote ", bytes, " bytes to area.svg")

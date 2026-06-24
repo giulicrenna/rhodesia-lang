@@ -1,0 +1,131 @@
+// libs/flash/index.rho - flash library entry point.
+// API tipo pandas para Rhodesia: DataFrames columnares, inmutables, funcionales.
+//
+// Uso:   include flash
+//
+// DataFrame es un record con _cols (map), _names (arr), _nrows (int),
+//                                  _ncols (int), _dtypes (map).
+// Cada operación devuelve un df nuevo.
+//
+// File layout:
+//
+//   libs/flash/
+//     index.rho               - este archivo
+//     core/schema.rho         - record DataFrame + helpers + assert
+//     core/dtypes.rho         - inferencia + coercion
+//     core/frame.rho          - constructores + accessors
+//     io/csv_in.rho           - read_csv
+//     io/csv_out.rho          - write_csv / to_csv
+//     io/json_in.rho          - read_json
+//     format/to_string.rho    - to_string (tabla ASCII)
+//     format/show.rho         - show (imprime)
+//     format/repr.rho         - repr_df (schema)
+//     select/head_tail.rho    - head / tail
+//     select/columns.rho      - has_col, col_dtype, shape
+//     select/select.rho       - select_cols, reorder
+//     select/drop.rho         - drop_cols, dropna_cols
+//     select/at.rho           - at, iat
+//     filter/compare.rho      - filter_eq/ne/gt/ge/lt/le (str y _f)
+//     filter/logical.rho      - filter_and/or/not
+//     filter/isin.rho         - filter_isin, filter_notin
+//     filter/query.rho        - query (parser mínimo)
+//     sort/sort.rho           - sort_by (asc/desc)
+//     aggregations/reduce.rho - col_sum/mean/std/min/max/median/var
+//     aggregations/describe.rho - describe, col_count, col_n_missing
+//     aggregations/value_counts.rho - value_counts, unique, nunique
+//     aggregations/unique.rho  - drop_duplicates, duplicated
+//     aggregations/group_by.rho - group_by, group_agg
+//     missing/isna.rho        - isna, isna_col, notna, notna_col
+//     missing/dropna.rho      - dropna, dropna_col
+//     missing/fillna.rho      - fillna, fillna_col, interpolate_linear
+//     stats/correlation.rho   - corr, cov, corr_matrix
+//     stats/rank.rho          - rank_col, rank_df
+//     stats/quantile.rho      - quantile, quartiles, iqr
+//     stats/diff.rho          - diff_col, pct_change_col
+//     window/rolling.rho      - rolling_mean/std/sum/min/max
+//     window/expanding.rho    - expanding_mean/sum/std
+//     datetime/to_datetime.rho - to_datetime, dt_year/month/day
+//     joins/merge.rho         - merge (inner/left/right/outer)
+//     joins/concat.rho        - concat (vertical/horizontal)
+//     joins/join.rho          - join (atajos)
+//     reshape/transpose.rho   - transpose_df
+//     reshape/pivot.rho       - pivot
+//     reshape/pivot_table.rho - pivot_table (con aggfunc)
+//     reshape/melt.rho        - melt
+//     reshape/stack.rho       - stack
+//     reshape/unstack.rho     - unstack
+//     reshape/multiindex.rho  - set_index, reset_index
+//     accessors/sstring.rho   - str_upper/lower/strip/len/contains/...
+//     accessors/col.rho       - col_v (vec), col_s (arr<str>) — acceso directo
+//     accessors/dt.rho        - dt_year/month/day/dow/diff_days/parse
+//     convert/convert.rho     - to_dict, to_records, from_records
+//     plot/plot.rho           - 12 wrappers plot_* (usa libs/plot; incl. plot_corr_heatmap)
+//
+// ponytail: el record DataFrame es el "estado" — vive dentro de cada valor
+// que se devuelve. No hay variables globales en este index (sólo includes).
+// Esto evita el problema clásico de Rhodesia de no compartir vars entre sub-includes.
+
+// --- Includes (orden importa: schema y dtypes primero) ---
+include flash/core/schema
+include flash/core/dtypes
+include flash/core/frame
+
+include flash/io/csv_in
+include flash/io/csv_out
+include flash/io/json_in
+
+include flash/format/to_string
+include flash/format/show
+include flash/format/repr
+
+include flash/select/head_tail
+include flash/select/columns
+include flash/select/select
+include flash/select/drop
+include flash/select/at
+
+include flash/filter/compare
+include flash/filter/logical
+include flash/filter/isin
+include flash/filter/query
+
+include flash/sort/sort
+
+include flash/aggregations/reduce
+include flash/aggregations/describe
+include flash/aggregations/value_counts
+include flash/aggregations/unique
+include flash/aggregations/group_by
+
+include flash/missing/isna
+include flash/missing/dropna
+include flash/missing/fillna
+
+include flash/stats/correlation
+include flash/stats/rank
+include flash/stats/quantile
+include flash/stats/diff
+
+include flash/window/rolling
+include flash/window/expanding
+
+include flash/datetime/to_datetime
+
+include flash/joins/merge
+include flash/joins/concat
+include flash/joins/join
+
+include flash/reshape/transpose
+include flash/reshape/pivot
+include flash/reshape/pivot_table
+include flash/reshape/melt
+include flash/reshape/stack
+include flash/reshape/unstack
+include flash/reshape/multiindex
+
+include flash/accessors/sstring
+include flash/accessors/col
+include flash/accessors/dt
+include flash/convert/convert
+
+include flash/plot/plot

@@ -1,0 +1,191 @@
+// libs/flash/filter/compare.rho
+// Filtros por comparación: filter_eq, filter_ne, filter_gt, filter_ge, filter_lt, filter_le
+// Cada uno devuelve un df con las filas que cumplen la condición.
+//
+// El valor a comparar puede ser string o float64. Si la columna es string,
+// se compara string. Si es numérica, se convierte el valor a float.
+
+// _cmp_value(df, col, row, op, val_str, val_float) — 1 si la celda cumple la op, 0 si no.
+fun _cmp_value(record: df, str: col, int: row, str: op,
+               str: vs, float64: vf) -> int {
+    record: c = mapping.get(df._cols, col)
+    if c.kind == "arr" {
+        arr: a = c.data
+        if row >= array.size(a) { return 0 }
+        str: cv = a[row]
+        if op == "==" { if cv == vs { return 1 } }
+        if op == "!=" { if cv != vs { return 1 } }
+        if op == ">"  { if _str_gt(cv, vs) == 1 { return 1 } }
+        if op == ">=" { if _str_gt(cv, vs) == 1 or cv == vs { return 1 } }
+        if op == "<"  { if _str_gt(vs, cv) == 1 { return 1 } }
+        if op == "<=" { if _str_gt(vs, cv) == 1 or cv == vs { return 1 } }
+        return 0
+    }
+    vec: v = c.data
+    if row >= math.size(v) { return 0 }
+    float64: cv = v[row]
+    if op == "==" { if cv == vf { return 1 } }
+    if op == "!=" { if cv != vf { return 1 } }
+    if op == ">"  { if cv > vf { return 1 } }
+    if op == ">=" { if cv >= vf { return 1 } }
+    if op == "<"  { if cv < vf { return 1 } }
+    if op == "<=" { if cv <= vf { return 1 } }
+    return 0
+}
+
+// _str_gt(a, b) — 1 si a > b lexicográficamente.
+fun _str_gt(str: a, str: b) -> int {
+    int: n = string.length(a)
+    int: m = string.length(b)
+    int: lim = n
+    if m < lim { lim = m }
+    int: i = 0
+    while i < lim {
+        if a[i] > b[i] { return 1 }
+        if a[i] < b[i] { return 0 }
+        i = i + 1
+    }
+    if n > m { return 1 }
+    return 0
+}
+
+// _apply_filter(df, mask) — devuelve df nuevo con sólo las filas donde mask[i]==1.
+fun _apply_filter(record: df, arr: mask) -> record {
+    int: n = array.size(mask)
+    int: nn = array.size(df._names)
+    // Buffers por col: arr_bufs[i] para cols str/datetime, vec_bufs[i] para numéricas,
+    // na_bufs[i] para la máscara NA preservada.
+    arr: arr_bufs = array.create(0)
+    arr: vec_bufs = array.create(0)
+    arr: na_bufs = array.create(0)
+    int: ci = 0
+    while ci < nn {
+        array.push(arr_bufs, array.create(0))
+        array.push(vec_bufs, array.create(0))
+        array.push(na_bufs, array.create(0))
+        ci = ci + 1
+    }
+    int: kept = 0
+    int: r = 0
+    while r < n {
+        if mask[r] == 1 {
+            int: cj = 0
+            while cj < nn {
+                str: nm = df._names[cj]
+                record: c = mapping.get(df._cols, nm)
+                arr: na_src = c.na
+                arr: na_buf = na_bufs[cj]
+                if r < array.size(na_src) { array.push(na_buf, na_src[r]) }
+                else { array.push(na_buf, "0") }
+                if c.kind == "arr" {
+                    arr: a = c.data
+                    arr: buf = arr_bufs[cj]
+                    if r < array.size(a) { array.push(buf, a[r]) }
+                    else { array.push(buf, "") }
+                } else {
+                    vec: v = c.data
+                    arr: fbuf = vec_bufs[cj]
+                    if r < math.size(v) { array.push(fbuf, v[r]) }
+                    else { array.push(fbuf, 0.0) }
+                }
+                cj = cj + 1
+            }
+            kept = kept + 1
+        }
+        r = r + 1
+    }
+    // Construir el df final: cada col se setea UNA vez con su buffer populado.
+    record: out = _new_df()
+    ci = 0
+    while ci < nn {
+        str: nm = df._names[ci]
+        str: dt = mapping.get(df._dtypes, nm)
+        record: c = mapping.get(df._cols, nm)
+        arr: na_buf = na_bufs[ci]
+        if c.kind == "arr" {
+            arr: buf = arr_bufs[ci]
+            out = _set_col(out, nm, { kind: "arr", data: buf, na: na_buf }, dt)
+        } else {
+            arr: fbuf = vec_bufs[ci]
+            int: sz = array.size(fbuf)
+            if sz == 0 {
+                vec: empty_v = math.zeros(1)
+                arr: na_empty = _new_na(1)
+                out = _set_col(out, nm, { kind: "vec", data: empty_v, na: na_empty }, dt)
+            } else {
+                vec: nv = math.zeros(sz)
+                int: jj = 0
+                while jj < sz {
+                    nv[jj] = fbuf[jj]
+                    jj = jj + 1
+                }
+                out = _set_col(out, nm, { kind: "vec", data: nv, na: na_buf }, dt)
+            }
+        }
+        ci = ci + 1
+    }
+    return out
+}
+
+// _filter_op(df, col, op, vs, vf) — implementación común.
+fun _filter_op(record: df, str: col, str: op, str: vs, float64: vf) -> record {
+    _check_col(df, col)
+    int: n = df._nrows
+    arr: mask = array.create(0)
+    int: i = 0
+    while i < n {
+        int: m = _cmp_value(df, col, i, op, vs, vf)
+        array.push(mask, m)
+        i = i + 1
+    }
+    return _apply_filter(df, mask)
+}
+
+fun filter_eq(record: df, str: col, str: val) -> record {
+    return _filter_op(df, col, "==", val, _str_to_float_v2(val))
+}
+
+fun filter_ne(record: df, str: col, str: val) -> record {
+    return _filter_op(df, col, "!=", val, _str_to_float_v2(val))
+}
+
+fun filter_gt(record: df, str: col, str: val) -> record {
+    return _filter_op(df, col, ">", val, _str_to_float_v2(val))
+}
+
+fun filter_ge(record: df, str: col, str: val) -> record {
+    return _filter_op(df, col, ">=", val, _str_to_float_v2(val))
+}
+
+fun filter_lt(record: df, str: col, str: val) -> record {
+    return _filter_op(df, col, "<", val, _str_to_float_v2(val))
+}
+
+fun filter_le(record: df, str: col, str: val) -> record {
+    return _filter_op(df, col, "<=", val, _str_to_float_v2(val))
+}
+
+// Versiones numéricas directas
+fun filter_eq_f(record: df, str: col, float64: val) -> record {
+    return _filter_op(df, col, "==", _float_to_str_simple(val), val)
+}
+
+fun filter_gt_f(record: df, str: col, float64: val) -> record {
+    return _filter_op(df, col, ">", _float_to_str_simple(val), val)
+}
+
+fun filter_ge_f(record: df, str: col, float64: val) -> record {
+    return _filter_op(df, col, ">=", _float_to_str_simple(val), val)
+}
+
+fun filter_lt_f(record: df, str: col, float64: val) -> record {
+    return _filter_op(df, col, "<", _float_to_str_simple(val), val)
+}
+
+fun filter_le_f(record: df, str: col, float64: val) -> record {
+    return _filter_op(df, col, "<=", _float_to_str_simple(val), val)
+}
+
+fun _float_to_str_simple(float64: x) -> str {
+    return _float_to_str(x)
+}

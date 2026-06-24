@@ -1,0 +1,11 @@
+include plot
+println("=== hyperbolic_decay ===")
+fun f(float64: x) -> float64 { return 1 / (1 + math.exp(x)) }
+figure(800, 510)
+plot(f, -5, 5, "f(x)", "blue")
+title("hyperbolic_decay")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("hyperbolic_decay.svg")
+println("Wrote ", bytes, " bytes to hyperbolic_decay.svg")

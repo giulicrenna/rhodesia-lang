@@ -3,7 +3,7 @@
 ; Produces: installer/Output/rhodesia-setup-0.1.0.exe
 
 #define MyAppName "Rhodesia"
-#define MyAppVersion "0.1.2"
+#define MyAppVersion "0.1.3"
 #define MyAppPublisher "Giuliano Crenna"
 #define MyAppPublisherURL "https://github.com/giulicrenna/rhodesia-lang"
 #define MyAppExeName "rhodesia.exe"

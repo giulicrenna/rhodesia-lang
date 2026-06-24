@@ -26,10 +26,14 @@ exposing a focused set of functions. Modules are accessed with the
 | [`datetime`](datetime.md) | Date / time / timestamp types |
 | [`io`](io.md) | File I/O and user input |
 | [`net`](net.md) | TCP sockets and HTTP/1.1 client |
+| [`plot`](plot.md) | Matplotlib-like 2D plotting (SVG output) |
 
 A second-tier user-space library — [`libs/math`](libs-math.md) — bundles
 ~150 functions for linear algebra, numerical methods, statistics, and
 regression. Import it with `include math`.
+
+The [`plot`](plot.md) library is also user-space (lives under `libs/plot/`).
+Import with `include plot`.
 
 ## Top-level Built-ins
 

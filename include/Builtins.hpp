@@ -14,6 +14,7 @@
 
 #include "RhoValue.hpp"
 #include "Error.hpp"
+#include "AST.hpp"  // For CallArg
 #include <unordered_map>
 #include <functional>
 
@@ -107,6 +108,13 @@ private:
  */
 using BuiltinFunc = std::function<RhoValue(const std::vector<RhoValue>&, SourceLocation)>;
 
+/**
+ * @brief Callback used by the dispatcher to evaluate a single call argument
+ *        expression. Provided by the caller (Evaluator) so Builtins doesn't
+ *        need to depend on the Evaluator class and avoid a circular include.
+ */
+using ArgEvaluator = std::function<RhoValue(ExprNode&)>;
+
 #include "NetworkModule.hpp"
 
 /**
@@ -144,7 +152,8 @@ public:
     }
 
     /**
-     * @brief Call a built-in function
+     * @brief Call a built-in function with positional args already evaluated.
+     *        For internal C++ call sites that don't have CallArg to resolve.
      */
     RhoValue call(const std::string& name, const std::vector<RhoValue>& args,
                 SourceLocation loc = {}) {
@@ -156,7 +165,26 @@ public:
     }
 
     /**
-     * @brief Call a module function (e.g., math.zeros)
+     * @brief Call a built-in function with parsed CallArgs. Resolves keyword
+     *        args to positional via builtinParamNames_.
+     */
+    RhoValue call(const std::string& name, const std::vector<CallArg>& callArgs,
+                const ArgEvaluator& evalArg, SourceLocation loc = {}) {
+        auto it = functions_.find(name);
+        if (it == functions_.end()) {
+            throw RuntimeError::undefinedFunction(name, loc);
+        }
+        std::vector<std::string> paramNames;
+        auto pnIt = builtinParamNames_.find(name);
+        if (pnIt != builtinParamNames_.end()) paramNames = pnIt->second;
+        std::vector<RhoValue> args = resolveArgs(name, callArgs, evalArg, loc, paramNames);
+        return it->second(args, loc);
+    }
+
+    /**
+     * @brief Call a module function (e.g., math.zeros) with positional args
+     *        already evaluated. For internal C++ call sites that don't go
+     *        through the parser (and so don't have CallArg to resolve).
      */
     RhoValue callModule(const std::string& module, const std::string& function,
                        const std::vector<RhoValue>& args, SourceLocation loc = {}) {
@@ -170,6 +198,34 @@ public:
             throw RuntimeError::undefinedFunction(module + "." + function, loc);
         }
 
+        return funcIt->second(args, loc);
+    }
+
+    /**
+     * @brief Call a module function (e.g., math.zeros) with parsed CallArgs.
+     *        Resolves keyword args to positional via moduleParamNames_.
+     */
+    RhoValue callModule(const std::string& module, const std::string& function,
+                       const std::vector<CallArg>& callArgs,
+                       const ArgEvaluator& evalArg, SourceLocation loc = {}) {
+        auto modIt = modules_.find(module);
+        if (modIt == modules_.end()) {
+            throw RuntimeError("Unknown module '" + module + "'", loc);
+        }
+
+        auto funcIt = modIt->second.find(function);
+        if (funcIt == modIt->second.end()) {
+            throw RuntimeError::undefinedFunction(module + "." + function, loc);
+        }
+
+        const std::string fullName = module + "." + function;
+        std::vector<std::string> paramNames;
+        auto namesIt = moduleParamNames_.find(module);
+        if (namesIt != moduleParamNames_.end()) {
+            auto fnIt = namesIt->second.find(function);
+            if (fnIt != namesIt->second.end()) paramNames = fnIt->second;
+        }
+        std::vector<RhoValue> args = resolveArgs(fullName, callArgs, evalArg, loc, paramNames);
         return funcIt->second(args, loc);
     }
 
@@ -204,6 +260,89 @@ private:
     std::unordered_map<std::string, BuiltinFunc> functions_;
     std::unordered_map<std::string, std::unordered_map<std::string, BuiltinFunc>> modules_;
     std::unordered_map<std::string, std::unordered_map<std::string, RhoValue>> moduleConstants_;
+
+    // Per-builtin parameter names so the dispatcher can map keyword args to
+    // positional indices. Populated by registerParamName(s) in registerAll().
+    std::unordered_map<std::string, std::vector<std::string>> builtinParamNames_;
+    std::unordered_map<std::string,
+        std::unordered_map<std::string, std::vector<std::string>>> moduleParamNames_;
+
+    void registerParamName(const std::string& fn, const std::string& param) {
+        builtinParamNames_[fn].push_back(param);
+    }
+    void registerParamNames(const std::string& fn,
+                            std::initializer_list<std::string> params) {
+        auto& v = builtinParamNames_[fn];
+        for (const auto& p : params) v.push_back(p);
+    }
+    void registerModuleParamNames(const std::string& mod, const std::string& fn,
+                                  std::initializer_list<std::string> params) {
+        auto& v = moduleParamNames_[mod][fn];
+        for (const auto& p : params) v.push_back(p);
+    }
+
+    /**
+     * @brief Resolve a vector<CallArg> into a positional vector<RhoValue>,
+     *        looking up keyword names in the provided paramNames list.
+     *        If a kwarg has no matching param name, throws ArgumentError.
+     *        Pure-positional calls skip the lookup entirely.
+     */
+    std::vector<RhoValue> resolveArgs(
+        const std::string& name,
+        const std::vector<CallArg>& callArgs,
+        const ArgEvaluator& evalArg,
+        SourceLocation loc,
+        const std::vector<std::string>& paramNames) const
+    {
+        // Fast path: all positional. No registry lookup, just evaluate.
+        bool anyKeyword = false;
+        for (const auto& ca : callArgs) {
+            if (!ca.name.empty()) { anyKeyword = true; break; }
+        }
+        if (!anyKeyword) {
+            std::vector<RhoValue> args;
+            args.reserve(callArgs.size());
+            for (const auto& ca : callArgs) {
+                args.push_back(evalArg(*ca.value));
+            }
+            return args;
+        }
+
+        // Keyword path: build a positional vector, with kwarg values placed
+        // at the index of the matching param name. Extra positional args are
+        // appended after the named ones; an unknown kwarg is an error.
+        std::vector<RhoValue> args(paramNames.size());
+        std::vector<bool> filled(paramNames.size(), false);
+        std::vector<RhoValue> extraPositional;
+        for (const auto& ca : callArgs) {
+            if (ca.name.empty()) {
+                extraPositional.push_back(evalArg(*ca.value));
+                continue;
+            }
+            bool found = false;
+            for (size_t i = 0; i < paramNames.size(); ++i) {
+                if (paramNames[i] == ca.name) {
+                    if (filled[i]) {
+                        throw ArgumentError(name,
+                            "argument '" + ca.name + "' given multiple values", loc);
+                    }
+                    args[i] = evalArg(*ca.value);
+                    filled[i] = true;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                throw ArgumentError(name,
+                    "unknown keyword argument '" + ca.name + "' "
+                    "(builtin does not declare this parameter; positional call required)",
+                    loc);
+            }
+        }
+        // Append positional extras to the back.
+        for (auto& v : extraPositional) args.push_back(std::move(v));
+        return args;
+    }
 
     Builtins() {
         registerAll();
@@ -506,21 +645,25 @@ private:
             }, args[0]);
         };
         
-        // sin(x), cos(x), tan(x)
+        // sin(x), cos(x), tan(x), asin, acos, atan - scalar or element-wise
         auto makeTrigFunc = [](const std::string& name, double(*func)(double)) {
             return [name, func](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
                 if (args.size() != 1) {
                     throw ArgumentError::wrongCount(name, 1, args.size(), loc);
                 }
-                
+
                 return std::visit([&](auto&& arg) -> RhoValue {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, int64_t>) {
                         return func(static_cast<double>(arg));
                     } else if constexpr (std::is_same_v<T, double>) {
                         return func(arg);
+                    } else if constexpr (std::is_same_v<T, Eigen::VectorXd>) {
+                        return Eigen::VectorXd(arg.unaryExpr(func));
+                    } else if constexpr (std::is_same_v<T, Eigen::MatrixXd>) {
+                        return Eigen::MatrixXd(arg.unaryExpr(func));
                     } else {
-                        throw ArgumentError(name, "argument must be scalar", loc);
+                        throw ArgumentError(name, "invalid argument type", loc);
                     }
                 }, args[0]);
             };
@@ -799,7 +942,7 @@ private:
 
         // rand() -> float64 - uniform random number in [0, 1)
         // Used by Monte Carlo integration, simulated annealing, genetic algorithms.
-        // ponytail: thread-local mt19937_64 — each thread gets independent streams.
+        // thread-local mt19937_64 — each thread gets independent streams.
         functions_["rand"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
             if (args.size() != 0) {
                 throw ArgumentError::wrongCount("rand", 0, args.size(), loc);
@@ -1083,7 +1226,7 @@ private:
             }
 
             double mean_val = vec->mean();
-            // ponytail: materialize to avoid temp-aliasing with previous calls.
+            // materialize to avoid temp-aliasing with previous calls.
             Eigen::ArrayXd centered = vec->array() - mean_val;
             double std_val = std::sqrt(centered.square().sum() / (vec->size() - 1));
 
@@ -1111,7 +1254,7 @@ private:
             }
 
             double mean_val = vec->mean();
-            // ponytail: materialize the centered array as a local Eigen::ArrayXd
+            // materialize the centered array as a local Eigen::ArrayXd
             // so the chain of temporary ArrayBase objects doesn't alias with
             // state from a previous stats call. Observed segfault when
             // skewness/kurtosis and zscore were called back-to-back.
@@ -1146,7 +1289,7 @@ private:
             }
 
             double mean_val = vec->mean();
-            // ponytail: materialize to avoid temp-aliasing with previous calls.
+            // materialize to avoid temp-aliasing with previous calls.
             Eigen::ArrayXd centered = vec->array() - mean_val;
             double std_val = std::sqrt(centered.square().sum() / (vec->size() - 1));
 
@@ -2266,6 +2409,22 @@ private:
             }
         };
 
+        // string.from(v) -> str — convert int/float/bool to string
+        stringModule["from"] = [](const std::vector<RhoValue>& args, SourceLocation loc) -> RhoValue {
+            if (args.size() != 1)
+                throw ArgumentError::wrongCount("string.from", 1, args.size(), loc);
+            const RhoValue& v = args[0];
+            if (std::holds_alternative<int64_t>(v))
+                return std::to_string(std::get<int64_t>(v));
+            if (std::holds_alternative<double>(v))
+                return std::to_string(std::get<double>(v));
+            if (std::holds_alternative<bool>(v))
+                return std::string(std::get<bool>(v) ? "true" : "false");
+            if (std::holds_alternative<std::string>(v))
+                return std::get<std::string>(v);
+            throw TypeError("string.from: cannot convert to string", loc);
+        };
+
         /**
          * string.slice(s, start, end) -> str
          * Return the substring s[start..end) (0-based, end exclusive).
@@ -3287,6 +3446,57 @@ private:
         }
 
         registerNetworkModule(modules_, moduleConstants_);
+
+        // Register parameter names so the dispatcher can resolve keyword args
+        // to positional indices. Only the most common builtins are listed —
+        // the rest still work positionally (and error on keyword args).
+        registerParamNames("print",  {"args"});
+        registerParamNames("println", {"args"});
+        registerParamNames("len", {"s"});
+        registerParamNames("length", {"s"});
+        registerParamNames("to_string", {"v"});
+        registerParamNames("type", {"v"});
+
+        registerModuleParamNames("math", "norm",     {"v"});
+        registerModuleParamNames("math", "dot",      {"a", "b"});
+        registerModuleParamNames("math", "transpose",{"m"});
+        registerModuleParamNames("math", "inv",      {"m"});
+        registerModuleParamNames("math", "sum",      {"v"});
+        registerModuleParamNames("math", "mean",     {"v"});
+        registerModuleParamNames("math", "zeros",    {"n", "m"});
+        registerModuleParamNames("math", "ones",     {"n", "m"});
+        registerModuleParamNames("math", "eye",      {"n"});
+        registerModuleParamNames("math", "range",    {"start", "stop"});
+        registerModuleParamNames("math", "sqrt",     {"x"});
+        registerModuleParamNames("math", "exp",      {"x"});
+        registerModuleParamNames("math", "log",      {"x"});
+        registerModuleParamNames("math", "abs",      {"x"});
+        registerModuleParamNames("math", "pow",      {"base", "exp"});
+        registerModuleParamNames("math", "sin",      {"x"});
+        registerModuleParamNames("math", "cos",      {"x"});
+        registerModuleParamNames("math", "tan",      {"x"});
+
+        registerModuleParamNames("string", "upper",   {"s"});
+        registerModuleParamNames("string", "lower",   {"s"});
+        registerModuleParamNames("string", "length",  {"s"});
+        registerModuleParamNames("string", "from",    {"v"});
+        registerModuleParamNames("string", "concat",  {"a", "b"});
+        registerModuleParamNames("string", "contains",{"s", "sub"});
+        registerModuleParamNames("string", "substr",  {"s", "start", "length"});
+        registerModuleParamNames("string", "find",    {"s", "sub"});
+
+        registerModuleParamNames("vector", "length",  {"v"});
+        registerModuleParamNames("vector", "sum",     {"v"});
+        registerModuleParamNames("vector", "mean",    {"v"});
+        registerModuleParamNames("vector", "min",     {"v"});
+        registerModuleParamNames("vector", "max",     {"v"});
+        registerModuleParamNames("vector", "norm",    {"v"});
+        registerModuleParamNames("vector", "append",  {"v", "x"});
+        registerModuleParamNames("vector", "get",     {"v", "i"});
+
+        registerModuleParamNames("matrix", "rows",    {"m"});
+        registerModuleParamNames("matrix", "cols",    {"m"});
+        registerModuleParamNames("matrix", "get",     {"m", "i", "j"});
     }
 };
 

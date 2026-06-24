@@ -1,0 +1,38 @@
+// layout/subplot.rho - Subplot grid selection. Each call to subplot(r, c, idx)
+// sets the active panel (1-based index, row-major). figure() resets to a 1x1 grid.
+
+fun subplot(int: rows, int: cols, int: idx) -> int {
+    if rows < 1 { rows = 1 }
+    if cols < 1 { cols = 1 }
+    _NROWS = rows
+    _NCOLS = cols
+    int: total = rows * cols
+    // Grow _PANELS if needed (new panels start as fresh defaults)
+    int: cur_size = array.size(_PANELS)
+    int: i = cur_size
+    while i < total {
+        map: p = mapping.create()
+        mapping.put(p, "series", array.create(0))
+        mapping.put(p, "title", "")
+        mapping.put(p, "xlabel", "")
+        mapping.put(p, "ylabel", "")
+        mapping.put(p, "has_xl", 0)
+        mapping.put(p, "xl_lo", 0.0)
+        mapping.put(p, "xl_hi", 0.0)
+        mapping.put(p, "has_yl", 0)
+        mapping.put(p, "yl_lo", 0.0)
+        mapping.put(p, "yl_hi", 0.0)
+        mapping.put(p, "legend", 0)
+        array.push(_PANELS, p)
+        i = i + 1
+    }
+    int: active = idx - 1
+    if active < 0 { active = 0 }
+    if active >= total { active = total - 1 }
+    _CUR = active
+    return 0
+}
+
+fun current_subplot() -> int {
+    return _CUR + 1
+}

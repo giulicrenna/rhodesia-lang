@@ -29,3 +29,5 @@ installer/windows/Output/
 *.cmake
 CMakeFiles
 *.dll
+.ninja_*
+*.svg

@@ -1,0 +1,47 @@
+// boxplot.rho - Box plots: median, Q1, Q3, whiskers (1.5*IQR), outliers.
+// Three groups, vertical orientation, notched median CI.
+
+include plot
+
+println("=== boxplot ===")
+
+// Three synthetic groups: 30 samples each, centered around different means.
+arr: groups = array.create(0)
+arr: labels = array.create(0)
+
+vec: g1 = math.zeros(30)
+int: i = 0
+while i < 30 {
+    g1[i] = 5.0 + (rand() - 0.5) * 4.0
+    i = i + 1
+}
+array.push(groups, g1)
+array.push(labels, "control")
+
+vec: g2 = math.zeros(30)
+i = 0
+while i < 30 {
+    g2[i] = 7.0 + (rand() - 0.5) * 3.0
+    i = i + 1
+}
+array.push(groups, g2)
+array.push(labels, "treatment A")
+
+vec: g3 = math.zeros(30)
+i = 0
+while i < 30 {
+    g3[i] = 9.0 + (rand() - 0.5) * 2.0
+    i = i + 1
+}
+array.push(groups, g3)
+array.push(labels, "treatment B")
+
+figure(800, 510)
+// 0 = vertical, 0 = no notch first
+boxplot(groups, labels, 0, 1, "scores", "steelblue")
+title("Boxplot (vertical, notched)")
+xlabel("group")
+ylabel("score")
+
+int: bytes = savefig("boxplot.svg")
+println("Wrote ", bytes, " bytes to boxplot.svg")

@@ -1,0 +1,509 @@
+/*
+libs/flash/core/dtypes.rho
+ Type inference and coercion between types.
+
+ Supported dtypes:
+   "int"      — vec column of integers (stored as float64 in vec)
+   "float"    — vec column of floating point
+   "str"      — arr column of strings
+   "bool"     — vec column (0.0 / 1.0)
+   "datetime" — arr<str> column in ISO format "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"
+*/
+
+fun _is_int_str(str: s) -> int {
+    /*
+    Checks whether a string represents an integer.
+
+    Validates that the input string corresponds to a valid integer,
+    optionally allowing a leading '+' or '-' sign.
+
+    Args:
+        s (str): The string to evaluate.
+
+    Returns:
+        int: 1 if the string is a valid integer, 0 otherwise.
+    */
+    int: n = string.length(s)
+    if n == 0 { return 0 }
+    int: i = 0
+    if string.slice(s, 0, 0 + 1) == "-" or string.slice(s, 0, 0 + 1) == "+" { i = 1 }
+    if i >= n { return 0 }
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if _is_digit(c) == 0 { return 0 }
+        i = i + 1
+    }
+    return 1
+}
+
+fun _is_float_str(str: s) -> int {
+    /*
+    Checks whether a string represents a floating-point number.
+
+    Validates the string as a valid float64, allowing an optional sign,
+    decimal point, and exponential notation ('e' / 'E').
+
+    Args:
+        s (str): The string to evaluate.
+
+    Returns:
+        int: 1 if parseable as float64, 0 otherwise.
+    */
+    int: n = string.length(s)
+    if n == 0 { return 0 }
+    int: i = 0
+    if string.slice(s, 0, 0 + 1) == "-" or string.slice(s, 0, 0 + 1) == "+" { i = 1 }
+    int: dot = 0
+    int: exp_seen = 0
+    int: any_digit = 0
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if c == "." { dot = dot + 1 }
+        else if c == "e" or c == "E" { exp_seen = 1 }
+        else if _is_digit(c) { any_digit = 1 }
+        else { return 0 }
+        i = i + 1
+    }
+    if any_digit == 0 { return 0 }
+    if dot > 1 { return 0 }
+    return 1
+}
+
+fun _is_digit(str: c) -> int {
+    /*
+    Checks whether a character is a digit 0-9.
+
+    Args:
+        c (str): A single character.
+
+    Returns:
+        int: 1 if c is a digit, 0 otherwise.
+    */
+    if c == "0" { return 1 }
+    if c == "1" { return 1 }
+    if c == "2" { return 1 }
+    if c == "3" { return 1 }
+    if c == "4" { return 1 }
+    if c == "5" { return 1 }
+    if c == "6" { return 1 }
+    if c == "7" { return 1 }
+    if c == "8" { return 1 }
+    if c == "9" { return 1 }
+    return 0
+}
+
+fun _is_bool_str(str: s) -> int {
+    /*
+    Checks whether a string represents a boolean value.
+
+    Recognizes "true"/"false", "True"/"False", "TRUE"/"FALSE" and "0"/"1".
+
+    Args:
+        s (str): The string to evaluate.
+
+    Returns:
+        int: 1 if it is a valid boolean, 0 otherwise.
+    */
+    if s == "true"  { return 1 }
+    if s == "false" { return 1 }
+    if s == "True"  { return 1 }
+    if s == "False" { return 1 }
+    if s == "TRUE"  { return 1 }
+    if s == "FALSE" { return 1 }
+    if s == "0"     { return 1 }
+    if s == "1"     { return 1 }
+    return 0
+}
+
+fun _is_datetime_str(str: s) -> int {
+    /*
+    Checks whether a string looks like an ISO date.
+
+    Recognizes the pattern "YYYY-MM-DD" optionally followed by " HH:MM:SS".
+
+    Args:
+        s (str): The string to evaluate.
+
+    Returns:
+        int: 1 if it looks like an ISO date, 0 otherwise.
+    */
+    int: n = string.length(s)
+    if n < 10 { return 0 }
+    str: y = string.slice(s, 0, 4)
+    str: d1 = string.slice(s, 4, 5)
+    str: mo = string.slice(s, 5, 7)
+    str: d2 = string.slice(s, 7, 8)
+    str: dd = string.slice(s, 8, 10)
+    if _is_digit_str(y) == 0 { return 0 }
+    if d1 != "-"             { return 0 }
+    if _is_digit_str(mo) == 0 { return 0 }
+    if d2 != "-"             { return 0 }
+    if _is_digit_str(dd) == 0 { return 0 }
+    return 1
+}
+
+fun _is_digit_str(str: s) -> int {
+    /*
+    Checks whether all characters in a string are digits.
+
+    Args:
+        s (str): The string to evaluate.
+
+    Returns:
+        int: 1 if all characters are digits, 0 otherwise.
+    */
+    int: n = string.length(s)
+    if n == 0 { return 0 }
+    int: i = 0
+    while i < n {
+        if _is_digit(string.slice(s, i, i + 1)) == 0 { return 0 }
+        i = i + 1
+    }
+    return 1
+}
+
+fun _infer_dtype(arr: vals) -> str {
+    /*
+    Infers the dtype of a column from its string values.
+
+    Empty cells are ignored for inference. Precedence order:
+    int > bool > float > datetime > str.
+
+    Args:
+        vals (arr): Array of strings with column values.
+
+    Returns:
+        str: The inferred dtype: "int", "float", "bool", "datetime" or "str".
+    */
+    int: n = array.size(vals)
+    if n == 0 { return "str" }
+    int: all_int = 1
+    int: all_float = 1
+    int: all_bool = 1
+    int: all_dt = 1
+    int: any_nonempty = 0
+    int: i = 0
+    while i < n {
+        str: v = vals[i]
+        // Skip empty cells: they don't count for inference.
+        if string.length(v) == 0 {
+            i = i + 1
+            continue
+        }
+        any_nonempty = 1
+        if _is_int_str(v) == 0 { all_int = 0 }
+        if _is_float_str(v) == 0 { all_float = 0 }
+        if _is_bool_str(v) == 0 { all_bool = 0 }
+        if _is_datetime_str(v) == 0 { all_dt = 0 }
+        i = i + 1
+    }
+    if any_nonempty == 0 { return "str" }
+    if all_int   { return "int" }
+    if all_bool  { return "bool" }
+    if all_float { return "float" }
+    if all_dt    { return "datetime" }
+    return "str"
+}
+
+fun _str_to_float(str: s) -> float64 {
+    /*
+    Converts a numeric string to float64 (deprecated).
+
+    NOTE: This function has a parsing bug. Use _str_to_float_v2 instead.
+
+    Args:
+        s (str): Numeric string to convert.
+
+    Returns:
+        float64: Numeric value.
+    */
+    int: n = string.length(s)
+    if n == 0 { return 0.0 }
+    int: i = 0
+    float64: sign = 1.0
+    if string.slice(s, 0, 0 + 1) == "-" { sign = 0.0 - 1.0
+    i = 1 }
+    if string.slice(s, 0, 0 + 1) == "+" { i = 1 }
+    float64: ipart = 0.0
+    int: dot = -1
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if c == "." { dot = i
+    i = i + 1 }
+        else {
+            float64: d = _digit_to_float(c)
+            ipart = ipart * 10.0 + d
+            i = i + 1
+        }
+    }
+    if dot < 0 { return sign * ipart }
+    int: dec_places = n - dot - 1
+    float64: frac = ipart
+    int: j = 0
+    while j < dec_places {
+        frac = frac / 10.0
+        j = j + 1
+    }
+    int: int_part = _flash_intify(ipart)
+    float64: ip = _flash_intify(int_part)
+    // recompute: ipart may have decimal part concatenated
+    re-do
+    // cleaner approach: parse whole + frac separately
+    return _str_to_float_v2(s)
+}
+
+fun _str_to_float_v2(str: s) -> float64 {
+    /*
+    Converts a numeric string to float64 (correct implementation).
+
+    Parses sign, integer part, decimal point, and fractional part separately.
+
+    Args:
+        s (str): Numeric string to convert.
+
+    Returns:
+        float64: The parsed floating-point value.
+    */
+    int: n = string.length(s)
+    if n == 0 { return 0.0 }
+    int: i = 0
+    float64: sign = 1.0
+    if string.slice(s, 0, 0 + 1) == "-" { sign = 0.0 - 1.0
+    i = 1 }
+    if string.slice(s, 0, 0 + 1) == "+" { i = 1 }
+    float64: ip = 0.0
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if c == "." { return sign * _parse_dec(s, i + 1, ip) }
+        if _is_digit(c) == 0 { return sign * ip }
+        ip = ip * 10.0 + _digit_to_float(c)
+        i = i + 1
+    }
+    return sign * ip
+}
+
+fun _parse_dec(str: s, int: from, float64: ip) -> float64 {
+    /*
+    Finishes parsing the decimal part of a float string.
+
+    Processes digits after the decimal point, dividing by powers of 10.
+
+    Args:
+        s (str): The full numeric string.
+        from (int): Starting index after the decimal point.
+        ip (float64): The integer part already parsed.
+
+    Returns:
+        float64: The complete float value (integer part + fractional part).
+    */
+    int: n = string.length(s)
+    float64: frac = 0.0
+    float64: div = 10.0
+    int: i = from
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if _is_digit(c) == 0 { return ip + frac }
+        frac = frac + _digit_to_float(c) / div
+        div = div * 10.0
+        i = i + 1
+    }
+    return ip + frac
+}
+
+fun _digit_to_float(str: c) -> float64 {
+    /*
+    Converts a single digit character to its float64 value.
+
+    Args:
+        c (str): A single digit character "0" through "9".
+
+    Returns:
+        float64: The numeric value of the digit (0.0 to 9.0).
+    */
+    if c == "0" { return 0.0 }
+    if c == "1" { return 1.0 }
+    if c == "2" { return 2.0 }
+    if c == "3" { return 3.0 }
+    if c == "4" { return 4.0 }
+    if c == "5" { return 5.0 }
+    if c == "6" { return 6.0 }
+    if c == "7" { return 7.0 }
+    if c == "8" { return 8.0 }
+    if c == "9" { return 9.0 }
+    return 0.0
+}
+
+fun _flash_intify(int: v) -> int { 
+    /*
+    Identity function for int.
+
+    Args:
+        v (int): Input value.
+
+    Returns:
+        int: The same value unchanged.
+    */
+    return v 
+}
+
+fun _intify_f(float64: v) -> int {
+    /*
+    Converts a float64 to int via truncation.
+
+    Uses string conversion as intermediate step for truncation.
+
+    Args:
+        v (float64): The float value to truncate.
+
+    Returns:
+        int: Truncated integer value.
+    */
+    if v < 0.0 {
+        str: s = _float_to_str_pos_d(0.0 - v)
+        return 0 - string.to_int_or(s, 0)
+    }
+    str: s = _float_to_str_pos_d(v)
+    return string.to_int_or(s, 0)
+}
+
+fun _float_to_str_pos_d(float64: x) -> str {
+    /*
+    Converts a positive float64 to its integer part as a string.
+
+    Uses repeated subtraction to extract the integer part.
+
+    Args:
+        x (float64): Positive float value.
+
+    Returns:
+        str: The integer part as a string (e.g., "42").
+    */
+    if x == 0.0 { return "0" }
+    int: ip = 0
+    float64: r = x
+    while r >= 1.0 {
+        r = r - 1.0
+        ip = ip + 1
+    }
+    return _int_str(ip)
+}
+
+fun _strs_to_vec(arr: ss) -> vec {
+    /*
+    Converts an array of numeric strings to a vec.
+
+    Each string is parsed via _str_to_float_v2.
+
+    Args:
+        ss (arr): Array of numeric strings.
+
+    Returns:
+        vec: Vector of float64 values.
+    */
+    int: n = array.size(ss)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        out[i] = _str_to_float_v2(ss[i])
+        i = i + 1
+    }
+    return out
+}
+
+fun _bool_str_to_float(str: s) -> float64 {
+    /*
+    Converts a boolean string to float64.
+
+    "true"/"1" → 1.0, "false"/"0" → 0.0.
+
+    Args:
+        s (str): Boolean string.
+
+    Returns:
+        float64: 1.0 for true, 0.0 for false.
+    */
+    if s == "true" or s == "True" or s == "TRUE" or s == "1" {
+        return 1.0
+    }
+    return 0.0
+}
+
+fun _coerce_col(arr: vals, str: dtype) -> record {
+    /*
+    Converts an array of strings to a typed column record.
+
+    Builds an NA mask alongside the data: "1" for missing cells, "0" otherwise.
+    ponytail: NA tracking is only set when constructing from strings; new operations
+    that produce col_data without NA stay as "no missing" (empty mask → all present).
+
+    Args:
+        vals (arr): Array of string values.
+        dtype (str): Target dtype ("str", "datetime", "bool", "int", "float").
+
+    Returns:
+        record: A column record with fields {kind, data, na}.
+    */
+    int: n = array.size(vals)
+    // Build NA mask: "1" for empty cells, "0" otherwise.
+    arr: na = array.create(0)
+    int: k = 0
+    while k < n {
+        if string.length(vals[k]) == 0 { array.push(na, "1") }
+        else { array.push(na, "0") }
+        k = k + 1
+    }
+    if dtype == "str" or dtype == "datetime" {
+        return { kind: "arr", data: vals, na: na }
+    }
+    if dtype == "bool" {
+        vec: bv = math.zeros(n)
+        int: i = 0
+        while i < n {
+            bv[i] = _bool_str_to_float(vals[i])
+            i = i + 1
+        }
+        return { kind: "vec", data: bv, na: na }
+    }
+    // int / float: empty cells become 0.0, but the NA mask remembers them.
+    vec: v = _strs_to_vec(vals)
+    return { kind: "vec", data: v, na: na }
+}
+
+fun _is_na(record: c, int: row) -> int {
+    /*
+    Checks whether a cell is NA (missing).
+
+    ponytail: col_data is a record {kind, data, na}. If a column was not
+    built with the na field (rare case, e.g. horizontal concat), returns 0 (not NA).
+
+    Args:
+        c (record): Column data record.
+        row (int): Row index to check.
+
+    Returns:
+        int: 1 if the cell is missing, 0 otherwise.
+    */
+    arr: na = c.na
+    if row >= array.size(na) { return 0 }
+    if na[row] == "1" { return 1 }
+    return 0
+}
+
+fun _new_na(int: n) -> arr {
+    /*
+    Creates a "no NA" mask of size n (all cells present).
+
+    Args:
+        n (int): Number of rows.
+
+    Returns:
+        arr: Array of "0" strings of length n.
+    */
+    arr: na = array.create(0)
+    int: i = 0
+    while i < n {
+        array.push(na, "0")
+        i = i + 1
+    }
+    return na
+}

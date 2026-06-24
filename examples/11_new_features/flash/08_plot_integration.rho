@@ -1,0 +1,167 @@
+// examples/11_new_features/flash/08_plot_integration.rho
+// Demo: flash + libs/plot — los 11 wrappers plot_* sobre un único DataFrame.
+
+include plot
+include flash
+
+println("=== flash + plot integration (all 11 wrappers) ===")
+println()
+
+// Generamos un CSV con todas las columnas que necesitan los 11 charts.
+str: csv = "x,y,y_low,y_high,yerr,a,b,c,cat,axis,val\n"
+csv = string.concat(csv, "1,1,0,2,1,1,1,1,cat_A,A,1\n")
+csv = string.concat(csv, "2,4,1,7,2,2,1,1,cat_B,B,2\n")
+csv = string.concat(csv, "3,9,2,16,3,3,2,2,cat_C,C,3\n")
+csv = string.concat(csv, "4,16,3,29,4,4,3,2,cat_D,D,4\n")
+csv = string.concat(csv, "5,25,4,46,5,5,5,2,cat_E,E,5\n")
+csv = string.concat(csv, "6,36,5,67,6,6,7,2,cat_F,A,3\n")
+csv = string.concat(csv, "7,49,6,92,7,7,11,3,cat_G,B,2\n")
+csv = string.concat(csv, "8,64,7,121,8,8,16,3,cat_H,C,4\n")
+csv = string.concat(csv, "9,81,8,154,9,9,22,3,cat_I,D,3\n")
+csv = string.concat(csv, "10,100,9,191,10,10,30,4,cat_J,E,5\n")
+io.write_file("flash_demo.csv", csv)
+record: df = read_csv("flash_demo.csv")
+
+println("DataFrame shape: ", shape(df))
+
+// Arrs reutilizables para los multi-columna.
+arr: stack_cols = array.create(0)
+array.push(stack_cols, "a")
+array.push(stack_cols, "b")
+array.push(stack_cols, "c")
+arr: stack_labels = array.create(0)
+array.push(stack_labels, "alpha")
+array.push(stack_labels, "beta")
+array.push(stack_labels, "gamma")
+arr: group_cols = array.create(0)
+array.push(group_cols, "a")
+array.push(group_cols, "b")
+array.push(group_cols, "c")
+arr: group_labels = array.create(0)
+array.push(group_labels, "alpha")
+array.push(group_labels, "beta")
+array.push(group_labels, "gamma")
+
+// 1. plot_line
+figure(700, 460)
+plot_line(df, "x", "y")
+title("line")
+xlabel("x")
+ylabel("y")
+legend(1)
+savefig("flash_line.svg")
+println("Wrote flash_line.svg")
+
+// 2. plot_scatter
+figure(700, 460)
+plot_scatter(df, "x", "y")
+title("scatter")
+savefig("flash_scatter.svg")
+println("Wrote flash_scatter.svg")
+
+// 3. plot_hist
+figure(700, 460)
+plot_hist(df, "y", 5)
+title("histogram of y")
+savefig("flash_hist.svg")
+println("Wrote flash_hist.svg")
+
+// 4. plot_bar
+figure(700, 460)
+plot_bar(df, "cat", "y")
+title("bar")
+savefig("flash_bar.svg")
+println("Wrote flash_bar.svg")
+
+// 5. plot_area
+figure(700, 460)
+plot_area(df, "x", "y")
+title("area")
+savefig("flash_area.svg")
+println("Wrote flash_area.svg")
+
+// 6. plot_fill_between
+figure(700, 460)
+plot_fill_between(df, "x", "y_low", "y_high")
+title("fill_between")
+savefig("flash_band.svg")
+println("Wrote flash_band.svg")
+
+// 7. plot_errorbar
+figure(700, 460)
+plot_errorbar(df, "x", "y", "yerr")
+title("errorbar")
+savefig("flash_errbar.svg")
+println("Wrote flash_errbar.svg")
+
+// 8. plot_stacked_area
+figure(700, 460)
+plot_stacked_area(df, "x", stack_cols, stack_labels)
+title("stacked_area")
+legend(1)
+savefig("flash_stacked_area.svg")
+println("Wrote flash_stacked_area.svg")
+
+// 9. plot_stack_bars
+figure(700, 460)
+plot_stack_bars(df, "cat", stack_cols, stack_labels)
+title("stack_bars")
+legend(1)
+savefig("flash_stack_bars.svg")
+println("Wrote flash_stack_bars.svg")
+
+// 10. plot_boxplot (vertical, sin notch)
+figure(700, 460)
+plot_boxplot(df, group_cols, group_labels, 0, 0)
+title("boxplot")
+savefig("flash_box.svg")
+println("Wrote flash_box.svg")
+
+// 11. plot_radar
+figure(700, 460)
+plot_radar(df, "axis", "val")
+title("radar")
+savefig("flash_radar.svg")
+println("Wrote flash_radar.svg")
+
+// 12. plot_corr_heatmap: corr matrix desde flash -> heatmap
+arr: corr_cols = array.create(0)
+array.push(corr_cols, "y")
+array.push(corr_cols, "a")
+array.push(corr_cols, "b")
+array.push(corr_cols, "c")
+figure(560, 520)
+plot_corr_heatmap(df, corr_cols)
+title("correlation heatmap (default colors)")
+savefig("flash_corr_heatmap.svg")
+println("Wrote flash_corr_heatmap.svg")
+
+// 12b. mismo heatmap con colores custom: blanco -> azul
+figure(560, 520)
+set_heatmap_colors("#ffffff", "#1f77b4")
+plot_corr_heatmap(df, corr_cols)
+title("correlation heatmap (white -> blue)")
+savefig("flash_corr_heatmap_blue.svg")
+println("Wrote flash_corr_heatmap_blue.svg")
+
+// 12c. mismo heatmap con colores custom: negro -> rojo
+figure(560, 520)
+set_heatmap_colors("#000000", "#e60049")
+plot_corr_heatmap(df, corr_cols)
+title("correlation heatmap (black -> red)")
+savefig("flash_corr_heatmap_red.svg")
+println("Wrote flash_corr_heatmap_red.svg")
+
+// Acceso directo con col_v / col_s: usar plot functions directamente
+// sin pasar por un wrapper plot_*.
+figure(700, 460)
+line(col_v(df, "x"), col_v(df, "y"), "y vs x (direct)", "")
+title("direct column access (col_v)")
+xlabel("x")
+ylabel("y")
+legend(1)
+savefig("flash_direct.svg")
+println("Wrote flash_direct.svg")
+
+io.remove("flash_demo.csv")
+println("Done.")

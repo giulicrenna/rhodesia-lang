@@ -1,0 +1,78 @@
+// libs/flash/stats/correlation.rho
+// corr(df, c1, c2) -> Pearson correlation
+// cov(df, c1, c2)  -> covariance
+// corr_matrix(df, arr<str>) -> df con matriz de correlaciones
+
+fun corr(record: df, str: c1, str: c2) -> float64 {
+    vec: v1 = _get_vec(df, c1)
+    vec: v2 = _get_vec(df, c2)
+    int: n = math.size(v1)
+    if n != math.size(v2) { _err("corr: columns have different lengths") }
+    if n < 2 { return 0.0 }
+    float64: m1 = 0.0
+    float64: m2 = 0.0
+    int: i = 0
+    while i < n {
+        m1 = m1 + v1[i]
+        m2 = m2 + v2[i]
+        i = i + 1
+    }
+    m1 = m1 / n
+    m2 = m2 / n
+    float64: num = 0.0
+    float64: d1 = 0.0
+    float64: d2 = 0.0
+    i = 0
+    while i < n {
+        float64: x = v1[i] - m1
+        float64: y = v2[i] - m2
+        num = num + x * y
+        d1 = d1 + x * x
+        d2 = d2 + y * y
+        i = i + 1
+    }
+    if d1 == 0.0 or d2 == 0.0 { return 0.0 }
+    return num / math.sqrt(d1 * d2)
+}
+
+fun cov(record: df, str: c1, str: c2) -> float64 {
+    vec: v1 = _get_vec(df, c1)
+    vec: v2 = _get_vec(df, c2)
+    int: n = math.size(v1)
+    if n < 2 { return 0.0 }
+    float64: m1 = 0.0
+    float64: m2 = 0.0
+    int: i = 0
+    while i < n {
+        m1 = m1 + v1[i]
+        m2 = m2 + v2[i]
+        i = i + 1
+    }
+    m1 = m1 / n
+    m2 = m2 / n
+    float64: s = 0.0
+    i = 0
+    while i < n {
+        s = s + (v1[i] - m1) * (v2[i] - m2)
+        i = i + 1
+    }
+    return s / (n - 1)
+}
+
+fun corr_matrix(record: df, arr: cols) -> record {
+    int: k = array.size(cols)
+    record: out = _new_df()
+    out = _set_col(out, "row", _wrap_arr(cols), "str")
+    int: i = 0
+    while i < k {
+        vec: rowv = math.zeros(k)
+        int: j = 0
+        while j < k {
+            rowv[j] = corr(df, cols[i], cols[j])
+            j = j + 1
+        }
+        out = _set_col(out, cols[i], _wrap_vec(rowv), "float")
+        i = i + 1
+    }
+    return out
+}

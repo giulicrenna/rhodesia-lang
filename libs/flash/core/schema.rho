@@ -1,0 +1,500 @@
+/*
+libs/flash/core/schema.rho
+ Internal DataFrame record definition + schema helpers.
+
+ The DataFrame is a record with these fields:
+   _cols   : map<string, vec|arr<str>>   heterogeneous columns
+   _names  : arr<str>                    column order
+   _nrows  : int                         row count
+   _ncols  : int                         column count
+   _dtypes : map<string, str>            dtype per column
+             ("int"|"float"|"str"|"datetime"|"bool")
+
+ ponytail: the record is immutable from the user's perspective
+ (every operation returns a new one). Internal setters (_set_*)
+ are only used inside functions that build a new df.
+*/
+
+// --- Assert / error helpers (used across all flash modules) ---
+
+fun _ok(record: df) -> record {
+    /*
+    Identity function for a DataFrame record.
+
+    Used as a pass-through in expression chains.
+
+    Args:
+        df (record): A DataFrame record.
+
+    Returns:
+        record: The same DataFrame unchanged.
+    */
+    return df
+}
+
+fun _err(str: msg) -> int {
+    /*
+    Throws an error with a "flash:" prefix.
+
+    Args:
+        msg (str): The error message.
+
+    Returns:
+        int: Never returns; throws an exception.
+    */
+    throw string.concat("flash: ", msg)
+    return 0
+}
+
+fun _assert(int: cond, str: msg) -> int {
+    /*
+    Asserts a condition; throws if false.
+
+    Args:
+        cond (int): Condition to check (1 = true, 0 = false).
+        msg (str): Error message if assertion fails.
+
+    Returns:
+        int: 0 on success.
+    */
+    if cond == 0 { _err(msg) }
+    return 0
+}
+
+fun _has_col(record: df, str: col) -> int {
+    /*
+    Checks whether a column exists in the DataFrame.
+
+    Args:
+        df (record): A DataFrame record.
+        col (str): Column name to check.
+
+    Returns:
+        int: 1 if the column exists, 0 otherwise.
+    */
+    if mapping.has(df._cols, col) { return 1 }
+    return 0
+}
+
+fun _check_col(record: df, str: col) -> int {
+    /*
+    Validates that a column exists; throws with a clear message if not.
+
+    Args:
+        df (record): A DataFrame record.
+        col (str): Column name to check.
+
+    Returns:
+        int: 0 on success.
+    */
+    if mapping.has(df._cols, col) == 0 {
+        _err(string.concat("column '", col, "' not found"))
+    }
+    return 0
+}
+
+fun _check_len(arr: a, int: n, str: what) -> int {
+    /*
+    Validates that an array has the expected length.
+
+    Args:
+        a (arr): Array to check.
+        n (int): Expected length.
+        what (str): Descriptive name for the error message.
+
+    Returns:
+        int: 0 on success.
+    */
+    int: an = array.size(a)
+    if an != n {
+        _err(string.concat(what, " has length ", _int_str(an),
+                            ", expected ", _int_str(n)))
+    }
+    return 0
+}
+
+fun _int_div10(int: n) -> int {
+    /*
+    Divides an integer by 10 (Rhodesia does not have int / int -> int).
+
+    Uses repeated subtraction.
+
+    Args:
+        n (int): The integer to divide.
+
+    Returns:
+        int: n / 10, truncated.
+    */
+    int: q = 0
+    int: r = n
+    while r >= 10 {
+        r = r - 10
+        q = q + 1
+    }
+    return q
+}
+
+fun _int_str(int: n) -> str {
+    /*
+    Converts an integer to a string.
+
+    Args:
+        n (int): The integer to convert.
+
+    Returns:
+        str: String representation of the integer (e.g., "42").
+    */
+    if n == 0 { return "0" }
+    if n < 0  { return string.concat("-", _int_str(0 - n)) }
+    arr: digits = array.create(0)
+    int: x = n
+    while x > 0 {
+        int: d = x % 10
+        array.push(digits, _digit(d))
+        x = _int_div10(x)
+    }
+    str: out = ""
+    int: i = array.size(digits) - 1
+    while i >= 0 {
+        out = string.concat(out, digits[i])
+        i = i - 1
+    }
+    return out
+}
+
+fun _digit(int: d) -> str {
+    /*
+    Converts a single digit integer (0-9) to its string representation.
+
+    Args:
+        d (int): The digit (0-9).
+
+    Returns:
+        str: The digit as a string.
+    */
+    if d == 0 { return "0" }
+    if d == 1 { return "1" }
+    if d == 2 { return "2" }
+    if d == 3 { return "3" }
+    if d == 4 { return "4" }
+    if d == 5 { return "5" }
+    if d == 6 { return "6" }
+    if d == 7 { return "7" }
+    if d == 8 { return "8" }
+    return "9"
+}
+
+// --- DataFrame builders ---
+
+fun _new_df() -> record {
+    /*
+    Creates an empty DataFrame record.
+
+    Returns:
+        record: An empty DataFrame with zero rows and columns.
+    */
+    return {
+        _cols:   mapping.create(),
+        _names:  array.create(0),
+        _nrows:  0,
+        _ncols:  0,
+        _dtypes: mapping.create(),
+        _index_names:  array.create(0),
+        _index_values: mapping.create()
+    }
+}
+
+fun _set_col(record: df, str: name, record: col_data, str: dtype) -> record {
+    /*
+    Adds or overwrites a column in the DataFrame (internal).
+
+    Returns a NEW record (Rhodesia records are immutable). The input
+    record is NOT mutated: _names and _dtypes are copied to avoid
+    sharing references.
+
+    Args:
+        df (record): Source DataFrame.
+        name (str): Column name.
+        col_data (record): Column data record {kind, data, na}.
+        dtype (str): Data type string.
+
+    Returns:
+        record: New DataFrame with the column added/updated.
+    */
+    arr: new_names = array.create(0)
+    int: nn = array.size(df._names)
+    int: j = 0
+    while j < nn {
+        array.push(new_names, df._names[j])
+        j = j + 1
+    }
+    map: new_dtypes = mapping.create()
+    int: k = 0
+    while k < nn {
+        str: nnm = new_names[k]
+        str: dt = mapping.get(df._dtypes, nnm)
+        mapping.put(new_dtypes, nnm, dt)
+        k = k + 1
+    }
+    map: new_cols = mapping.create()
+    int: m = 0
+    while m < nn {
+        str: nnm = new_names[m]
+        record: cc = mapping.get(df._cols, nnm)
+        mapping.put(new_cols, nnm, cc)
+        m = m + 1
+    }
+    mapping.put(new_cols, name, col_data)
+    mapping.put(new_dtypes, name, dtype)
+    if _name_in(new_names, name) == 0 {
+        array.push(new_names, name)
+    }
+    int: new_ncols = array.size(new_names)
+    int: max_rows = 0
+    int: i = 0
+    int: n = array.size(new_names)
+    while i < n {
+        str: nm = new_names[i]
+        record: c = mapping.get(new_cols, nm)
+        int: sz = _col_size(c)
+        if sz > max_rows { max_rows = sz }
+        i = i + 1
+    }
+    record: out = {
+        _cols:   new_cols,
+        _names:  new_names,
+        _nrows:  max_rows,
+        _ncols:  new_ncols,
+        _dtypes: new_dtypes,
+        _index_names:  df._index_names,
+        _index_values: df._index_values
+    }
+    return out
+}
+
+fun _name_in(arr: names, str: name) -> int {
+    /*
+    Checks if a name appears in an array of strings.
+
+    Args:
+        names (arr): Array of strings to search.
+        name (str): Name to look for.
+
+    Returns:
+        int: 1 if found, 0 otherwise.
+    */
+    int: i = 0
+    int: n = array.size(names)
+    while i < n {
+        if names[i] == name { return 1 }
+        i = i + 1
+    }
+    return 0
+}
+
+fun _col_size(record: col_data) -> int {
+    /*
+    Returns the size (length) of a column's data.
+
+    col_data is a map { kind: "vec"|"arr", data: <vec|arr> }.
+
+    Args:
+        col_data (record): Column data record.
+
+    Returns:
+        int: The number of elements in the column.
+    */
+    str: kind = col_data.kind
+    if kind == "vec" {
+        vec: v = col_data.data
+        return math.size(v)
+    }
+    arr: a = col_data.data
+    return array.size(a)
+}
+
+fun _wrap_vec(vec: v) -> record {
+    /*
+    Wraps a vec into a column data record with no NA mask.
+
+    Args:
+        v (vec): Vector of float64 values.
+
+    Returns:
+        record: Column record {kind: "vec", data: v, na: mask}.
+    */
+    int: n = math.size(v)
+    return { kind: "vec", data: v, na: _new_na(n) }
+}
+
+fun _wrap_arr(arr: a) -> record {
+    /*
+    Wraps an arr into a column data record with no NA mask.
+
+    Args:
+        a (arr): Array of strings.
+
+    Returns:
+        record: Column record {kind: "arr", data: a, na: mask}.
+    */
+    int: n = array.size(a)
+    return { kind: "arr", data: a, na: _new_na(n) }
+}
+
+fun _get_col(record: df, str: name) -> record {
+    /*
+    Returns the raw column data record for a given column name.
+
+    Args:
+        df (record): A DataFrame record.
+        name (str): Column name.
+
+    Returns:
+        record: Column data record {kind, data, na}.
+    */
+    _check_col(df, name)
+    return mapping.get(df._cols, name)
+}
+
+fun _get_vec(record: df, str: name) -> vec {
+    /*
+    Returns the vec data of a numeric column.
+
+    Asserts that the column is numeric.
+
+    Args:
+        df (record): A DataFrame record.
+        name (str): Column name.
+
+    Returns:
+        vec: The column's float64 vector.
+    */
+    _check_col(df, name)
+    record: c = mapping.get(df._cols, name)
+    if c.kind != "vec" {
+        _err(string.concat("column '", name, "' is not numeric"))
+    }
+    return c.data
+}
+
+fun _get_strs(record: df, str: name) -> arr {
+    /*
+    Returns the arr data of a string column.
+
+    Asserts that the column is of string type.
+
+    Args:
+        df (record): A DataFrame record.
+        name (str): Column name.
+
+    Returns:
+        arr: The column's string array.
+    */
+    _check_col(df, name)
+    record: c = mapping.get(df._cols, name)
+    if c.kind != "arr" {
+        _err(string.concat("column '", name, "' is not string"))
+    }
+    return c.data
+}
+
+fun _copy_vec(vec: v) -> vec {
+    /*
+    Creates a defensive copy of a vec.
+
+    Args:
+        v (vec): Source vector.
+
+    Returns:
+        vec: A new vector with the same values.
+    */
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        out[i] = v[i]
+        i = i + 1
+    }
+    return out
+}
+
+fun _copy_arr(arr: a) -> arr {
+    /*
+    Creates a defensive copy of an array.
+
+    Args:
+        a (arr): Source array.
+
+    Returns:
+        arr: A new array with the same elements.
+    */
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = array.size(a)
+    while i < n {
+        array.push(out, a[i])
+        i = i + 1
+    }
+    return out
+}
+
+fun _copy_df(record: df) -> record {
+    /*
+    Creates a deep copy of a DataFrame, preserving NA masks.
+
+    Args:
+        df (record): Source DataFrame.
+
+    Returns:
+        record: A new DataFrame with copied data.
+    */
+    record: out = _new_df()
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        record: c = mapping.get(df._cols, nm)
+        str: dt = mapping.get(df._dtypes, nm)
+        arr: na_src = c.na
+        arr: na_new = _copy_arr(na_src)
+        if c.kind == "vec" {
+            record: cnew = { kind: "vec", data: _copy_vec(c.data), na: na_new }
+            out = _set_col(out, nm, cnew, dt)
+        } else {
+            record: cnew = { kind: "arr", data: _copy_arr(c.data), na: na_new }
+            out = _set_col(out, nm, cnew, dt)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fun _empty_df_like(record: df) -> record {
+    /*
+    Creates an empty DataFrame with the same schema as the input.
+
+    Result has 0 rows but preserves column names and dtypes.
+
+    Args:
+        df (record): Source DataFrame to copy schema from.
+
+    Returns:
+        record: Empty DataFrame with matching column structure.
+    */
+    record: out = _new_df()
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        str: dt = mapping.get(df._dtypes, nm)
+        if dt == "str" {
+            arr: empty = array.create(0)
+            out = _set_col(out, nm, _wrap_arr(empty), dt)
+        } else {
+            vec: empty = math.zeros(1)
+            out = _set_col(out, nm, _wrap_vec(empty), dt)
+        }
+        i = i + 1
+    }
+    return out
+}

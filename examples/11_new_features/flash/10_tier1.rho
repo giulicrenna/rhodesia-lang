@@ -1,0 +1,131 @@
+// examples/11_new_features/flash/10_tier1.rho
+// Demuestra todas las features nuevas de tier 1:
+//   .str accessors, .dt accessors, parse_dates, to_dict, to_records,
+//   merge compound key, pivot_table aggfunc, MultiIndex, filter_not.
+
+include flash
+
+println("=== flash tier-1: .str, .dt, pivot, merge, multiindex ===")
+println()
+
+// --- 1) Dataset con fechas y strings --------------------------------------
+str: csv_path = "_tier1.csv"
+str: csv_content = "user_id,country,plan,signup_date,revenue\n"
+csv_content = string.concat(csv_content, "1,argentina,pro,2024-03-15,120.50\n")
+csv_content = string.concat(csv_content, "2,brazil,free,2024-04-01,0.00\n")
+csv_content = string.concat(csv_content, "3,argentina,pro,2024-03-22,89.99\n")
+csv_content = string.concat(csv_content, "4,chile,pro,2024-05-10,150.00\n")
+csv_content = string.concat(csv_content, "5,brazil,pro,2024-05-12,75.50\n")
+csv_content = string.concat(csv_content, "6,argentina,free,2024-06-01,0.00\n")
+csv_content = string.concat(csv_content, "7,chile,pro,2024-06-15,200.00\n")
+csv_content = string.concat(csv_content, "8,argentina,pro,2024-07-03,99.00\n")
+io.write_file(csv_path, csv_content)
+
+record: df = read_csv_dates(csv_path, "signup_date")
+println("Schema con signup_date como datetime:")
+print(repr_df(df))
+println()
+
+// --- 2) .dt accessors ----------------------------------------------------
+println("Mes del signup (nueva col signup_date_month):")
+record: dfm = dtc_month(df, "signup_date")
+print(to_string(head(dfm, 4)))
+println()
+
+println("Dia de la semana del signup (0=lun,6=dom):")
+record: dfd = dtc_dayofweek(df, "signup_date")
+print(to_string(head(dfd, 4)))
+println()
+
+// --- 3) .str accessors ----------------------------------------------------
+println("Country en mayúsculas (nueva col country):")
+record: dfu = str_upper(df, "country")
+print(to_string(head(dfu, 3)))
+println()
+
+println("Largo del country (nueva col country_len):")
+record: dflen = str_len(dfu, "country")
+print(to_string(head(dflen, 3)))
+println()
+
+println("user_ids que contienen '5' (nueva col user_id_contains):")
+record: dfc = str_contains(df, "user_id", "5")
+print(to_string(head(dfc, 8)))
+println()
+
+// --- 4) to_records -------------------------------------------------------
+println("Primeras 3 filas como arr<map>:")
+arr: recs = to_records(head(df, 3))
+int: r = 0
+while r < array.size(recs) {
+    map: row = recs[r]
+    println(mapping.get(row, "user_id"), " | ", mapping.get(row, "country"),
+            " | ", mapping.get(row, "signup_date"), " | ", mapping.get(row, "revenue"))
+    r = r + 1
+}
+println()
+
+// --- 5) to_dict ----------------------------------------------------------
+println("to_dict — map con vec/arr por col:")
+map: d = to_dict(df)
+int: kk = mapping.keys(d)
+println("num cols (mapping.keys devuelve count): ", kk)
+println()
+
+// --- 6) pivot_table con aggfunc=sum --------------------------------------
+println("Pivot: country (index) x plan (cols) -> revenue SUM:")
+record: p1 = pivot_table(df, "country", "plan", "revenue", "sum")
+show_df(p1)
+println()
+
+println("Pivot con aggfunc=mean:")
+record: p2 = pivot_table(df, "country", "plan", "revenue", "mean")
+show_df(p2)
+println()
+
+println("Pivot con aggfunc=count:")
+record: p3 = pivot_table(df, "country", "plan", "", "count")
+show_df(p3)
+println()
+
+// --- 7) merge compound key ----------------------------------------------
+str: ev_path = "_tier1_events.csv"
+str: ev_content = "user_id,country,logins\n"
+ev_content = string.concat(ev_content, "1,argentina,12\n")
+ev_content = string.concat(ev_content, "2,brazil,3\n")
+ev_content = string.concat(ev_content, "3,argentina,5\n")
+ev_content = string.concat(ev_content, "4,chile,8\n")
+ev_content = string.concat(ev_content, "9,narnia,1\n")
+io.write_file(ev_path, ev_content)
+record: ev = read_csv(ev_path)
+println("Events:")
+show_df(ev)
+println()
+
+println("Merge compound key (user_id + country) — inner:")
+record: m1 = merge_keys(df, ev, "user_id,country", "inner")
+show_df(head(m1, 5))
+println()
+
+println("Merge outer:")
+record: m2 = merge_keys(df, ev, "user_id,country", "outer")
+show_df(head(m2, 8))
+println()
+
+// --- 8) MultiIndex ------------------------------------------------------
+println("Set index (user_id + country como índice):")
+record: idxed = set_index_keys(df, "user_id,country")
+arr: idx_names = index_names(idxed)
+println("Index names size: ", array.size(idx_names))
+println("Index value (user_id) row 0: ", index_value(idxed, "user_id", 0))
+record: back = reset_index(idxed)
+println("Después de reset_index — has_index: ", has_index(back))
+println()
+
+// --- 9) filter_not (sin ~) ----------------------------------------------
+println("Filas que NO son de argentina (filter_complement):")
+record: not_arg = filter_complement(df, filter_eq(df, "country", "argentina"))
+show_df(head(not_arg, 4))
+println()
+
+println("Done.")

@@ -1,0 +1,264 @@
+// libs/flash/io/json_in.rho
+// Parser JSON mínimo: array de objetos → DataFrame.
+// Soporta sólo JSON plano: [{ "k": v, ... }, ...] con valores
+// string / número / bool / null.
+// NO soporta JSON anidado profundo (sólo top-level fields planos).
+//
+// API:
+//   read_json(path) -> DataFrame
+
+// _json_skip_ws(s, i) — salta whitespace desde i.
+fun _json_skip_ws(str: s, int: i) -> int {
+    int: n = string.length(s)
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if c == " " or c == "\t" or c == "\n" or c == "\r" {
+            i = i + 1
+            continue
+        }
+        return i
+    }
+    return i
+}
+
+// _json_parse_string(s, i) — parsea "..." desde i. Devuelve (str, new_i).
+fun _json_parse_string(str: s, int: i) -> record {
+    // asume s[i] == '"'
+    i = i + 1
+    str: out = ""
+    int: n = string.length(s)
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if c == "\"" { return { val: out, idx: i + 1 } }
+        if c == "\\" {
+            if i + 1 < n {
+                str: c2 = string.slice(s, i + 1, i + 2)
+                if c2 == "n" { out = string.concat(out, "\n") }
+                else if c2 == "t" { out = string.concat(out, "    ") }
+                else if c2 == "r" { out = string.concat(out, " ") }
+                else if c2 == "\"" { out = string.concat(out, "\"") }
+                else if c2 == "\\" { out = string.concat(out, "\\") }
+                else { out = string.concat(out, c2) }
+                i = i + 2
+                continue
+            }
+        }
+        out = string.concat(out, c)
+        i = i + 1
+    }
+    return { val: out, idx: i }
+}
+
+// _json_collect_keys(s, from) —
+//   Encuentra todas las claves del array de objetos JSON (de from hasta el ']').
+//   Asume from apunta a '[' y devuelve map<str,int> con orden de aparición + arr<str> de keys.
+fun _json_collect_keys(str: s, int: from) -> record {
+    arr: keys = array.create(0)
+    map: keyset = mapping.create()
+    int: i = from + 1
+    int: n = string.length(s)
+    while i < n {
+        i = _json_skip_ws(s, i)
+        if i >= n { break }
+        str: c = string.slice(s, i, i + 1)
+        if c == "]" { return { keys: keys, keyset: keyset, idx: i } }
+        if c == "," { i = i + 1
+    continue }
+        if c == "{" {
+            // objeto: leer todas las claves
+            int: j = i + 1
+            int: end = _json_find_obj_end(s, i)
+            while j < end {
+                j = _json_skip_ws(s, j)
+                if j >= end { break }
+                if string.slice(s, j, j + 1) != "\"" { break }
+                record: ks = _json_parse_string(s, j)
+                str: k = ks.val
+                if mapping.has(keyset, k) == 0 {
+                    mapping.put(keyset, k, 1)
+                    array.push(keys, k)
+                }
+                j = ks.idx
+                j = _json_skip_ws(s, j)
+                if j < end and s[j] == ":" { j = j + 1 }
+                // saltar el valor
+                j = _json_skip_value(s, j)
+                j = _json_skip_ws(s, j)
+                if j < end and s[j] == "," { j = j + 1 }
+            }
+            i = end + 1
+            continue
+        }
+        i = i + 1
+    }
+    return { keys: keys, keyset: keyset, idx: i }
+}
+
+// _json_find_obj_end(s, from) — devuelve el índice del cierre de objeto JSON.
+fun _json_find_obj_end(str: s, int: from) -> int {
+    int: depth = 0
+    int: i = from
+    int: n = string.length(s)
+    int: in_str = 0
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if in_str == 1 {
+            if c == "\\" { i = i + 2
+    continue }
+            if c == "\"" { in_str = 0 }
+            i = i + 1
+            continue
+        }
+        if c == "\"" { in_str = 1
+    i = i + 1
+    continue }
+        if c == "{" { depth = depth + 1 }
+        if c == "}" {
+            depth = depth - 1
+            if depth == 0 { return i }
+        }
+        i = i + 1
+    }
+    return n
+}
+
+// _json_skip_value(s, i) — salta un valor JSON desde i. Devuelve nuevo índice.
+fun _json_skip_value(str: s, int: i) -> int {
+    int: n = string.length(s)
+    i = _json_skip_ws(s, i)
+    if i >= n { return i }
+    str: c = string.slice(s, i, i + 1)
+    if c == "\"" {
+        record: r = _json_parse_string(s, i)
+        return r.idx
+    }
+    if c == "{" { return _json_find_obj_end(s, i) + 1 }
+    if c == "[" { return _json_find_arr_end(s, i) + 1 }
+    // número, bool, null
+    while i < n {
+        str: cc = string.slice(s, i, i + 1)
+        if cc == "," or cc == "}" or cc == "]" or cc == " " or cc == "\n" or cc == "\t" or cc == "\r" {
+            return i
+        }
+        i = i + 1
+    }
+    return i
+}
+
+fun _json_find_arr_end(str: s, int: from) -> int {
+    int: depth = 0
+    int: i = from
+    int: n = string.length(s)
+    int: in_str = 0
+    while i < n {
+        str: c = string.slice(s, i, i + 1)
+        if in_str == 1 {
+            if c == "\\" { i = i + 2
+    continue }
+            if c == "\"" { in_str = 0 }
+            i = i + 1
+            continue
+        }
+        if c == "\"" { in_str = 1
+    i = i + 1
+    continue }
+        if c == "[" { depth = depth + 1 }
+        if c == "]" {
+            depth = depth - 1
+            if depth == 0 { return i }
+        }
+        i = i + 1
+    }
+    return n
+}
+
+// _json_get_value(s, i, key) — busca la clave key en el objeto que empieza en i (debe ser '{').
+//   Devuelve { val: str, idx: new_i } o { val: "?", idx: i, found: 0 }.
+fun _json_get_value(str: s, int: i, str: key) -> record {
+    int: end = _json_find_obj_end(s, i)
+    int: j = i + 1
+    while j < end {
+        j = _json_skip_ws(s, j)
+        if j >= end { break }
+        if string.slice(s, j, j + 1) != "\"" { break }
+        record: ks = _json_parse_string(s, j)
+        str: k = ks.val
+        j = ks.idx
+        j = _json_skip_ws(s, j)
+        if j < end and s[j] == ":" { j = j + 1 }
+        j = _json_skip_ws(s, j)
+        int: vstart = j
+        if k == key {
+            // leer el valor como string crudo
+            int: vend = _json_skip_value(s, j)
+            str: raw = string.slice(s, vstart, vend)
+            // trim
+            while string.length(raw) > 0 and (raw[0] == " " or raw[0] == "\n" or raw[0] == "\t") {
+                raw = string.slice(raw, 1, string.length(raw))
+            }
+            return { val: raw, idx: vend, found: 1 }
+        }
+        j = _json_skip_value(s, j)
+        j = _json_skip_ws(s, j)
+        if j < end and s[j] == "," { j = j + 1 }
+    }
+    return { val: "", idx: i, found: 0 }
+}
+
+fun read_json(str: path) -> record {
+    if io.exists(path) == 0 {
+        _err(string.concat("file not found: ", path))
+    }
+    str: content = io.read_file(path)
+    int: i = _json_skip_ws(content, 0)
+    if i >= string.length(content) or string.slice(content, i, i + 1) != "[" {
+        _err("read_json: expected '[' at top level")
+    }
+    // 1ra pasada: recolectar claves
+    record: kr = _json_collect_keys(content, i)
+    arr: keys = kr.keys
+    // 2da pasada: para cada objeto, leer cada clave
+    int: nk = array.size(keys)
+    arr: col_strs = array.create(0)
+    int: kk = 0
+    while kk < nk {
+        array.push(col_strs, array.create(0))
+        kk = kk + 1
+    }
+    int: n = string.length(content)
+    i = i + 1
+    while i < n {
+        i = _json_skip_ws(content, i)
+        if i >= n { break }
+        str: c = string.slice(content, i, i + 1)
+        if c == "]" { break }
+        if c == "," { i = i + 1
+    continue }
+        if c == "{" {
+            int: end = _json_find_obj_end(content, i)
+            int: ki = 0
+            while ki < nk {
+                record: vr = _json_get_value(content, i, keys[ki])
+                if vr.found == 1 {
+                    array.push(col_strs[ki], vr.val)
+                } else {
+                    array.push(col_strs[ki], "")
+                }
+                ki = ki + 1
+            }
+            i = end + 1
+            continue
+        }
+        i = i + 1
+    }
+    record: df = _new_df()
+    int: ci = 0
+    while ci < nk {
+        str: nm = keys[ci]
+        str: dt = _infer_dtype(col_strs[ci])
+        record: cdata = _coerce_col(col_strs[ci], dt)
+        df = _set_col(df, nm, cdata, dt)
+        ci = ci + 1
+    }
+    return df
+}

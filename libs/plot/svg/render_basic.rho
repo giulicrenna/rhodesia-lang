@@ -1,0 +1,411 @@
+// svg/render_basic.rho - SVG generators for line, scatter, bar, hist, area,
+// fill_between, stacked_area, errorbar.
+//
+// ponytail: the bug fix lives here. _render_hist and _render_bar receive
+// xmin/xrange/ymin/yrange precomputed by the panel scope where ymin <= 0 has
+// been forced when the panel contains hist/bar. So the bar base _y_to_px(0, ...)
+// stays inside the visible region. If we forgot that, the bars overflow below
+// the plot area (the v0.1 bug).
+
+fun _render_line(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    vec: y = mapping.get(s, "y")
+    str: color = mapping.get(s, "color")
+    int: n = math.size(x)
+    if n < 2 { return "" }
+
+    // A "jump" between consecutive points that exceeds this many displayed-y
+    // units signals an asymptote crossing — start a fresh polyline so the
+    // line doesn't draw a vertical fill between the two sides.
+    float64: jump_thr = yrange * 3.0
+    if jump_thr < 1.0 { jump_thr = 1.0 }
+
+    str: cur = ""
+    int: started = 0
+    float64: prev_y = 0.0
+    arr: segments = array.create(0)
+    int: i = 0
+    while i < n {
+        float64: px = _x_to_px(x[i], xmin, xrange, pw)
+        float64: py = _y_to_px(y[i], ymin, yrange, ph)
+        // Clamp off-screen points so the line cleanly stops at the edge.
+        if px < 0.0 { px = 0.0 }
+        if px > pw * 1.0 { px = pw * 1.0 }
+        if py < 0.0 { py = 0.0 }
+        if py > ph * 1.0 { py = ph * 1.0 }
+        int: brk = 0
+        if started == 1 {
+            float64: dy = y[i] - prev_y
+            if dy < 0.0 { dy = 0.0 - dy }
+            if dy > jump_thr { brk = 1 }
+        }
+        if brk == 1 {
+            array.push(segments, cur)
+            cur = ""
+            started = 0
+        }
+        if started == 0 {
+            cur = _num_to_str(px)
+            cur = string.concat(cur, ",")
+            cur = string.concat(cur, _num_to_str(py))
+            started = 1
+        } else {
+            cur = string.concat(cur, " ")
+            cur = string.concat(cur, _num_to_str(px))
+            cur = string.concat(cur, ",")
+            cur = string.concat(cur, _num_to_str(py))
+        }
+        prev_y = y[i]
+        i = i + 1
+    }
+    if started == 1 { array.push(segments, cur) }
+
+    str: out = ""
+    int: k = 0
+    int: nseg = array.size(segments)
+    while k < nseg {
+        str: seg = "<polyline points=\""
+        seg = string.concat(seg, segments[k])
+        seg = string.concat(seg, "\" fill=\"none\" stroke=\"")
+        seg = string.concat(seg, color)
+        seg = string.concat(seg, "\" stroke-width=\"")
+        seg = string.concat(seg, _num_to_str(_LINE_WIDTH))
+        seg = string.concat(seg, "\"/>")
+        out = string.concat(out, seg)
+        k = k + 1
+    }
+    return out
+}
+
+fun _render_scatter(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    vec: y = mapping.get(s, "y")
+    str: color = mapping.get(s, "color")
+    int: n = math.size(x)
+    str: out = ""
+    int: i = 0
+    while i < n {
+        float64: px = _x_to_px(x[i], xmin, xrange, pw)
+        float64: py = _y_to_px(y[i], ymin, yrange, ph)
+        out = string.concat(out, "<circle cx=\"")
+        out = string.concat(out, _num_to_str(px))
+        out = string.concat(out, "\" cy=\"")
+        out = string.concat(out, _num_to_str(py))
+        out = string.concat(out, "\" r=\"")
+        out = string.concat(out, _num_to_str(_MARKER_SIZE))
+        out = string.concat(out, "\" fill=\"")
+        out = string.concat(out, color)
+        out = string.concat(out, "\"/>")
+        i = i + 1
+    }
+    return out
+}
+
+fun _render_bar(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    vec: y = mapping.get(s, "y")
+    str: color = mapping.get(s, "color")
+    int: n = math.size(x)
+    if n < 1 { return "" }
+    float64: bw = pw / n
+    if bw < 1.0 { bw = 1.0 }
+    // Bar baseline is always y=0. Caller is responsible for ensuring ymin <= 0.
+    float64: base_py = _y_to_px(0.0, ymin, yrange, ph)
+    str: out = ""
+    int: i = 0
+    while i < n {
+        float64: px = _x_to_px(x[i], xmin, xrange, pw) - bw / 2.0
+        float64: py = _y_to_px(y[i], ymin, yrange, ph)
+        float64: top = py
+        if base_py < top { top = base_py }
+        float64: h = math.abs(base_py - py)
+        out = string.concat(out, "<rect x=\"")
+        out = string.concat(out, _num_to_str(px))
+        out = string.concat(out, "\" y=\"")
+        out = string.concat(out, _num_to_str(top))
+        out = string.concat(out, "\" width=\"")
+        out = string.concat(out, _num_to_str(bw - 1.0))
+        out = string.concat(out, "\" height=\"")
+        out = string.concat(out, _num_to_str(h))
+        out = string.concat(out, "\" fill=\"")
+        out = string.concat(out, color)
+        out = string.concat(out, "\"/>")
+        i = i + 1
+    }
+    return out
+}
+
+fun _render_hist(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    vec: y = mapping.get(s, "y")
+    int: bins = mapping.get(s, "n")
+    str: color = mapping.get(s, "color")
+    if bins < 1 { return "" }
+    // Bar baseline at y=0. ymin <= 0 guaranteed by panel resolver.
+    float64: base_py = _y_to_px(0.0, ymin, yrange, ph)
+    float64: bw = pw / bins
+    if bw < 1.0 { bw = 1.0 }
+    str: out = ""
+    int: i = 0
+    while i < bins {
+        float64: px = _x_to_px(x[i], xmin, xrange, pw) - bw / 2.0
+        float64: py = _y_to_px(y[i], ymin, yrange, ph)
+        float64: top = py
+        if base_py < top { top = base_py }
+        float64: h = math.abs(base_py - py)
+        out = string.concat(out, "<rect x=\"")
+        out = string.concat(out, _num_to_str(px))
+        out = string.concat(out, "\" y=\"")
+        out = string.concat(out, _num_to_str(top))
+        out = string.concat(out, "\" width=\"")
+        out = string.concat(out, _num_to_str(bw - 1.0))
+        out = string.concat(out, "\" height=\"")
+        out = string.concat(out, _num_to_str(h))
+        out = string.concat(out, "\" fill=\"")
+        out = string.concat(out, color)
+        out = string.concat(out, "\"/>")
+        i = i + 1
+    }
+    return out
+}
+
+fun _render_area(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    vec: y = mapping.get(s, "y")
+    str: color = mapping.get(s, "color")
+    int: n = math.size(x)
+    if n < 1 { return "" }
+    // Build polygon: line along y, then baseline at y=0 along x-reversed.
+    float64: base_py = _y_to_px(0.0, ymin, yrange, ph)
+    str: pts = ""
+    int: i = 0
+    while i < n {
+        if i > 0 { pts = string.concat(pts, " ") }
+        float64: px = _x_to_px(x[i], xmin, xrange, pw)
+        float64: py = _y_to_px(y[i], ymin, yrange, ph)
+        pts = string.concat(pts, _num_to_str(px))
+        pts = string.concat(pts, ",")
+        pts = string.concat(pts, _num_to_str(py))
+        i = i + 1
+    }
+    // Close along the x-axis
+    float64: xlast = _x_to_px(x[n - 1], xmin, xrange, pw)
+    float64: xfirst = _x_to_px(x[0], xmin, xrange, pw)
+    pts = string.concat(pts, " ")
+    pts = string.concat(pts, _num_to_str(xlast))
+    pts = string.concat(pts, ",")
+    pts = string.concat(pts, _num_to_str(base_py))
+    pts = string.concat(pts, " ")
+    pts = string.concat(pts, _num_to_str(xfirst))
+    pts = string.concat(pts, ",")
+    pts = string.concat(pts, _num_to_str(base_py))
+    str: out = "<polygon points=\""
+    out = string.concat(out, pts)
+    out = string.concat(out, "\" fill=\"")
+    out = string.concat(out, color)
+    out = string.concat(out, "\" fill-opacity=\"")
+    out = string.concat(out, _num_to_str(_SERIES_ALPHA))
+    out = string.concat(out, "\" stroke=\"")
+    out = string.concat(out, color)
+    out = string.concat(out, "\" stroke-width=\"")
+    out = string.concat(out, _num_to_str(_LINE_WIDTH))
+    out = string.concat(out, "\"/>")
+    return out
+}
+
+fun _render_fill_between(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    vec: y1 = mapping.get(s, "y1")
+    vec: y2 = mapping.get(s, "y2")
+    str: color = mapping.get(s, "color")
+    int: n = math.size(x)
+    if n < 1 { return "" }
+    str: pts = ""
+    int: i = 0
+    while i < n {
+        if i > 0 { pts = string.concat(pts, " ") }
+        float64: px = _x_to_px(x[i], xmin, xrange, pw)
+        float64: py = _y_to_px(y1[i], ymin, yrange, ph)
+        pts = string.concat(pts, _num_to_str(px))
+        pts = string.concat(pts, ",")
+        pts = string.concat(pts, _num_to_str(py))
+        i = i + 1
+    }
+    // Walk y2 in reverse
+    i = n - 1
+    while i >= 0 {
+        pts = string.concat(pts, " ")
+        float64: px = _x_to_px(x[i], xmin, xrange, pw)
+        float64: py = _y_to_px(y2[i], ymin, yrange, ph)
+        pts = string.concat(pts, _num_to_str(px))
+        pts = string.concat(pts, ",")
+        pts = string.concat(pts, _num_to_str(py))
+        i = i - 1
+    }
+    str: out = "<polygon points=\""
+    out = string.concat(out, pts)
+    out = string.concat(out, "\" fill=\"")
+    out = string.concat(out, color)
+    out = string.concat(out, "\" fill-opacity=\"")
+    out = string.concat(out, _num_to_str(_SERIES_ALPHA))
+    out = string.concat(out, "\" stroke=\"")
+    out = string.concat(out, color)
+    out = string.concat(out, "\" stroke-width=\"1\"/>")
+    return out
+}
+
+// Compute cumulative sums of stacked_area layers, returning an arr of vec.
+fun _stacked_y(arr: layers, vec: x) -> arr {
+    int: nx = math.size(x)
+    int: nl = array.size(layers)
+    // running = zeros; for each layer add its y to running, copy to out.
+    vec: running = math.zeros(nx)
+    arr: out = array.create(0)
+    int: li = 0
+    while li < nl {
+        map: lyr = layers[li]
+        vec: y = mapping.get(lyr, "y")
+        vec: layer_top = running
+        int: i = 0
+        while i < nx {
+            layer_top[i] = layer_top[i] + y[i]
+            i = i + 1
+        }
+        // push a copy: arr.push copies reference; we approximate by reading back
+        array.push(out, layer_top)
+        running = layer_top
+        li = li + 1
+    }
+    return out
+}
+
+fun _render_stacked_area(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    arr: layers = mapping.get(s, "labels")   // layers stored under "labels" key (see stacked_area())
+    int: nx = math.size(x)
+    int: nl = array.size(layers)
+    if nl < 1 { return "" }
+    arr: legend_entries = mapping.get(s, "legend_entries")
+    str: out = ""
+    int: li = 0
+    vec: prev = math.zeros(nx)
+    while li < nl {
+        map: lyr = layers[li]
+        vec: y = mapping.get(lyr, "y")
+        // top = prev + y
+        vec: top = math.zeros(nx)
+        int: i = 0
+        while i < nx {
+            top[i] = prev[i] + y[i]
+            i = i + 1
+        }
+        // polygon: (x[i], y[i]+prev[i]) forward, (x[i], prev[i]) reverse
+        str: pts = ""
+        i = 0
+        while i < nx {
+            if i > 0 { pts = string.concat(pts, " ") }
+            float64: px = _x_to_px(x[i], xmin, xrange, pw)
+            float64: py = _y_to_px(top[i], ymin, yrange, ph)
+            pts = string.concat(pts, _num_to_str(px))
+            pts = string.concat(pts, ",")
+            pts = string.concat(pts, _num_to_str(py))
+            i = i + 1
+        }
+        i = nx - 1
+        while i >= 0 {
+            pts = string.concat(pts, " ")
+            float64: px = _x_to_px(x[i], xmin, xrange, pw)
+            float64: py = _y_to_px(prev[i], ymin, yrange, ph)
+            pts = string.concat(pts, _num_to_str(px))
+            pts = string.concat(pts, ",")
+            pts = string.concat(pts, _num_to_str(py))
+            i = i - 1
+        }
+        // Pick color from legend_entries or fall back to _next_color
+        str: col = _next_color()
+        if li < array.size(legend_entries) {
+            map: le = legend_entries[li]
+            col = mapping.get(le, "color")
+        }
+        str: poly = "<polygon points=\""
+        poly = string.concat(poly, pts)
+        poly = string.concat(poly, "\" fill=\"")
+        poly = string.concat(poly, col)
+        poly = string.concat(poly, "\" fill-opacity=\"")
+        poly = string.concat(poly, _num_to_str(_SERIES_ALPHA))
+        poly = string.concat(poly, "\" stroke=\"")
+        poly = string.concat(poly, col)
+        poly = string.concat(poly, "\" stroke-width=\"1\"/>")
+        out = string.concat(out, poly)
+        prev = top
+        li = li + 1
+    }
+    return out
+}
+
+fun _render_errorbar(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    vec: x = mapping.get(s, "x")
+    vec: y = mapping.get(s, "y")
+    vec: err = mapping.get(s, "err")
+    str: color = mapping.get(s, "color")
+    int: n = math.size(x)
+    if n < 1 { return "" }
+    str: out = ""
+    // Connecting line first
+    if n >= 2 {
+        str: pts = ""
+        int: i = 0
+        while i < n {
+            if i > 0 { pts = string.concat(pts, " ") }
+            float64: px = _x_to_px(x[i], xmin, xrange, pw)
+            float64: py = _y_to_px(y[i], ymin, yrange, ph)
+            pts = string.concat(pts, _num_to_str(px))
+            pts = string.concat(pts, ",")
+            pts = string.concat(pts, _num_to_str(py))
+            i = i + 1
+        }
+        out = string.concat(out, "<polyline points=\"")
+        out = string.concat(out, pts)
+        out = string.concat(out, "\" fill=\"none\" stroke=\"")
+        out = string.concat(out, color)
+        out = string.concat(out, "\" stroke-width=\"")
+        out = string.concat(out, _num_to_str(_LINE_WIDTH))
+        out = string.concat(out, "\"/>")
+    }
+    // Vertical error bars + caps
+    int: i = 0
+    float64: cap = 4.0
+    while i < n {
+        float64: px = _x_to_px(x[i], xmin, xrange, pw)
+        float64: py = _y_to_px(y[i], ymin, yrange, ph)
+        float64: ey = _y_to_px(y[i] - err[i], ymin, yrange, ph)
+        // top cap line
+        str: cap1 = "<line x1=\""
+        cap1 = string.concat(cap1, _num_to_str(px - cap))
+        cap1 = string.concat(cap1, "\" y1=\"")
+        cap1 = string.concat(cap1, _num_to_str(ey))
+        cap1 = string.concat(cap1, "\" x2=\"")
+        cap1 = string.concat(cap1, _num_to_str(px + cap))
+        cap1 = string.concat(cap1, "\" y2=\"")
+        cap1 = string.concat(cap1, _num_to_str(ey))
+        cap1 = string.concat(cap1, "\" stroke=\"")
+        cap1 = string.concat(cap1, color)
+        cap1 = string.concat(cap1, "\" stroke-width=\"1\"/>")
+        out = string.concat(out, cap1)
+        // bar from ey to py
+        str: bar = "<line x1=\""
+        bar = string.concat(bar, _num_to_str(px))
+        bar = string.concat(bar, "\" y1=\"")
+        bar = string.concat(bar, _num_to_str(ey))
+        bar = string.concat(bar, "\" x2=\"")
+        bar = string.concat(bar, _num_to_str(px))
+        bar = string.concat(bar, "\" y2=\"")
+        bar = string.concat(bar, _num_to_str(py))
+        bar = string.concat(bar, "\" stroke=\"")
+        bar = string.concat(bar, color)
+        bar = string.concat(bar, "\" stroke-width=\"1\"/>")
+        out = string.concat(out, bar)
+        i = i + 1
+    }
+    return out
+}

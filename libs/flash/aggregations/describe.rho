@@ -1,0 +1,81 @@
+// libs/flash/aggregations/describe.rho
+// describe(df) — devuelve un df con count/mean/std/min/max/median por columna numérica.
+
+fun describe(record: df) -> record {
+    record: out = _new_df()
+    // Columnas: "stat" + una por columna numérica
+    arr: num_names = array.create(0)
+    int: i = 0
+    int: nn = array.size(df._names)
+    while i < nn {
+        str: nm = df._names[i]
+        str: dt = mapping.get(df._dtypes, nm)
+        if dt != "str" { array.push(num_names, nm) }
+        i = i + 1
+    }
+    int: num_n = array.size(num_names)
+    // stat col
+    arr: stats = array.create(0)
+    array.push(stats, "count")
+    array.push(stats, "mean")
+    array.push(stats, "std")
+    array.push(stats, "min")
+    array.push(stats, "max")
+    array.push(stats, "median")
+    record: stat_col = _wrap_arr(stats)
+    out = _set_col(out, "stat", stat_col, "str")
+    int: k = 0
+    while k < num_n {
+        str: nm = num_names[k]
+        // count de celdas presentes (no-NA) en esta col
+        record: c = mapping.get(df._cols, nm)
+        arr: na = c.na
+        int: present = 0
+        if c.kind == "vec" {
+            vec: vv = c.data
+            present = _present(vv, na)
+        } else {
+            int: nn = array.size(c.data)
+            int: i = 0
+            while i < nn {
+                if i >= array.size(na) or na[i] == "0" { present = present + 1 }
+                i = i + 1
+            }
+        }
+        if present > 0 {
+            vec: v = math.zeros(6)
+            v[0] = present * 1.0
+            v[1] = col_mean(df, nm)
+            v[2] = col_std(df, nm)
+            v[3] = col_min(df, nm)
+            v[4] = col_max(df, nm)
+            v[5] = col_median(df, nm)
+            out = _set_col(out, nm, _wrap_vec(v), "float")
+        } else {
+            vec: empty = math.zeros(1)
+            out = _set_col(out, nm, _wrap_vec(empty), "float")
+        }
+        k = k + 1
+    }
+    return out
+}
+
+// col_count(df) — total de filas (equivalente a nrow).
+fun col_count(record: df) -> int {
+    return df._nrows
+}
+
+// col_n_missing(df, col) — cuenta celdas NA de la columna.
+fun col_n_missing(record: df, str: col) -> int {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    int: n = df._nrows
+    int: missing = 0
+    arr: na = c.na
+    int: i = 0
+    while i < n {
+        if i < array.size(na) and na[i] == "1" { missing = missing + 1 }
+        i = i + 1
+    }
+    return missing
+}

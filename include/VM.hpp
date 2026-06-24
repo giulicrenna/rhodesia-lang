@@ -35,9 +35,9 @@
 
 namespace Rhodesia {
 
-// ----
+
 // VMError
-// ----
+
 
 class VMError : public std::runtime_error {
 public:
@@ -45,7 +45,7 @@ public:
         : std::runtime_error("VMError: " + msg) {}
 };
 
-// ----
+
 // Helpers to work with compiled RhoFunction objects
 //
 // Convention used by the Compiler (and expected by the VM):
@@ -62,7 +62,7 @@ public:
 //   upvalues(f)       -> vector<RhoValue>&  (mutable reference)
 //   setUpvalues(f, v) -> store a vector of upvalues into f
 //   isCompiled(f)     -> true if f carries bytecode
-// ----
+
 
 /**
  * @brief A small box that lets us store a mutable vector<RhoValue> as a
@@ -76,10 +76,10 @@ struct UpvalueBox {
     std::vector<RhoValue> values;
 };
 
-// ----
+
 // Global registry for UpvalueBox objects (keyed by a monotonically
 // increasing ID stored in the RhoFunction closure as "__upvalue_id__").
-// ----
+
 
 namespace detail {
 
@@ -168,9 +168,9 @@ inline std::shared_ptr<UpvalueBox> upvalueBoxOf(const RhoFunction& f) {
     return rit->second;
 }
 
-// ----
+
 // CallFrame
-// ----
+
 
 struct CallFrame {
     std::shared_ptr<Chunk>    chunk;    ///< Currently executing chunk
@@ -179,9 +179,9 @@ struct CallFrame {
     std::shared_ptr<RhoFunction> closure; ///< Current closure (nullptr for top-level)
 };
 
-// ----
+
 // TryFrame
-// ----
+
 
 struct TryFrame {
     int32_t catchTarget;  ///< Absolute instruction index of the catch handler
@@ -190,9 +190,9 @@ struct TryFrame {
     std::string catchVar; ///< (informational; actual binding done by CATCH_BIND)
 };
 
-// ----
+
 // VM
-// ----
+
 
 class VM {
 public:
@@ -322,7 +322,7 @@ private:
     
 
     RhoValue applyBinaryOp(Opcode op, const RhoValue& left, const RhoValue& right) {
-        // // ---- Comparison opcodes // ----
+        //  Comparison opcodes 
         if (op == Opcode::EQ || op == Opcode::NE ||
             op == Opcode::LT || op == Opcode::GT ||
             op == Opcode::LE || op == Opcode::GE)
@@ -330,7 +330,7 @@ private:
             return applyComparison(op, left, right);
         }
 
-        // // ---- Arithmetic // ----
+        //  Arithmetic 
         switch (op) {
         case Opcode::ADD: return applyAdd(left, right);
         case Opcode::SUB: return applySub(left, right);
@@ -342,7 +342,7 @@ private:
         }
     }
 
-    // // ---- ADD // ----
+    //  ADD 
     RhoValue applyAdd(const RhoValue& left, const RhoValue& right) {
         // Fast path: most common numeric combinations avoid std::visit overhead
         if (const auto* l = std::get_if<int64_t>(&left)) {
@@ -387,7 +387,7 @@ private:
         }, left, right);
     }
 
-    // // ---- SUB // ----
+    //  SUB 
     RhoValue applySub(const RhoValue& left, const RhoValue& right) {
         if (const auto* l = std::get_if<int64_t>(&left)) {
             if (const auto* r = std::get_if<int64_t>(&right)) return *l - *r;
@@ -421,7 +421,7 @@ private:
         }, left, right);
     }
 
-    // // ---- MUL // ----
+    //  MUL 
     RhoValue applyMul(const RhoValue& left, const RhoValue& right) {
         if (const auto* l = std::get_if<int64_t>(&left)) {
             if (const auto* r = std::get_if<int64_t>(&right)) return *l * *r;
@@ -471,7 +471,7 @@ private:
         }, left, right);
     }
 
-    // // ---- DIV // ----
+    //  DIV 
     RhoValue applyDiv(const RhoValue& left, const RhoValue& right) {
         if (const auto* l = std::get_if<int64_t>(&left)) {
             if (const auto* r = std::get_if<int64_t>(&right)) {
@@ -520,7 +520,7 @@ private:
         }, left, right);
     }
 
-    // // ---- MOD // ----
+    //  MOD 
     RhoValue applyMod(const RhoValue& left, const RhoValue& right) {
         if (!isScalar(left) || !isScalar(right))
             throw VMError("Modulo requires scalar operands");
@@ -529,7 +529,7 @@ private:
         return toInt(left) % r;
     }
 
-    // // ---- Comparison // ----
+    //  Comparison 
     RhoValue applyComparison(Opcode op, const RhoValue& left, const RhoValue& right) {
         // null == null
         if (std::holds_alternative<std::shared_ptr<RhoNull>>(left) &&
@@ -663,7 +663,7 @@ private:
         if (!func)
             throw VMError("Null function value");
 
-        // // ---- Native function // ----
+        //  Native function 
         if (func->isNative()) {
             std::vector<RhoValue> args;
             args.reserve(static_cast<size_t>(argc));
@@ -679,7 +679,7 @@ private:
             return;
         }
 
-        // // ---- Compiled function // ----
+        //  Compiled function 
         if (isCompiledFunction(*func)) {
             auto chunk = compiledChunk(*func);
             if (!chunk)
@@ -710,7 +710,7 @@ private:
             return;
         }
 
-        // // ---- AST-based lambda (non-native, non-compiled) // ----
+        //  AST-based lambda (non-native, non-compiled) 
         // These are constructed by the Evaluator, not the Compiler.
         // The VM can still call them by forwarding to the Builtins machinery
         // would require the Evaluator, which we cannot run here.

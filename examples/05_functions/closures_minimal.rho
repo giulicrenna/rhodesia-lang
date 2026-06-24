@@ -6,9 +6,17 @@ print(f(3))
 
 print("Test 2: Two functions")
 fun makeAdder(int: n) -> function {
+    /*
+    MakeAdder:
+
+    Args:
+        n: int
+    */
     return lambda(a) -> a + n
 }
 function: add5 = makeAdder(5)
 print(add5(10))
+
+m
 
 print("Done!")

@@ -1,0 +1,215 @@
+/*
+  examples/12_neural_network/dense_nn.rho
+  Dense feedforward neural network (1 hidden layer) on the diamonds dataset.
+
+  - flash: read CSV, normalize features
+  - math:  activations via the built-in `math.*` namespace (tanh, exp, ...)
+  - plot:  training-loss curve
+
+  Config knobs at the top: ACT, EPOCHS, LR, HIDDEN.
+  Run from this directory:
+      rhodesia dense_nn.rho
+
+  ponytail: single hidden layer + plain full-batch GD — good enough to
+           demonstrate loss-curve dynamics; swap for Adam / mini-batch later.
+
+  ponytail: we do NOT `include math` here on purpose — libs/math clashes with
+           libs/flash on `quartiles`, and the clash only resolves one way
+           (drop one library). All math helpers come from the `math.*`
+           builtin module which is always available.
+*/
+
+include flash
+include plot
+
+// Config
+str: ACT       = "relu"      // "tanh" | "sigmoid" | "relu"
+int: EPOCHS    = 500
+float64: LR    = 0.05
+int: HIDDEN    = 8
+float64: SEED  = 0.5         // deterministic init via seeded RNG (rand scaled)
+
+// Helpers
+fun act_fn(str: name, float64: x) -> float64 {
+    if name == "relu" {
+        return x > 0.0 ? x : 0.0
+    }
+    if name == "sigmoid" {
+        return 1.0 / (1.0 + math.exp(-x))
+    }
+    return math.tanh(x)                          // default: tanh
+}
+
+fun act_deriv(str: name, float64: x) -> float64 {
+    if name == "relu" {
+        return x > 0.0 ? 1.0 : 0.0
+    }
+    if name == "sigmoid" {
+        float64: s = 1.0 / (1.0 + math.exp(-x))
+        return s * (1.0 - s)
+    }
+    float64: t = math.tanh(x)
+    return 1.0 - t * t
+}
+
+// Load + normalize
+record: df = read_csv("diamonds.csv")
+println("Loaded diamonds.csv: ", nrow(df), " rows")
+
+vec: carat_raw = col_v(df, "carat")
+vec: depth_raw = col_v(df, "depth")
+vec: table_raw = col_v(df, "table")
+vec: price_raw = col_v(df, "price")
+
+float64: c_min = math.min(carat_raw)
+float64: c_max = math.max(carat_raw)
+float64: d_min = math.min(depth_raw)
+float64: d_max = math.max(depth_raw)
+float64: t_min = math.min(table_raw)
+float64: t_max = math.max(table_raw)
+float64: p_min = math.min(price_raw)
+float64: p_max = math.max(price_raw)
+
+int: N = nrow(df)
+mat: X = zeros(N, 3)
+vec: y = zeros(N)
+for i in range(N) {
+    X[i, 0] = (carat_raw[i] - c_min) / (c_max - c_min)
+    X[i, 1] = (depth_raw[i] - d_min) / (d_max - d_min)
+    X[i, 2] = (table_raw[i] - t_min) / (t_max - t_min)
+    y[i]    = (price_raw[i] - p_min) / (p_max - p_min)
+}
+
+// Init weights (deterministic, scaled small)
+// ponytail: xorshift-style via SEED — not cryptographic, just reproducible.
+float64: s = SEED
+for i in range(20) {
+    s = s * 1103515245.0 + 12345.0
+    s = s - math.floor(s / 2147483647.0) * 2147483647.0
+}
+
+mat: W1 = zeros(HIDDEN, 3)
+vec: b1 = zeros(HIDDEN)
+mat: W2 = zeros(1, HIDDEN)
+vec: b2 = zeros(1)
+for i in range(HIDDEN) {
+    for j in range(3) {
+        s = s * 1103515245.0 + 12345.0
+        s = s - math.floor(s / 2147483647.0) * 2147483647.0
+        W1[i, j] = (s / 2147483647.0 - 0.5) * 0.4
+    }
+    s = s * 1103515245.0 + 12345.0
+    s = s - math.floor(s / 2147483647.0) * 2147483647.0
+    b1[i] = (s / 2147483647.0 - 0.5) * 0.1
+}
+for j in range(HIDDEN) {
+    s = s * 1103515245.0 + 12345.0
+    s = s - math.floor(s / 2147483647.0) * 2147483647.0
+    W2[0, j] = (s / 2147483647.0 - 0.5) * 0.4
+}
+s = s * 1103515245.0 + 12345.0
+s = s - math.floor(s / 2147483647.0) * 2147483647.0
+b2[0] = (s / 2147483647.0 - 0.5) * 0.1
+
+// Train
+vec: loss_curve = zeros(EPOCHS)
+mat: Yhat = zeros(N, 1)
+println("Training ", HIDDEN, "-neuron net, activation=", ACT,
+        ", epochs=", EPOCHS, ", lr=", LR)
+
+for epoch in range(EPOCHS) {
+    // Forward pass: cache pre-activations for backprop.
+    mat: Z1 = zeros(N, HIDDEN)
+    mat: A1 = zeros(N, HIDDEN)
+    for i in range(N) {
+        for h in range(HIDDEN) {
+            float64: z = b1[h]
+            for j in range(3) {
+                z = z + W1[h, j] * X[i, j]
+            }
+            Z1[i, h] = z
+            A1[i, h] = act_fn(ACT, z)
+        }
+        float64: z = b2[0]
+        for h in range(HIDDEN) {
+            z = z + W2[0, h] * A1[i, h]
+        }
+        Yhat[i, 0] = z
+    }
+
+    // MSE loss (mean over N).
+    float64: loss = 0.0
+    for i in range(N) {
+        float64: d = Yhat[i, 0] - y[i]
+        loss = loss + d * d
+    }
+    loss = loss / N
+    loss_curve[epoch] = loss
+
+    // Backward pass (full-batch GD): dL/dYhat = 2*(Yhat - y)/N.
+    mat: dW1 = zeros(HIDDEN, 3)
+    vec: db1 = zeros(HIDDEN)
+    mat: dW2 = zeros(1, HIDDEN)
+    vec: db2 = zeros(1)
+    for i in range(N) {
+        float64: dy = 2.0 * (Yhat[i, 0] - y[i]) / N
+        for h in range(HIDDEN) {
+            dW2[0, h] = dW2[0, h] + dy * A1[i, h]
+            float64: dh = dy * W2[0, h] * act_deriv(ACT, Z1[i, h])
+            db1[h] = db1[h] + dh
+            for j in range(3) {
+                dW1[h, j] = dW1[h, j] + dh * X[i, j]
+            }
+        }
+        db2[0] = db2[0] + dy
+    }
+
+    // Update.
+    for h in range(HIDDEN) {
+        for j in range(3) {
+            W1[h, j] = W1[h, j] - LR * dW1[h, j]
+        }
+        b1[h] = b1[h] - LR * db1[h]
+        for k in range(HIDDEN) {
+            W2[0, k] = W2[0, k] - LR * dW2[0, k]
+        }
+    }
+    b2[0] = b2[0] - LR * db2[0]
+
+    if epoch < 5 or epoch % 50 == 0 or epoch == EPOCHS - 1 {
+        println("  epoch ", epoch, "  loss=", loss)
+    }
+}
+
+// Report
+println()
+println("Final loss (normalized): ", loss_curve[EPOCHS - 1])
+
+println()
+println("Sample predictions (denormalized to dollars):")
+for i in range(5) {
+    float64: pred_n = Yhat[i, 0]
+    float64: pred_d = pred_n * (p_max - p_min) + p_min
+    println("  carat=", carat_raw[i],
+            "  actual=$", price_raw[i],
+            "  pred=$", pred_d)
+}
+
+// Plot loss curve
+int: K = EPOCHS
+vec: xs = zeros(K)
+vec: ys = zeros(K)
+for i in range(K) {
+    xs[i] = 1.0 * i
+    ys[i] = loss_curve[i]
+}
+
+figure(720, 460)
+line(xs, ys, "loss", "steelblue")
+title(string.concat("Training loss: dense NN on diamonds (activation=", ACT, ")"))
+xlabel("epoch")
+ylabel("MSE (normalized)")
+legend(1)
+int: bytes = savefig(string.concat("nn_loss_", ACT, ".svg"))
+println()
+println("Wrote ", bytes, " bytes to nn_loss_", ACT, ".svg")

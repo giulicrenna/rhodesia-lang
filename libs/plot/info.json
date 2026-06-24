@@ -1,0 +1,29 @@
+{
+  "name": "plot",
+  "version": "0.1.0",
+  "description": "Matplotlib-like 2D plotting for Rhodesia. Generates SVG via pure .rho; no C++ extensions, no native deps. Import with: include plot",
+  "author": "Rhodesia community",
+  "license": "MIT",
+  "entry": "index.rho",
+  "exports": [
+    {"name": "figure",       "type": "function", "signature": "int: width, int: height -> int"},
+    {"name": "line",         "type": "function", "signature": "vec: x, vec: y, str: label, str: color -> int"},
+    {"name": "scatter",      "type": "function", "signature": "vec: x, vec: y, str: label, str: color -> int"},
+    {"name": "hist",         "type": "function", "signature": "vec: values, int: bins, str: label, str: color -> int"},
+    {"name": "plot",         "type": "function", "signature": "function: f, float64: a, float64: b, str: label, str: color -> int"},
+    {"name": "bar",          "type": "function", "signature": "vec: labels, vec: values, str: label, str: color -> int"},
+    {"name": "title",        "type": "function", "signature": "str: s -> int"},
+    {"name": "xlabel",       "type": "function", "signature": "str: s -> int"},
+    {"name": "ylabel",       "type": "function", "signature": "str: s -> int"},
+    {"name": "xlim",         "type": "function", "signature": "float64: lo, float64: hi -> int"},
+    {"name": "ylim",         "type": "function", "signature": "float64: lo, float64: hi -> int"},
+    {"name": "legend",       "type": "function", "signature": "() -> int"},
+    {"name": "axes_at_origin", "type": "function", "signature": "int: on -> int"},
+    {"name": "x_axis_at",    "type": "function", "signature": "float64: y -> int"},
+    {"name": "y_axis_at",    "type": "function", "signature": "float64: x -> int"},
+    {"name": "set_heatmap_colors", "type": "function", "signature": "str: lo, str: hi -> int"},
+    {"name": "savefig",      "type": "function", "signature": "str: path -> int"},
+    {"name": "show",         "type": "function", "signature": "() -> int"}
+  ],
+  "dependencies": []
+}

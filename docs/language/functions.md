@@ -112,6 +112,82 @@ greet("World")
 Arguments are evaluated left-to-right. Recursion is fully supported but
 not tail-call-optimized — very deep recursion may exhaust the stack.
 
+### Default Parameter Values
+
+Any parameter can carry a default expression with `=`. Defaults let
+callers omit the argument and pick it up from the function declaration.
+
+```rhodesia
+fun greet(string: who, string: greeting = "Hello") -> string {
+    return string.concat(greeting, ", ", who, "!")
+}
+
+greet("World")                // "Hello, World!"
+greet("World", "Hi")          // "Hi, World!"     (positional override)
+greet("World", greeting: "Hi") // "Hi, World!"   (keyword override)
+```
+
+Defaults can reference any earlier parameter or any visible binding:
+
+```rhodesia
+fun window(int: width, int: height, string: title = "Untitled",
+            bool: resizable = true) -> string {
+    return string.concat(title, " ", string.from(width), "x",
+                         string.from(height))
+}
+```
+
+### Keyword Arguments at the Call Site
+
+Use `name: value` to bind an argument by name instead of position. Order
+is then free, and required arguments can be skipped (provided a default
+exists or the parameter is filled by another keyword argument).
+
+```rhodesia
+print(makeWindow(width: 1024, height: 768))                 // both keyword
+print(makeWindow(800, 600, title: "App"))                   // mix
+print(makeWindow(height: 768, width: 1024, resizable: false)) // reorder
+```
+
+**Rules:**
+- Once a keyword argument appears, every later argument must also be
+  keyword (`positional after keyword` is a parse error).
+- Each parameter may be bound at most once.
+- Keyword arguments work for user-defined `fun`, `lambda`, and for all
+  registered builtins (`math.sqrt(x: 16)`, `string.upper(s: "hi")`,
+  `vec.sum(v: data)`, `print(label: x)` if the builtin has `args`).
+
+### Variadic Parameters (`*args`)
+
+A trailing `*type: name` collects all remaining positional arguments
+into a single parameter. When the type is `vec` (or numeric), the
+parameter receives an `Eigen::VectorXd`; otherwise it receives an
+`arr` (`RhoArray`) that can still be iterated with `for`.
+
+```rhodesia
+fun sumAll(int: first, *int: rest) -> int {
+    int: total = first
+    for n in rest { total = total + n }
+    return total
+}
+
+sumAll(1, 2, 3, 4, 5)   // 15
+sumAll(10)              // 10  (rest is empty)
+
+fun joinAll(string: sep, *string: parts) -> string {
+    return string.join(parts, sep)
+}
+
+joinAll(", ", "a", "b", "c")  // "a, b, c"
+```
+
+Variadic parameters can be combined with defaults (the variadic marker
+must be the last parameter) and with keyword binding:
+
+```rhodesia
+sumAll(1, rest: [2, 3, 4])    // rest is keyword-bound to [2, 3, 4]
+```
+
 ## Naming Conflicts
 
 If a parameter or local variable shadows a function name, the local binding

@@ -1,0 +1,54 @@
+// boxplot_horizontal.rho - Horizontal box plots for long category labels.
+
+include plot
+
+println("=== boxplot (horizontal) ===")
+
+arr: groups = array.create(0)
+arr: labels = array.create(0)
+
+vec: g1 = math.zeros(40)
+int: i = 0
+while i < 40 {
+    g1[i] = 12.0 + (rand() - 0.5) * 6.0
+    i = i + 1
+}
+array.push(groups, g1)
+array.push(labels, "very long label 1")
+
+vec: g2 = math.zeros(40)
+i = 0
+while i < 40 {
+    g2[i] = 18.0 + (rand() - 0.5) * 4.0
+    i = i + 1
+}
+array.push(groups, g2)
+array.push(labels, "very long label 2")
+
+vec: g3 = math.zeros(40)
+i = 0
+while i < 40 {
+    g3[i] = 22.0 + (rand() - 0.5) * 8.0
+    i = i + 1
+}
+array.push(groups, g3)
+array.push(labels, "very long label 3")
+
+vec: g4 = math.zeros(40)
+i = 0
+while i < 40 {
+    g4[i] = 15.0 + (rand() - 0.5) * 5.0
+    i = i + 1
+}
+array.push(groups, g4)
+array.push(labels, "very long label 4")
+
+figure(800, 510)
+// orient=1 (horizontal), notch=0
+boxplot(groups, labels, 1, 0, "value", "crimson")
+title("Boxplot (horizontal)")
+xlabel("value")
+ylabel("category")
+
+int: bytes = savefig("boxplot_horizontal.svg")
+println("Wrote ", bytes, " bytes to boxplot_horizontal.svg")

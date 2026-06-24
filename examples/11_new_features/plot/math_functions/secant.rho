@@ -1,0 +1,11 @@
+include plot
+println("=== secant ===")
+fun f(float64: x) -> float64 { return 1 / math.cos(x) }
+figure(800, 510)
+plot(f, -1.4, 1.4, "f(x)", "blue")
+title("secant")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("secant.svg")
+println("Wrote ", bytes, " bytes to secant.svg")

@@ -1,0 +1,29 @@
+// fill_between.rho - Confidence band between two curves.
+
+include plot
+
+println("=== fill_between ===")
+
+vec: x = numerical.linspace(0.0, 4.0 * math.PI, 80)
+vec: y_mid = math.zeros(80)
+vec: y_lo = math.zeros(80)
+vec: y_hi = math.zeros(80)
+int: i = 0
+while i < 80 {
+    float64: xx = x[i]
+    y_mid[i] = math.sin(xx)
+    y_lo[i] = math.sin(xx) - 0.3
+    y_hi[i] = math.sin(xx) + 0.3
+    i = i + 1
+}
+
+figure(800, 510)
+fill_between(x, y_lo, y_hi, "±0.3 band", "lightblue")
+line(x, y_mid, "sin(x)", "navy")
+title("Confidence band around sin(x)")
+xlabel("x")
+ylabel("y")
+legend(1)
+
+int: bytes = savefig("fill_between.svg")
+println("Wrote ", bytes, " bytes to fill_between.svg")

@@ -1,0 +1,47 @@
+// libs/flash/stats/quantile.rho
+// quantile(df, col, p) — p ∈ [0,1]
+
+fun quantile(record: df, str: col, float64: p) -> float64 {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    if n == 0 { return 0.0 }
+    vec: s = math.zeros(n)
+    int: i = 0
+    while i < n {
+        s[i] = v[i]
+        i = i + 1
+    }
+    int: swapped = 1
+    while swapped == 1 {
+        swapped = 0
+        i = 0
+        while i < n - 1 {
+            if s[i] > s[i + 1] {
+                float64: t = s[i]
+                s[i] = s[i + 1]
+                s[i + 1] = t
+                swapped = 1
+            }
+            i = i + 1
+        }
+    }
+    float64: pos = p * (n - 1)
+    int: lo = _flash_intify(pos)
+    int: hi = lo + 1
+    if hi >= n { return s[lo] }
+    float64: frac = pos - lo
+    return s[lo] * (1.0 - frac) + s[hi] * frac
+}
+
+fun quartiles(record: df, str: col) -> vec {
+    vec: q = math.zeros(3)
+    q[0] = quantile(df, col, 0.25)
+    q[1] = quantile(df, col, 0.5)
+    q[2] = quantile(df, col, 0.75)
+    return q
+}
+
+fun iqr(record: df, str: col) -> float64 {
+    vec: q = quartiles(df, col)
+    return q[2] - q[0]
+}

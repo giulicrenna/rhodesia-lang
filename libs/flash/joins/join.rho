@@ -1,0 +1,14 @@
+// libs/flash/joins/join.rho
+// join(d1, d2, key, how) — atajo de merge.
+
+fun join(record: d1, record: d2, str: key, str: how) -> record {
+    return merge(d1, d2, key, how)
+}
+
+fun join_inner(record: d1, record: d2, str: key) -> record {
+    return merge(d1, d2, key, "inner")
+}
+
+fun join_left(record: d1, record: d2, str: key) -> record {
+    return merge(d1, d2, key, "left")
+}

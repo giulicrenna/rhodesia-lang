@@ -1,0 +1,206 @@
+// libs/flash/reshape/multiindex.rho
+// MultiIndex / set_index / reset_index.
+//
+// Modelo simple: un DataFrame tiene _index_names (arr<str>) y _index_values
+// (map<str, arr<str>>). set_index(df, csv) mueve las cols del cuerpo a
+// _index_values. reset_index(df) las devuelve al cuerpo.
+//
+// API:
+//   set_index(df, col)            -> df (promueve "col" a índice)
+//   set_index_keys(df, csv)       -> df (promueve varias cols)
+//   reset_index(df)               -> df (saca el índice, lo devuelve como cols)
+//   index_names(df)               -> arr<str> (nombres de las cols de índice)
+//   has_index(df)                 -> int (1 si hay índice, 0 si no)
+//   index_value(df, col, row)     -> str (valor de la col-índice en row)
+//
+// ponytail: el índice es solo etiquetas (str), no se usa para nada automático
+// (no cambia el orden, no se preserva en merges, no acelera lookups).
+// Es metadata + display. Suficiente para el 90% de uso de pandas.
+
+fun set_index(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" and c.kind != "vec" { _err("set_index: column has unknown kind") }
+    // Si ya está como índice, no-op.
+    if _name_in(df._index_names, col) == 1 { return df }
+    // Guardar valor (convertir a str si es vec).
+    arr: vals = array.create(0)
+    if c.kind == "vec" {
+        vec: v = c.data
+        int: i = 0
+        int: n = math.size(v)
+        while i < n {
+            array.push(vals, _float_to_str(v[i]))
+            i = i + 1
+        }
+    } else {
+        arr: a = c.data
+        int: i = 0
+        int: n = array.size(a)
+        while i < n {
+            array.push(vals, a[i])
+            i = i + 1
+        }
+    }
+    // Construir copia local para no mutar el df del caller
+    arr: new_idx_names = array.create(0)
+    int: k = 0
+    int: nn = array.size(df._index_names)
+    while k < nn {
+        array.push(new_idx_names, df._index_names[k])
+        k = k + 1
+    }
+    map: new_idx_vals = mapping.create()
+    int: kk = 0
+    while kk < nn {
+        str: inm = new_idx_names[kk]
+        arr: iv = mapping.get(df._index_values, inm)
+        mapping.put(new_idx_vals, inm, iv)
+        kk = kk + 1
+    }
+    mapping.put(new_idx_vals, col, vals)
+    array.push(new_idx_names, col)
+    record: out = _drop_one_internal_with_index(df, col, new_idx_names, new_idx_vals)
+    return out
+}
+
+fun set_index_keys(record: df, str: csv) -> record {
+    arr: cols = _mi_split(csv, ",")
+    record: out = df
+    int: i = 0
+    int: n = array.size(cols)
+    while i < n {
+        out = set_index(out, cols[i])
+        i = i + 1
+    }
+    return out
+}
+
+fun reset_index(record: df) -> record {
+    int: n = array.size(df._index_names)
+    if n == 0 { return df }
+    record: out = df
+    int: i = 0
+    while i < n {
+        str: kc = df._index_names[i]
+        if mapping.has(df._index_values, kc) {
+            arr: vals = mapping.get(df._index_values, kc)
+            arr: na = _new_na(array.size(vals))
+            if _has_col(out, kc) == 0 {
+                out = _set_col(out, kc, { kind: "arr", data: vals, na: na }, "str")
+            }
+        }
+        i = i + 1
+    }
+    // Crear nuevo record sin índice (no mutamos el df del caller).
+    record: cleared = {
+        _cols:   out._cols,
+        _names:  out._names,
+        _nrows:  out._nrows,
+        _ncols:  out._ncols,
+        _dtypes: out._dtypes,
+        _index_names:  array.create(0),
+        _index_values: mapping.create()
+    }
+    return cleared
+}
+
+fun index_names(record: df) -> arr {
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = array.size(df._index_names)
+    while i < n {
+        array.push(out, df._index_names[i])
+        i = i + 1
+    }
+    return out
+}
+
+fun has_index(record: df) -> int {
+    if array.size(df._index_names) > 0 { return 1 }
+    return 0
+}
+
+fun index_value(record: df, str: col, int: row) -> str {
+    if mapping.has(df._index_values, col) == 0 { return "" }
+    arr: a = mapping.get(df._index_values, col)
+    if row >= array.size(a) { return "" }
+    return a[row]
+}
+
+// _drop_one_internal(df, col) — drop a col sin _set_col overhead (preserva índice).
+// No mutamos df: copiamos _cols/_dtypes/_names.
+fun _drop_one_internal(record: df, str: col) -> record {
+    arr: new_names = array.create(0)
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        if df._names[i] != col { array.push(new_names, df._names[i]) }
+        i = i + 1
+    }
+    // Copia local de _cols (sin la col dropeada)
+    map: new_cols = mapping.create()
+    int: j = 0
+    int: nn = array.size(new_names)
+    while j < nn {
+        str: nnm = new_names[j]
+        record: cc = mapping.get(df._cols, nnm)
+        mapping.put(new_cols, nnm, cc)
+        j = j + 1
+    }
+    map: new_dtypes = mapping.create()
+    int: k = 0
+    while k < nn {
+        str: nnm = new_names[k]
+        str: dt = mapping.get(df._dtypes, nnm)
+        mapping.put(new_dtypes, nnm, dt)
+        k = k + 1
+    }
+    record: out = {
+        _cols:   new_cols,
+        _names:  new_names,
+        _nrows:  df._nrows,
+        _ncols:  array.size(new_names),
+        _dtypes: new_dtypes,
+        _index_names:  df._index_names,
+        _index_values: df._index_values
+    }
+    return out
+}
+
+// _drop_one_internal_with_index(df, col, idx_names, idx_vals) — drop + nuevo índice.
+fun _drop_one_internal_with_index(record: df, str: col, arr: idx_names, map: idx_vals) -> record {
+    record: dropped = _drop_one_internal(df, col)
+    record: out = {
+        _cols:   dropped._cols,
+        _names:  dropped._names,
+        _nrows:  dropped._nrows,
+        _ncols:  dropped._ncols,
+        _dtypes: dropped._dtypes,
+        _index_names:  idx_names,
+        _index_values: idx_vals
+    }
+    return out
+}
+
+// _mi_split(s, sep) — split local (string.split nativo es placeholder).
+// Definido localmente porque multiindex.rho puede cargarse antes que sstring.rho.
+fun _mi_split(str: s, str: sep) -> arr {
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = string.length(s)
+    int: sl = string.length(sep)
+    str: cur = ""
+    while i < n {
+        if _starts_at(s, sep, i) {
+            array.push(out, cur)
+            cur = ""
+            i = i + sl
+            continue
+        }
+        cur = string.concat(cur, string.slice(s, i, i + 1))
+        i = i + 1
+    }
+    array.push(out, cur)
+    return out
+}

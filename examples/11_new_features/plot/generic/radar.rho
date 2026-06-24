@@ -1,0 +1,28 @@
+// radar.rho - Spider chart: two overlapping polygons.
+// Axes-only (no x/y grid) - radar panels render centered without rectangular axes.
+
+include plot
+
+println("=== radar ===")
+
+arr: axes = array.create(0)
+array.push(axes, "speed")
+array.push(axes, "power")
+array.push(axes, "range")
+array.push(axes, "weight")
+array.push(axes, "cost")
+array.push(axes, "safety")
+
+vec: a = [7.0, 6.0, 8.0, 4.0, 5.0, 9.0]
+vec: b = [5.0, 8.0, 5.0, 7.0, 6.0, 7.0]
+vec: c = [8.0, 5.0, 6.0, 8.0, 4.0, 6.0]
+
+figure(700, 600)
+radar(axes, a, "Model A", "#1f77b4")
+radar(axes, b, "Model B", "#ff7f0e")
+radar(axes, c, "Model C", "#2ca02c")
+title("Three-model radar comparison")
+legend(1)
+
+int: bytes = savefig("radar.svg")
+println("Wrote ", bytes, " bytes to radar.svg")

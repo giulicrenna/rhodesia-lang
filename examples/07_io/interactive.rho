@@ -13,7 +13,6 @@ mensaje = string.concat(mensaje, "!\n")
 io.write("saludo.txt", mensaje)
 println("Se ha creado un archivo de saludo")
 println()
-
 // Leer y mostrar el contenido
 str: contenido = io.read("saludo.txt")
 println("Contenido del archivo:")

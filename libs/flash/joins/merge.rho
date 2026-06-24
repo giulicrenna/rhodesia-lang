@@ -1,0 +1,258 @@
+// libs/flash/joins/merge.rho
+// merge(d1, d2, key, how)            — single key.
+// merge_keys(d1, d2, key_csv, how)   — compound key (varias cols).
+//   key_csv: "user_id" o "user_id,session_id" (separadas por coma).
+//   Coincidencia sobre el tuple (col1, col2, ...). Sufijos "_x"/"_y" para cols en colisión.
+//
+// how ∈ {"inner", "left", "right", "outer"}.
+
+fun merge(record: d1, record: d2, str: key, str: how) -> record {
+    if _has_col(d1, key) == 0 { _err(string.concat("merge: key '", key, "' not in left")) }
+    if _has_col(d2, key) == 0 { _err(string.concat("merge: key '", key, "' not in right")) }
+    return _merge_impl(d1, d2, key, how, 0)
+}
+
+// merge_keys — compound key. key_csv = "col1,col2,...".
+fun merge_keys(record: d1, record: d2, str: key_csv, str: how) -> record {
+    arr: keys = _merge_split(key_csv, ",")
+    int: i = 0
+    int: nk = array.size(keys)
+    while i < nk {
+        if _has_col(d1, keys[i]) == 0 { _err(string.concat("merge_keys: key '", keys[i], "' not in left")) }
+        if _has_col(d2, keys[i]) == 0 { _err(string.concat("merge_keys: key '", keys[i], "' not in right")) }
+        i = i + 1
+    }
+    return _merge_impl(d1, d2, key_csv, how, 1)
+}
+
+// _merge_impl(d1, d2, key, how, compound) — single o compound key.
+fun _merge_impl(record: d1, record: d2, str: key, str: how, int: compound) -> record {
+    if how != "inner" and how != "left" and how != "right" and how != "outer" {
+        _err(string.concat("merge: how must be inner|left|right|outer, got '", how, "'"))
+    }
+    // Recolectar cols: key + left-only + right-only (con sufijo si colisionan)
+    arr: out_names = array.create(0)
+    arr: out_dtypes = array.create(0)
+    map: src_map = mapping.create()     // out_name -> {src: "l"|"r", name: original}
+    // Determinar set de key cols (para no incluirlas dos veces).
+    arr: key_cols = array.create(0)
+    if compound == 1 {
+        key_cols = _merge_split(key, ",")
+    } else {
+        array.push(key_cols, key)
+    }
+    // Salida: cada key col aparece UNA vez (tomamos su dtype de d1).
+    int: ki = 0
+    int: kn = array.size(key_cols)
+    while ki < kn {
+        str: kc = key_cols[ki]
+        array.push(out_names, kc)
+        array.push(out_dtypes, mapping.get(d1._dtypes, kc))
+        mapping.put(src_map, kc, { src: "l", name: kc })
+        ki = ki + 1
+    }
+    int: i = 0
+    int: nn = array.size(d1._names)
+    while i < nn {
+        str: nm = d1._names[i]
+        if _name_in(key_cols, nm) == 0 {
+            str: target = nm
+            if _has_col(d2, nm) {
+                target = string.concat(nm, "_x")
+            }
+            array.push(out_names, target)
+            array.push(out_dtypes, mapping.get(d1._dtypes, nm))
+            mapping.put(src_map, target, { src: "l", name: nm })
+        }
+        i = i + 1
+    }
+    i = 0
+    nn = array.size(d2._names)
+    while i < nn {
+        str: nm = d2._names[i]
+        if _name_in(key_cols, nm) == 0 {
+            str: target = nm
+            if _has_col(d1, nm) {
+                target = string.concat(nm, "_y")
+            }
+            array.push(out_names, target)
+            array.push(out_dtypes, mapping.get(d2._dtypes, nm))
+            mapping.put(src_map, target, { src: "r", name: nm })
+        }
+        i = i + 1
+    }
+    // Construir máscara: para cada fila de d1, encontrar match en d2
+    // Precomputar: para cada valor único de la key, lista de indices en d2
+    map: keymap = mapping.create()
+    int: n2 = d2._nrows
+    int: r2 = 0
+    while r2 < n2 {
+        str: v = _key_value(d2, key_cols, r2)
+        if mapping.has(keymap, v) == 0 {
+            arr: lst = array.create(0)
+            mapping.put(keymap, v, lst)
+        }
+        arr: lst = mapping.get(keymap, v)
+        array.push(lst, r2)
+        r2 = r2 + 1
+    }
+    // Ahora merge: para cada row de d1, buscar match
+    arr: pairs_l = array.create(0)
+    arr: pairs_r = array.create(0)
+    int: n1 = d1._nrows
+    int: r1 = 0
+    while r1 < n1 {
+        str: v = _key_value(d1, key_cols, r1)
+        if mapping.has(keymap, v) {
+            arr: lst = mapping.get(keymap, v)
+            int: k = 0
+            while k < array.size(lst) {
+                array.push(pairs_l, r1)
+                array.push(pairs_r, lst[k])
+                k = k + 1
+            }
+        } else {
+            if how == "left" or how == "outer" {
+                array.push(pairs_l, r1)
+                array.push(pairs_r, -1)
+            }
+        }
+        r1 = r1 + 1
+    }
+    if how == "right" or how == "outer" {
+        // agregar filas de d2 sin match en d1
+        r2 = 0
+        while r2 < n2 {
+            str: v2 = _key_value(d2, key_cols, r2)
+            int: matched = 0
+            r1 = 0
+            while r1 < n1 {
+                str: v1 = _key_value(d1, key_cols, r1)
+                if v1 == v2 { matched = 1 }
+                r1 = r1 + 1
+            }
+            if matched == 0 {
+                array.push(pairs_l, -1)
+                array.push(pairs_r, r2)
+            }
+            r2 = r2 + 1
+        }
+    }
+    // Construir df
+    record: out = _new_df()
+    int: nout = array.size(pairs_l)
+    int: oi = 0
+    while oi < array.size(out_names) {
+        str: onm = out_names[oi]
+        str: dt = out_dtypes[oi]
+        record: src = mapping.get(src_map, onm)
+        if src.src == "l" {
+            record: c = mapping.get(d1._cols, src.name)
+            if c.kind == "arr" {
+                arr: a = c.data
+                arr: out_a = array.create(nout)
+                int: p = 0
+                while p < nout {
+                    int: li = pairs_l[p]
+                    if li >= 0 { array.push(out_a, a[li]) }
+                    else { array.push(out_a, "") }
+                    p = p + 1
+                }
+                // out_a ya está lleno porque lo llenamos con array.push — pero el array.create(nout) da nout espacios vacíos. Limpiamos:
+                out_a = array.create(0)
+                p = 0
+                while p < nout {
+                    int: li = pairs_l[p]
+                    if li >= 0 { array.push(out_a, a[li]) }
+                    else { array.push(out_a, "") }
+                    p = p + 1
+                }
+                out = _set_col(out, onm, _wrap_arr(out_a), dt)
+            } else {
+                vec: v = c.data
+                vec: out_v = math.zeros(nout)
+                int: p = 0
+                while p < nout {
+                    int: li = pairs_l[p]
+                    if li >= 0 { out_v[p] = v[li] }
+                    p = p + 1
+                }
+                out = _set_col(out, onm, _wrap_vec(out_v), dt)
+            }
+        } else if src.src == "r" {
+            record: c = mapping.get(d2._cols, src.name)
+            if c.kind == "arr" {
+                arr: a = c.data
+                arr: out_a = array.create(0)
+                int: p = 0
+                while p < nout {
+                    int: ri = pairs_r[p]
+                    if ri >= 0 { array.push(out_a, a[ri]) }
+                    else { array.push(out_a, "") }
+                    p = p + 1
+                }
+                out = _set_col(out, onm, _wrap_arr(out_a), dt)
+            } else {
+                vec: v = c.data
+                vec: out_v = math.zeros(nout)
+                int: p = 0
+                while p < nout {
+                    int: ri = pairs_r[p]
+                    if ri >= 0 { out_v[p] = v[ri] }
+                    p = p + 1
+                }
+                out = _set_col(out, onm, _wrap_vec(out_v), dt)
+            }
+        }
+        oi = oi + 1
+    }
+    return out
+}
+
+// _key_value(df, key_cols, row) — concatena los valores de las key cols en un solo
+// string (con separador "") para que sirva como compound key comparable.
+fun _key_value(record: df, arr: key_cols, int: row) -> str {
+    str: out = ""
+    int: i = 0
+    int: n = array.size(key_cols)
+    while i < n {
+        if i > 0 { out = string.concat(out, "") }
+        str: nm = key_cols[i]
+        record: c = mapping.get(df._cols, nm)
+        if c.kind == "vec" {
+            vec: v = c.data
+            float64: x = 0.0
+            if row < math.size(v) { x = v[row] }
+            out = string.concat(out, _float_to_str(x))
+        } else {
+            arr: a = c.data
+            str: vs = ""
+            if row < array.size(a) { vs = a[row] }
+            out = string.concat(out, vs)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// _merge_split(s, sep) — split local (string.split nativo es placeholder).
+// Definido localmente porque merge.rho puede cargarse antes que sstring.rho.
+fun _merge_split(str: s, str: sep) -> arr {
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = string.length(s)
+    int: sl = string.length(sep)
+    str: cur = ""
+    while i < n {
+        if _starts_at(s, sep, i) {
+            array.push(out, cur)
+            cur = ""
+            i = i + sl
+            continue
+        }
+        cur = string.concat(cur, string.slice(s, i, i + 1))
+        i = i + 1
+    }
+    array.push(out, cur)
+    return out
+}

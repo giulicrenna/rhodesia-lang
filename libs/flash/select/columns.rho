@@ -1,0 +1,30 @@
+// libs/flash/select/columns.rho
+// Funciones de inspección de columnas (algunas viven en core/frame.rho
+// y se duplican aquí para acceso sin sub-include).
+
+// has_col(df, col) — 1 si existe, 0 si no.
+fun has_col(record: df, str: col) -> int {
+    return _has_col(df, col)
+}
+
+// col_dtype(df, col) — dtype de una columna específica.
+fun col_dtype(record: df, str: col) -> str {
+    _check_col(df, col)
+    return mapping.get(df._dtypes, col)
+}
+
+// column_index(df, col) — índice de la columna en el orden del df, o -1.
+fun column_index(record: df, str: col) -> int {
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        if df._names[i] == col { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+// shape(df) -> (int rows, int cols) via tuple
+fun shape(record: df) -> tuple {
+    return (df._nrows, df._ncols)
+}

@@ -9,7 +9,7 @@
 #ifndef RHODESIA_RHOVALUE_HPP
 #define RHODESIA_RHOVALUE_HPP
 
-// ponytail: Eigen's SIMD alignment is unsafe when Eigen::VectorXd lives
+// Eigen's SIMD alignment is unsafe when Eigen::VectorXd lives
 // inside std::variant<RhoValue> — std::variant is not aware of Eigen's
 // 16-byte alignment requirement, so allocations (especially on the stack)
 // can be misaligned, producing intermittent segfaults in back-to-back
@@ -648,6 +648,22 @@ private:
     ArrayType data_;
 };
 
+// Forward declaration so ParamDescriptor can hold an ExprPtr
+class ExprNode;
+
+/**
+ * @brief Full description of a single parameter, kept on the closure so
+ *        default values can be evaluated lazily at call time.
+ */
+struct ParamDescriptor {
+    std::string name;
+    RhoType type = RhoType::Unknown;
+    bool isVariadic = false;
+    /// Default-value AST (cloned from the declaration site).
+    /// nullptr if the parameter has no default.
+    std::shared_ptr<ExprNode> defaultValue;
+};
+
 /**
  * @brief RhoFunction - Function value with closure support
  *
@@ -730,6 +746,16 @@ public:
      */
     size_t arity() const { return params_.size(); }
 
+    /**
+     * @brief Rich parameter descriptors (name, type, isVariadic, defaultValue).
+     *        Required to evaluate default values and bind keyword args /
+     *        variadic positional args at the call site. Populated by the
+     *        evaluator from the AST when a function value is created.
+     */
+    const std::vector<ParamDescriptor>& paramDescriptors() const { return paramDescriptors_; }
+
+    void setParamDescriptors(std::vector<ParamDescriptor> d) { paramDescriptors_ = std::move(d); }
+
 private:
     std::vector<std::string> params_;  // Parameter names
     std::shared_ptr<void> bodyNode_;   // Lambda body AST node (ExprNode* or BlockNode*)
@@ -738,6 +764,7 @@ private:
     std::vector<RhoType> paramTypes_;  // Declared parameter types (empty if unknown)
     NativeFunc nativeFunc_;            // Native C++ function
     bool isNative_;                    // Is this a native function?
+    std::vector<ParamDescriptor> paramDescriptors_;  // Full param info (variadic, defaults)
 };
 
 /**

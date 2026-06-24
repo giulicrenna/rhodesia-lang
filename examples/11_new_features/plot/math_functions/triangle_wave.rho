@@ -1,0 +1,11 @@
+include plot
+println("=== triangle_wave ===")
+fun f(float64: x) -> float64 { return 2 * math.abs(2 * (x - math.floor(x)) - 1) - 1 }
+figure(800, 510)
+plot(f, 0, 6, "f(x)", "blue")
+title("triangle_wave")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("triangle_wave.svg")
+println("Wrote ", bytes, " bytes to triangle_wave.svg")

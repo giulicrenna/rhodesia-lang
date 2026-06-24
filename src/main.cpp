@@ -62,7 +62,7 @@ using namespace Rhodesia;
  * @brief Print usage information
  */
 void printUsage(const char* program) {
-    std::cout << "Rhodesia Language Interpreter v0.1.0\n\n";
+    std::cout << "Rhodesia Language Interpreter v0.1.3\n\n";
     std::cout << "Usage:\n";
     std::cout << "  " << program << "              Start REPL (interactive mode)\n";
     std::cout << "  " << program << " <file.rho>   Execute a Rhodesia source file\n";
@@ -166,7 +166,7 @@ int execute(const std::string& source, Evaluator& evaluator, bool showResult = f
  * @brief Run interactive REPL
  */
 int runRepl() {
-    std::cout << "Rhodesia REPL v0.1.0 (type 'exit' or Ctrl+D to quit)\n";
+    std::cout << "Rhodesia REPL v0.1.3 (type 'exit' or ctrl+C to quit)\n";
     std::cout << "Use 'help' for available commands.\n\n";
 
     Evaluator evaluator;
@@ -276,7 +276,7 @@ int main(int argc, char* argv[]) {
     // Initialise the socket library (no-op on POSIX, WSAStartup on Windows).
     socket_init();
 
-    // ponytail: force single-threaded Eigen. Multithreaded Eigen with
+    // force single-threaded Eigen. Multithreaded Eigen with
     // expression templates has been observed to corrupt memory in
     // back-to-back stats calls (skewness/kurtosis/zscore) on Windows.
     Eigen::setNbThreads(1);

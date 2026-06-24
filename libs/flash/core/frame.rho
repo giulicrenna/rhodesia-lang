@@ -1,0 +1,249 @@
+/*
+libs/flash/core/frame.rho
+ Public DataFrame constructors + basic accessors.
+ Exposed API:
+   frame()                           -> empty DataFrame
+   frame_from_cols(map, arr<str>, map) -> DataFrame from columns
+   nrow(df) -> int
+   ncol(df) -> int
+   col_names(df) -> arr<str>
+   col_dtypes(df) -> map<string, str>
+   get_col(df, name) -> vec|arr<str>
+   copy(df) -> DataFrame
+   empty_like(df) -> DataFrame
+*/
+
+fun frame() -> record {
+    /*
+    Creates an empty DataFrame (0 rows, 0 columns).
+
+    Returns:
+        record: An empty DataFrame.
+    */
+    return _new_df()
+}
+
+fun frame_from_cols(map: cols, arr: names, map: dtypes) -> record {
+    /*
+    Creates a DataFrame from column maps.
+
+    Args:
+        cols (map): Map of column name -> data (vec or arr).
+        names (arr): Array of column names defining order.
+        dtypes (map): Map of column name -> dtype string.
+
+    Returns:
+        record: A new DataFrame.
+    */
+    record: df = _new_df()
+    int: i = 0
+    int: n = array.size(names)
+    while i < n {
+        str: nm = names[i]
+        if mapping.has(cols, nm) == 0 {
+            _err(string.concat("frame_from_cols: column '", nm, "' missing in cols map"))
+        }
+        record: raw = mapping.get(cols, nm)
+        str: dt = "str"
+        if mapping.has(dtypes, nm) { dt = mapping.get(dtypes, nm) }
+        record: cdata = { kind: _kind_of(raw), data: raw }
+        df = _set_col(df, nm, cdata, dt)
+        i = i + 1
+    }
+    return df
+}
+
+fun _kind_of(record: raw) -> str {
+    /*
+    Determines whether a value is a vec or arr.
+
+    Uses a try block to probe math.size; if it works it's a vec.
+
+    Args:
+        raw (record): The value to classify.
+
+    Returns:
+        str: "vec" or "arr".
+    */
+    int: probe = _try_size_vec(raw)
+    if probe >= 0 { return "vec" }
+    return "arr"
+}
+
+fun _try_size_vec(record: v) -> int {
+    /*
+    Tries math.size(v), returns -1 on failure.
+
+    Args:
+        v (record): Value to probe (expected vec or arr).
+
+    Returns:
+        int: math.size(v) if vec, -1 if not.
+    */
+    try {
+        int: n = math.size(v)
+        return n
+    } catch err {
+        return -1
+    }
+    return -1
+}
+
+fun nrow(record: df) -> int {
+    /*
+    Returns the number of rows in the DataFrame.
+
+    Args:
+        df (record): A DataFrame.
+
+    Returns:
+        int: Row count.
+    */
+    return df._nrows
+}
+
+fun ncol(record: df) -> int {
+    /*
+    Returns the number of columns in the DataFrame.
+
+    Args:
+        df (record): A DataFrame.
+
+    Returns:
+        int: Column count.
+    */
+    return df._ncols
+}
+
+fun col_names(record: df) -> arr {
+    /*
+    Returns a copy of the column name list.
+
+    Args:
+        df (record): A DataFrame.
+
+    Returns:
+        arr: Array of column name strings.
+    */
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        array.push(out, df._names[i])
+        i = i + 1
+    }
+    return out
+}
+
+fun col_dtypes(record: df) -> map {
+    /*
+    Returns a copy of the dtypes map.
+
+    Args:
+        df (record): A DataFrame.
+
+    Returns:
+        map: Map of column name -> dtype string.
+    */
+    map: out = mapping.create()
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        mapping.put(out, nm, mapping.get(df._dtypes, nm))
+        i = i + 1
+    }
+    return out
+}
+
+fun get_col(record: df, str: name) -> record {
+    /*
+    Returns the raw vec or arr data of a column.
+
+    Args:
+        df (record): A DataFrame.
+        name (str): Column name.
+
+    Returns:
+        record: The raw data (vec or arr<str>).
+    */
+    _check_col(df, name)
+    record: c = mapping.get(df._cols, name)
+    return c.data
+}
+
+fun copy(record: df) -> record {
+    /*
+    Creates a deep copy of the DataFrame.
+
+    Args:
+        df (record): Source DataFrame.
+
+    Returns:
+        record: A new DataFrame with copied data.
+    */
+    return _copy_df(df)
+}
+
+fun empty_like(record: df) -> record {
+    /*
+    Creates an empty DataFrame with the same schema.
+
+    Result has 0 rows but preserves column names and dtypes.
+
+    Args:
+        df (record): Source DataFrame to copy schema from.
+
+    Returns:
+        record: Empty DataFrame with matching column structure.
+    */
+    return _empty_df_like(df)
+}
+
+fun add_col(record: df, str: name, record: col_data, str: dtype) -> record {
+    /*
+    Adds or replaces a column, returning a new DataFrame.
+
+    If the column already existed, new rows are filled with 0 or ""
+    depending on dtype.
+
+    Args:
+        df (record): Source DataFrame.
+        name (str): Column name.
+        col_data (record): Column data record {kind, data, na}.
+        dtype (str): Data type string.
+
+    Returns:
+        record: New DataFrame with the column added/updated.
+    */
+    return _set_col(df, name, col_data, dtype)
+}
+
+fun rename_col(record: df, str: old, str: new) -> record {
+    /*
+    Renames a column.
+
+    Args:
+        df (record): Source DataFrame.
+        old (str): Current column name.
+        new (str): New column name.
+
+    Returns:
+        record: New DataFrame with the column renamed.
+    */
+    _check_col(df, old)
+    record: out = _copy_df(df)
+    record: c = mapping.get(out._cols, old)
+    mapping.delete(out._cols, old)
+    mapping.put(out._cols, new, c)
+    mapping.delete(out._dtypes, old)
+    mapping.put(out._dtypes, new, mapping.get(df._dtypes, old))
+    int: i = 0
+    int: n = array.size(out._names)
+    arr: names_copy = out._names
+    while i < n {
+        if names_copy[i] == old { names_copy[i] = new }
+        i = i + 1
+    }
+    return out
+}

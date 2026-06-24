@@ -1,0 +1,66 @@
+// libs/flash/aggregations/value_counts.rho
+// value_counts(df, col) — devuelve df {valor, count}
+// unique(df, col)     — devuelve arr<str> con valores únicos
+
+fun value_counts(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    arr: vals = array.create(0)
+    arr: counts = array.create(0)
+    int: n = df._nrows
+    int: i = 0
+    while i < n {
+        record: at = _at_raw(df, col, i)
+        str: v = ""
+        if at.kind == "str" { v = at.val }
+        else { v = _float_to_str(at.val) }
+        int: j = _arr_pos(vals, v)
+        if j < 0 {
+            array.push(vals, v)
+            array.push(counts, 1)
+        } else {
+            counts[j] = counts[j] + 1
+        }
+        i = i + 1
+    }
+    record: out = _new_df()
+    out = _set_col(out, col, _wrap_arr(vals), "str")
+    vec: cv = math.zeros(array.size(counts))
+    int: k = 0
+    while k < array.size(counts) {
+        cv[k] = counts[k] * 1.0
+        k = k + 1
+    }
+    out = _set_col(out, "count", _wrap_vec(cv), "int")
+    return out
+}
+
+fun unique(record: df, str: col) -> arr {
+    _check_col(df, col)
+    arr: out = array.create(0)
+    int: n = df._nrows
+    int: i = 0
+    while i < n {
+        record: at = _at_raw(df, col, i)
+        str: v = ""
+        if at.kind == "str" { v = at.val }
+        else { v = _float_to_str(at.val) }
+        if _arr_pos(out, v) < 0 { array.push(out, v) }
+        i = i + 1
+    }
+    return out
+}
+
+fun nunique(record: df, str: col) -> int {
+    return array.size(unique(df, col))
+}
+
+fun _arr_pos(arr: a, str: x) -> int {
+    int: i = 0
+    int: n = array.size(a)
+    while i < n {
+        if a[i] == x { return i }
+        i = i + 1
+    }
+    return -1
+}

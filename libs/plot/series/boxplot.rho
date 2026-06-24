@@ -1,0 +1,163 @@
+// series/boxplot.rho - Box plot series: median, Q1, Q3, whiskers (1.5*IQR),
+// outliers. Multiple groups rendered side-by-side along the category axis.
+//
+// boxplot(groups, labels, orient, notch)
+//   groups: arr of vec (one vec per group)
+//   labels: arr of strings (one label per group)
+//   orient: 0 = vertical (default), 1 = horizontal
+//   notch:  0 = no notch, 1 = show 95% CI notch on the median
+//
+// Internal stats helpers: _sorted_copy, _quantile, _iqr, _whiskers, _outliers.
+
+fun _sorted_copy(vec: v) -> vec {
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        out[i] = v[i]
+        i = i + 1
+    }
+    // Insertion sort. Only enter the inner shift loop when out[a-1] > key
+    // (otherwise out[a] is already in the right place). Track `pos` so we
+    // know where to insert `key` AFTER the inner shift loop:
+    //   - if the loop shifted every element down to b = -1, pos = 0
+    //   - if the loop stopped because out[b] <= key, pos = b + 1
+    // The previous version used `out[b + 1] = key` with b = -1 in the else
+    // branch, which overwrote position 0 even when the correct insertion
+    // point was somewhere in the middle of the array.
+    int: a = 1
+    while a < n {
+        if out[a - 1] > out[a] {
+            float64: key = out[a]
+            int: b = a - 1
+            int: pos = a
+            while b >= 0 {
+                if out[b] > key {
+                    out[b + 1] = out[b]
+                    pos = b
+                    b = b - 1
+                } else {
+                    pos = b + 1
+                    b = -1
+                }
+            }
+            out[pos] = key
+        }
+        a = a + 1
+    }
+    return out
+}
+
+// Linear-interpolated quantile. q in [0,1]. Input must be sorted ascending.
+fun _quantile(vec: sorted, float64: q) -> float64 {
+    int: n = math.size(sorted)
+    if n < 1 { return 0.0 }
+    if n == 1 { return sorted[0] }
+    float64: pos = q * (n - 1)
+    int: lo = _intify(pos)
+    if lo < 0 { lo = 0 }
+    if lo > n - 2 { lo = n - 2 }
+    float64: frac = pos - lo
+    return sorted[lo] + frac * (sorted[lo + 1] - sorted[lo])
+}
+
+// Inter-quartile range.
+fun _iqr(vec: sorted) -> float64 {
+    return _quantile(sorted, 0.75) - _quantile(sorted, 0.25)
+}
+
+// Returns vec of stats: [min, q1, median, q3, max], where min/max are the
+// whisker endpoints (largest value within 1.5*IQR of q1/q3) and outliers
+// are stored separately as a vec.
+fun _box_stats(vec: v) -> vec {
+    vec: sorted = _sorted_copy(v)
+    float64: q1 = _quantile(sorted, 0.25)
+    float64: med = _quantile(sorted, 0.5)
+    float64: q3 = _quantile(sorted, 0.75)
+    float64: iqr = q3 - q1
+    float64: lo_w = q1 - 1.5 * iqr
+    float64: hi_w = q3 + 1.5 * iqr
+    float64: lo_actual = sorted[0]
+    float64: hi_actual = sorted[math.size(sorted) - 1]
+    int: i = 0
+    while i < math.size(sorted) {
+        if sorted[i] >= lo_w {
+            lo_actual = sorted[i]
+            i = math.size(sorted)
+        } else {
+            i = i + 1
+        }
+    }
+    i = math.size(sorted) - 1
+    while i >= 0 {
+        if sorted[i] <= hi_w {
+            hi_actual = sorted[i]
+            i = -1
+        } else {
+            i = i - 1
+        }
+    }
+    // Notch half-width: 1.57 * IQR / sqrt(n) (McGill, Tukey, Larsen 1978).
+    int: n_int = math.size(sorted)
+    float64: n_f = n_int / 1.0
+    float64: n_f_sqrt = math.sqrt(n_f)
+    float64: notch = 1.57 * iqr / n_f_sqrt
+    // Store as [min, q1, median, q3, max, notch_half]
+    vec: stats = [lo_actual, q1, med, q3, hi_actual, notch]
+    return stats
+}
+
+// Extract the outlier vec (points outside [lo_w, hi_w]).
+fun _box_outliers(vec: v) -> vec {
+    vec: sorted = _sorted_copy(v)
+    float64: q1 = _quantile(sorted, 0.25)
+    float64: q3 = _quantile(sorted, 0.75)
+    float64: iqr = q3 - q1
+    float64: lo_w = q1 - 1.5 * iqr
+    float64: hi_w = q3 + 1.5 * iqr
+    // First count, then allocate
+    int: n = math.size(v)
+    int: cnt = 0
+    int: i = 0
+    while i < n {
+        if v[i] < lo_w { cnt = cnt + 1 }
+        if v[i] > hi_w { cnt = cnt + 1 }
+        i = i + 1
+    }
+    vec: out = []
+    if cnt > 0 {
+        out = math.zeros(cnt)
+    }
+    int: j = 0
+    i = 0
+    while i < n {
+        if v[i] < lo_w {
+            out[j] = v[i]
+            j = j + 1
+        }
+        if v[i] > hi_w {
+            out[j] = v[i]
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// Public API. Register one series with kind=boxplot, holding the arr of groups.
+fun boxplot(arr: groups, arr: labels, int: orient, int: notch, str: label, str: color) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "boxplot")
+    mapping.put(s, "groups", groups)
+    mapping.put(s, "labels", labels)
+    mapping.put(s, "orient", orient)
+    mapping.put(s, "notch", notch)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}

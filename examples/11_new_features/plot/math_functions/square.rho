@@ -1,0 +1,11 @@
+include plot
+println("=== square ===")
+fun f(float64: x) -> float64 { return x * x }
+figure(800, 510)
+plot(f, -3, 3, "f(x)", "blue")
+title("square")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("square.svg")
+println("Wrote ", bytes, " bytes to square.svg")

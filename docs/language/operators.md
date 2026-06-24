@@ -22,6 +22,9 @@ broadcasts).
 | `/` | Division | `int`, `float64`, `vec` (elementwise) |
 | `%` | Modulo | `int` |
 
+For `/` on `vec`: `v / s`, `s / v`, and `v / v` all work element-wise
+(raises a division-by-zero runtime error if any divisor element is zero).
+
 Broadcasting: a scalar combined with a vector or matrix applies elementwise.
 
 ```rhodesia
@@ -97,6 +100,28 @@ string: label = n == 1 ? "one" : "many"
 | `u * M`, `M * v` | matrix-vector product |
 | `A * B` | matrix product |
 | `M / s` | scalar divide (broadcast) |
+| `s / v` | scalar / vector (elementwise broadcast) |
+| `v / v` | elementwise divide |
+
+## Element-wise user functions: `.map(fn)`
+
+To apply a user-defined function (or lambda) over every element of a
+`vec` or `mat`, call `.map(fn)`:
+
+```rhodesia
+vec: x = numerical.linspace(0.1, 10.0, 50)
+
+fun reciprocal_sin(float64: xx) -> float64 {
+    return 1.0 / math.sin(xx)
+}
+
+vec: y = x.map(reciprocal_sin)              // named fn
+vec: y2 = x.map(fn(xx) -> xx * xx + 1.0)   // inline lambda
+```
+
+`.map(fn)` is always available — no `include` required. The function
+must take a single numeric scalar and return a numeric scalar. For
+`mat`, the function is applied to every cell.
 
 For reductions, use the `math` module: `math.sum`, `math.mean`, `math.dot`,
 `math.norm`. For inversion use `math.inv(M)`.

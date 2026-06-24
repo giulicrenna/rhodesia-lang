@@ -1,0 +1,77 @@
+// examples/11_new_features/flash/09_penguins.rho
+// Dataset real: Palmer Penguins (344 filas, 7 cols).
+// Demuestra: read_csv con missing, filtros, group_by, describe, sort, select, drop, value_counts.
+
+include flash
+
+println("=== flash: Palmer Penguins ===")
+println()
+
+record: df = read_csv("penguins.csv")
+println("Schema:")
+print(repr_df(df))
+println()
+
+println("Primeras 5 filas:")
+show_df(head(df, 5))
+println()
+
+println("Filas con missing en sex:")
+record: no_sex = dropna_col(df, "sex")
+show_df(head(no_sex, 5))
+println()
+
+println("Conteo por especie:")
+show_df(value_counts(df, "species"))
+println()
+
+println("Conteo por isla:")
+show_df(value_counts(df, "island"))
+println()
+
+println("Conteo por sexo:")
+show_df(value_counts(df, "sex"))
+println()
+
+// Group by species: mean body mass
+record: gb = group_by(df, "species")
+record: mass = group_agg(gb, "body_mass_g", "mean")
+println("Body mass promedio por especie:")
+show_df(mass)
+println()
+
+// Filter: solo Gentoo con body_mass_g > 5000
+record: heavy_gentoo = filter_and(
+    filter_eq(df, "species", "Gentoo"),
+    filter_gt_f(df, "body_mass_g", 5000.0)
+)
+println("Gentoo pesados (>5000g):")
+println("Rows: ", nrow(heavy_gentoo))
+show_df(head(heavy_gentoo, 10))
+println()
+
+// Describe de las cols numéricas
+println("Describe:")
+show_df(describe(df))
+println()
+
+// Sort por body_mass_g desc y mostrar top 5
+record: heaviest = sort_by(dropna_col(df, "body_mass_g"), "body_mass_g", "desc")
+println("Top 5 más pesados:")
+arr: cols = array.create(0)
+array.push(cols, "species")
+array.push(cols, "sex")
+array.push(cols, "body_mass_g")
+show_df(select_cols(head(heaviest, 5), cols))
+println()
+
+// Drop de columnas auxiliares
+arr: drop = array.create(0)
+array.push(drop, "island")
+array.push(drop, "sex")
+record: trimmed = drop_cols(df, drop)
+println("Sin island/sex, primeras 3:")
+show_df(head(trimmed, 3))
+println()
+
+println("Done.")

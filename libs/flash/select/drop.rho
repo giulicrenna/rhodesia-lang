@@ -1,0 +1,61 @@
+// libs/flash/select/drop.rho
+// drop_cols(df, names) — devuelve df sin las columnas indicadas.
+
+fun drop_cols(record: df, arr: names) -> record {
+    record: out = _new_df()
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        if _name_in(names, nm) == 0 {
+            record: c = mapping.get(df._cols, nm)
+            str: dt = mapping.get(df._dtypes, nm)
+            out = _set_col(out, nm, c, dt)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fun drop_one(record: df, str: name) -> record {
+    arr: names = array.create(0)
+    array.push(names, name)
+    return drop_cols(df, names)
+}
+
+// dropna_cols(df) — drop columnas donde todos los valores son "" / 0.0.
+fun dropna_cols(record: df) -> record {
+    record: out = _new_df()
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        record: c = mapping.get(df._cols, nm)
+        int: keep = 1
+        if c.kind == "arr" {
+            arr: a = c.data
+            int: nonempty = 0
+            int: j = 0
+            int: an = array.size(a)
+            while j < an {
+                if string.length(a[j]) > 0 { nonempty = nonempty + 1 }
+                j = j + 1
+            }
+            if an > 0 and nonempty == 0 { keep = 0 }
+        } else {
+            vec: v = c.data
+            int: j = 0
+            int: vn = math.size(v)
+            while j < vn {
+                if v[j] != 0.0 { keep = 0 }
+                j = j + 1
+            }
+        }
+        if keep == 1 {
+            str: dt = mapping.get(df._dtypes, nm)
+            out = _set_col(out, nm, c, dt)
+        }
+        i = i + 1
+    }
+    return out
+}

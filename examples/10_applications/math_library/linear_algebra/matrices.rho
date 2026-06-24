@@ -30,7 +30,7 @@ fun mat_det_3x3(mat: m) -> float64 {
 fun mat_transpose(mat: m) -> mat {
     int: rows_m = rows(m)
     int: cols_m = cols(m)
-    // ponytail: transposed shape is (cols_m × rows_m), not (rows_m × cols_m)
+    // transposed shape is (cols_m × rows_m), not (rows_m × cols_m)
     mat: result = zeros(cols_m, rows_m)
 
     for i in range(rows_m) {

@@ -1,0 +1,322 @@
+// libs/flash/accessors/str.rho
+// String accessors a nivel de columna. Equivalente a pandas `.str`.
+//
+// API: cada función toma (df, col) y devuelve un df con la col transformada
+// o un valor derivado. Estilo uniforme a flash.
+//
+// Funciones:
+//   str_upper(df, col)               -> df (col en mayúsculas)
+//   str_lower(df, col)               -> df (col en minúsculas)
+//   str_strip(df, col)               -> df (col sin whitespace alrededor)
+//   str_len(df, col)                 -> df (nueva col "<col>_len" con el largo)
+//   str_contains(df, col, sub)       -> df (nueva col "<col>_contains" 0/1)
+//   str_starts_with(df, col, prefix) -> df (nueva col "<col>_starts" 0/1)
+//   str_ends_with(df, col, suffix)   -> df (nueva col "<col>_ends" 0/1)
+//   str_replace(df, col, old, new)   -> df (col reemplazada)
+//   str_slice(df, col, start, end)   -> df (col con substr en [start,end))
+//   str_split(df, col, sep, idx)     -> df (nueva col "<col>_part_<idx>")
+//   str_concat(df, cols[], sep)      -> df (nueva col "concat")
+//   str_pad(df, col, width, side)    -> df (col padded a width con espacios)
+//
+// ponytail: el sufijo del nombre de la col derivada es arbitrario y colisiona
+// si la col ya existe. Mejorable: usar un mapeo col -> derived_names.
+
+fun str_upper(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err(string.concat("str_upper: column '", col, "' must be string")) }
+    arr: a = c.data
+    arr: na = c.na
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = array.size(a)
+    while i < n {
+        array.push(out, string.upper(a[i]))
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "str")
+}
+
+fun str_lower(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err(string.concat("str_lower: column '", col, "' must be string")) }
+    arr: a = c.data
+    arr: na = c.na
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = array.size(a)
+    while i < n {
+        array.push(out, string.lower(a[i]))
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "str")
+}
+
+fun str_strip(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err(string.concat("str_strip: column '", col, "' must be string")) }
+    arr: a = c.data
+    arr: na = c.na
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = array.size(a)
+    while i < n {
+        array.push(out, string.trim(a[i]))
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "str")
+}
+
+// str_len(df, col) -> df con nueva col "<col>_len" (int como vec).
+fun str_len(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err(string.concat("str_len: column '", col, "' must be string")) }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        out[i] = string.length(a[i]) * 1.0
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_len")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+// str_contains(df, col, sub) -> df con nueva col "<col>_contains" (bool vec 0/1).
+// Para cols numéricas, las convierte a str y busca sub.
+fun str_contains(record: df, str: col, str: sub) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    arr: na = c.na
+    int: n = 0
+    if c.kind == "arr" {
+        n = array.size(c.data)
+    } else {
+        n = math.size(c.data)
+    }
+    vec: out = math.zeros(n)
+    if c.kind == "arr" {
+        arr: a = c.data
+        int: i = 0
+        while i < n {
+            if string.find(a[i], sub) >= 0 { out[i] = 1.0 }
+            i = i + 1
+        }
+    } else {
+        vec: v = c.data
+        int: i = 0
+        while i < n {
+            if string.find(_float_to_str(v[i]), sub) >= 0 { out[i] = 1.0 }
+            i = i + 1
+        }
+    }
+    str: new_name = string.concat(col, "_contains")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "bool")
+}
+
+fun str_starts_with(record: df, str: col, str: prefix) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("str_starts_with: must be string") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        if _starts_at(a[i], prefix, 0) { out[i] = 1.0 }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_starts")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "bool")
+}
+
+fun str_ends_with(record: df, str: col, str: suffix) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("str_ends_with: must be string") }
+    arr: a = c.data
+    arr: na = c.na
+    int: pn = string.length(suffix)
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        int: an = string.length(a[i])
+        if an >= pn and _starts_at(a[i], suffix, an - pn) { out[i] = 1.0 }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_ends")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "bool")
+}
+
+fun str_replace(record: df, str: col, str: old_s, str: new_s) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("str_replace: must be string") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    arr: out = array.create(0)
+    int: i = 0
+    while i < n {
+        array.push(out, string.replace(a[i], old_s, new_s))
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "str")
+}
+
+// str_slice(df, col, start, end) -> df con col = s[start:end] (end exclusivo).
+fun str_slice(record: df, str: col, int: start, int: end) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("str_slice: must be string") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    arr: out = array.create(0)
+    int: i = 0
+    while i < n {
+        array.push(out, string.slice(a[i], start, end))
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "str")
+}
+
+// str_split(df, col, sep, idx) -> df con nueva col "<col>_part_<idx>"
+//   que contiene la idx-ésima parte (0-based) de split por sep.
+fun str_split(record: df, str: col, str: sep, int: idx) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("str_split: must be string") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    arr: out = array.create(0)
+    int: i = 0
+    while i < n {
+        arr: parts = _rho_split(a[i], sep)
+        if idx < array.size(parts) { array.push(out, parts[idx]) }
+        else { array.push(out, "") }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_part_")
+    new_name = string.concat(new_name, _int_str(idx))
+    return _set_col(df, new_name, { kind: "arr", data: out, na: na }, "str")
+}
+
+// _rho_split(s, sep) — split local (string.split nativo es placeholder).
+fun _rho_split(str: s, str: sep) -> arr {
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = string.length(s)
+    int: sl = string.length(sep)
+    str: cur = ""
+    while i < n {
+        if _starts_at(s, sep, i) {
+            array.push(out, cur)
+            cur = ""
+            i = i + sl
+            continue
+        }
+        cur = string.concat(cur, string.slice(s, i, i + 1))
+        i = i + 1
+    }
+    array.push(out, cur)
+    return out
+}
+
+// str_concat(df, cols, sep) -> df con nueva col "concat".
+// cols es arr<str> con los nombres de las columnas a concatenar.
+fun str_concat(record: df, arr: cols, str: sep) -> record {
+    int: k = 0
+    int: nk = array.size(cols)
+    while k < nk {
+        _check_col(df, cols[k])
+        k = k + 1
+    }
+    int: nr = df._nrows
+    arr: out = array.create(0)
+    arr: na = _new_na(nr)
+    int: r = 0
+    while r < nr {
+        str: cur = ""
+        k = 0
+        while k < nk {
+            str: nm = cols[k]
+            record: c = mapping.get(df._cols, nm)
+            arr: a = c.data
+            str: v = ""
+            if r < array.size(a) { v = a[r] }
+            if k > 0 { cur = string.concat(cur, sep) }
+            cur = string.concat(cur, v)
+            k = k + 1
+        }
+        array.push(out, cur)
+        r = r + 1
+    }
+    return _set_col(df, "concat", { kind: "arr", data: out, na: na }, "str")
+}
+
+// str_pad(df, col, width, side) — side es "left"|"right"|"center".
+fun str_pad(record: df, str: col, int: width, str: side) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("str_pad: must be string") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    arr: out = array.create(0)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        int: vn = string.length(v)
+        if vn >= width {
+            array.push(out, v)
+        } else if side == "left" {
+            str: pad = _pad_left_str(v, width)
+            array.push(out, pad)
+        } else if side == "center" {
+            int: left_n = _flash_intify((width - vn) / 2)
+            int: right_n = width - vn - left_n
+            str: tmp = _pad_left_str(v, vn + left_n)
+            str: tmp2 = _pad_right_str(tmp, width)
+            array.push(out, tmp2)
+        } else {
+            array.push(out, _pad_right_str(v, width))
+        }
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "str")
+}
+
+fun _pad_left_str(str: s, int: width) -> str {
+    int: n = string.length(s)
+    if n >= width { return s }
+    int: diff = width - n
+    str: out = s
+    int: i = 0
+    while i < diff {
+        out = string.concat(" ", out)
+        i = i + 1
+    }
+    return out
+}
+
+fun _pad_right_str(str: s, int: width) -> str {
+    int: n = string.length(s)
+    if n >= width { return s }
+    int: diff = width - n
+    str: out = s
+    int: i = 0
+    while i < diff {
+        out = string.concat(out, " ")
+        i = i + 1
+    }
+    return out
+}

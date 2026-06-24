@@ -1,0 +1,46 @@
+// examples/11_new_features/flash/05_reshape.rho
+// pivot + melt + transpose_df + stack.
+
+include flash
+
+println("=== flash: reshape (pivot / melt / transpose / stack) ===")
+println()
+
+str: long_csv = "date,product,units,revenue\n2024-01,A,100,500\n2024-01,B,80,400\n2024-02,A,120,600\n2024-02,B,90,450\n2024-03,A,150,750\n2024-03,B,110,550\n"
+io.write_file("long.csv", long_csv)
+
+record: long = read_csv("long.csv")
+
+println("Long form:")
+show_df(long)
+println()
+
+// pivot: index=date, cols=product, vals=revenue
+record: wide = pivot(long, "date", "product", "revenue")
+println("Pivot (date × product = revenue):")
+show_df(wide)
+println()
+
+// melt: de wide a long
+arr: id_vars = array.create(0)
+array.push(id_vars, "date")
+arr: value_vars = array.create(0)
+array.push(value_vars, "A")
+array.push(value_vars, "B")
+record: back_long = melt(wide, id_vars, value_vars, "product", "revenue")
+println("Melt back to long:")
+show_df(back_long)
+println()
+
+// transpose
+println("Transpose of wide:")
+show_df(transpose_df(wide))
+println()
+
+// stack
+println("Stack of long:")
+show_df(stack(long))
+println()
+
+io.remove("long.csv")
+println("Done.")

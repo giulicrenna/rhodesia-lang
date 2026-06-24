@@ -1,0 +1,11 @@
+include plot
+println("=== round ===")
+fun f(float64: x) -> float64 { return math.round(x) }
+figure(800, 510)
+plot(f, -3, 3, "f(x)", "blue")
+title("round")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("round.svg")
+println("Wrote ", bytes, " bytes to round.svg")

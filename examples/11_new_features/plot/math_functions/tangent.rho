@@ -1,0 +1,11 @@
+include plot
+println("=== tangent ===")
+fun f(float64: x) -> float64 { return math.tan(x) }
+figure(800, 510)
+plot(f, -1.4, 1.4, "f(x)", "blue")
+title("tangent")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("tangent.svg")
+println("Wrote ", bytes, " bytes to tangent.svg")

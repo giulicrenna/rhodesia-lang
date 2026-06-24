@@ -222,7 +222,7 @@ float64: vy = v0 * sin_taylor(angle_rad, 10)
 
 float64: time_of_flight = 2.0 * vy / g
 float64: max_height = vy * vy / (2.0 * g)
-// ponytail: was `range` which shadows the builtin range(); rename to `proj_range`.
+// was `range` which shadows the builtin range(); rename to `proj_range`.
 float64: proj_range = vx * time_of_flight
 
 println("  Initial velocity:", v0, "m/s at", angle, "degrees")
@@ -252,7 +252,7 @@ println("  Standard deviation:", std_dev(dataset))
 println("  Median:", median(dataset))
 println("  Min:", min_value(dataset))
 println("  Max:", max_value(dataset))
-// ponytail: `range` is the builtin for integer iteration; compute the
+// `range` is the builtin for integer iteration; compute the
 // statistical range (max - min) explicitly.
 println("  Range:", max_value(dataset) - min_value(dataset))
 println("")

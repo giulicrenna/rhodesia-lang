@@ -1,0 +1,107 @@
+// libs/flash/reshape/pivot_table.rho
+// pivot_table(df, index, columns, values, aggfunc)
+// Tabla cruzada con agregación. aggfunc ∈ {"sum","mean","count","min","max"}.
+//
+// Si aggfunc == "count", `values` puede ser "" o cualquier col (cuenta filas).
+// Si hay múltiples matches para (idx, col), los agrega según aggfunc.
+//
+// Devuelve df con: index + una col por valor único de `columns`.
+// Las celdas sin match quedan NA (mask "1").
+
+fun pivot_table(record: df, str: index_col, str: cols_col,
+                str: vals_col, str: aggfunc) -> record {
+    _check_col(df, index_col)
+    _check_col(df, cols_col)
+    arr: idx_unique = unique(df, index_col)
+    arr: col_unique = unique(df, cols_col)
+    int: n_idx = array.size(idx_unique)
+    int: n_col = array.size(col_unique)
+    // Acumuladores: para cada celda (i, j) guardamos sum, count, min, max.
+    // Esto cubre todos los aggfunc sin branching por celda.
+    vec: acc_sum = math.zeros(n_idx * n_col)
+    vec: acc_cnt = math.zeros(n_idx * n_col)
+    vec: acc_min = math.zeros(n_idx * n_col)
+    vec: acc_max = math.zeros(n_idx * n_col)
+    // Inicializar min/max a sentinels.
+    int: k = 0
+    while k < n_idx * n_col {
+        acc_min[k] = 0.0 - 1.0e30
+        acc_max[k] = 1.0e30
+        k = k + 1
+    }
+    int: is_count = 0
+    if aggfunc == "count" { is_count = 1 }
+    int: r = 0
+    while r < df._nrows {
+        str: idx_v = _cell_to_display(df, index_col, r)
+        str: col_v = _cell_to_display(df, cols_col, r)
+        int: ii = _pt_pos(idx_unique, idx_v)
+        int: jj = _pt_pos(col_unique, col_v)
+        if ii >= 0 and jj >= 0 {
+            int: pos = ii * n_col + jj
+            acc_cnt[pos] = acc_cnt[pos] + 1.0
+            if is_count == 0 {
+                // obtener el valor de vals_col en r
+                float64: x = 0.0
+                if _has_col(df, vals_col) {
+                    record: c = mapping.get(df._cols, vals_col)
+                    if c.kind == "vec" {
+                        vec: v = c.data
+                        if r < math.size(v) { x = v[r] }
+                    } else {
+                        arr: a = c.data
+                        if r < array.size(a) { x = _str_to_float_v2(a[r]) }
+                    }
+                }
+                acc_sum[pos] = acc_sum[pos] + x
+                if x < acc_min[pos] { acc_min[pos] = x }
+                if x > acc_max[pos] { acc_max[pos] = x }
+            }
+        }
+        r = r + 1
+    }
+    // Construir output
+    record: out = _new_df()
+    out = _set_col(out, index_col, _wrap_arr(idx_unique), "str")
+    int: i = 0
+    while i < n_col {
+        str: cn = col_unique[i]
+        vec: cv = math.zeros(n_idx)
+        arr: na = array.create(0)
+        int: j = 0
+        while j < n_idx {
+            int: pos = j * n_col + i
+            float64: v = 0.0
+            if acc_cnt[pos] == 0.0 {
+                array.push(na, "1")
+                v = 0.0
+            } else {
+                array.push(na, "0")
+                if aggfunc == "sum"        { v = acc_sum[pos] }
+                else if aggfunc == "mean"  { v = acc_sum[pos] / acc_cnt[pos] }
+                else if aggfunc == "count" { v = acc_cnt[pos] }
+                else if aggfunc == "min"   { v = acc_min[pos] }
+                else if aggfunc == "max"   { v = acc_max[pos] }
+                else { v = acc_sum[pos] }
+            }
+            cv[j] = v
+            j = j + 1
+        }
+        str: dt = "float"
+        if aggfunc == "count" { dt = "int" }
+        out = _set_col(out, cn, { kind: "vec", data: cv, na: na }, dt)
+        i = i + 1
+    }
+    return out
+}
+
+// _pt_pos(arr, s) — 1-based position de s en arr; -1 si no está.
+fun _pt_pos(arr: a, str: s) -> int {
+    int: i = 0
+    int: n = array.size(a)
+    while i < n {
+        if a[i] == s { return i }
+        i = i + 1
+    }
+    return 0 - 1
+}

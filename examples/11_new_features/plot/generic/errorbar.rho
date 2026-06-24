@@ -1,0 +1,26 @@
+// errorbar.rho - Line plot with vertical error bars.
+
+include plot
+
+println("=== errorbar ===")
+
+vec: x = numerical.linspace(0.0, 5.0, 12)
+vec: y = math.zeros(12)
+vec: err = math.zeros(12)
+int: i = 0
+while i < 12 {
+    float64: xx = x[i]
+    y[i] = math.sin(xx)
+    err[i] = 0.1 + 0.05 * xx
+    i = i + 1
+}
+
+figure(800, 510)
+errorbar(x, y, err, "sin(x) ± err", "crimson")
+title("Line with error bars")
+xlabel("x")
+ylabel("y")
+legend(1)
+
+int: bytes = savefig("errorbar.svg")
+println("Wrote ", bytes, " bytes to errorbar.svg")

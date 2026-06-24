@@ -61,7 +61,7 @@ also accept `tuple` / `record` field access via the dot-free call form
 | `string.split(s, sep)` | Split on `sep` (currently a placeholder) |
 | `string.join(parts, sep)` | Join `parts` with `sep` (placeholder) |
 
-> ponytail: `split` and `join` are placeholders in the current build. Add a
+> `split` and `join` are placeholders in the current build. Add a
 > real implementation when needed — current users rely on manual
 > `string.find` + `string.substr` loops.
 

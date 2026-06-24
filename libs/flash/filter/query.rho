@@ -1,0 +1,248 @@
+// libs/flash/filter/query.rho
+// query(df, expr) — evalúa una expresión mínima.
+// Sintaxis soportada:
+//   "col op value"            — ej: "age > 30"
+//   "col op value AND/AND/&& expr2"
+//   "col op value OR/|| expr2"
+// donde op ∈ {==, !=, >, >=, <, <=}
+//
+// NO soporta paréntesis anidados, funciones, ni aritmética.
+// Valor es siempre string (sin comillar) o string entre comillas.
+
+// _tokenize(expr) — split básico en tokens: ids, números, ops, and, or, (, ).
+fun _tokenize(str: expr) -> arr {
+    arr: out = array.create(0)
+    int: i = 0
+    int: n = string.length(expr)
+    while i < n {
+        str: c = string.slice(expr, i, i + 1)
+        if c == " " or c == "\t" {
+            i = i + 1
+            continue
+        }
+        if c == "(" or c == ")" {
+            array.push(out, c)
+            i = i + 1
+            continue
+        }
+        if c == ">" or c == "<" or c == "=" or c == "!" {
+            str: tk = c
+            if i + 1 < n {
+                str: c2 = string.slice(expr, i + 1, i + 2)
+                if c2 == "=" { tk = string.concat(tk, "=")
+    i = i + 2 }
+                else { i = i + 1 }
+            } else { i = i + 1 }
+            array.push(out, tk)
+            continue
+        }
+        if c == "\"" {
+            // string literal
+            int: j = i + 1
+            str: s = ""
+            while j < n and string.slice(expr, j, j + 1) != "\"" {
+                s = string.concat(s, string.slice(expr, j, j + 1))
+                j = j + 1
+            }
+            array.push(out, string.concat("\"", string.concat(s, "\"")))
+            i = j + 1
+            continue
+        }
+        // identificador o número
+        int: j = i
+        while j < n {
+            str: cc = string.slice(expr, j, j + 1)
+            if cc == " " or cc == "\t" or cc == "(" or cc == ")" or
+               cc == ">" or cc == "<" or cc == "=" or cc == "!" {
+                return _after_ident(expr, j, out, i)
+            }
+            j = j + 1
+        }
+        return _after_ident(expr, j, out, i)
+    }
+    return out
+}
+
+fun _after_ident(str: expr, int: j, arr: out, int: i) -> arr {
+    str: tk = string.slice(expr, i, j)
+    array.push(out, tk)
+    return _tokenize_from(expr, j, out)
+}
+
+fun _tokenize_from(str: expr, int: i, arr: out) -> arr {
+    int: n = string.length(expr)
+    while i < n {
+        str: c = string.slice(expr, i, i + 1)
+        if c == " " or c == "\t" {
+            i = i + 1
+            continue
+        }
+        if c == "(" or c == ")" {
+            array.push(out, c)
+            i = i + 1
+            continue
+        }
+        if c == ">" or c == "<" or c == "=" or c == "!" {
+            str: tk = c
+            if i + 1 < n {
+                str: c2 = string.slice(expr, i + 1, i + 2)
+                if c2 == "=" { tk = string.concat(tk, "=")
+    i = i + 2 }
+                else { i = i + 1 }
+            } else { i = i + 1 }
+            array.push(out, tk)
+            continue
+        }
+        if c == "\"" {
+            int: j = i + 1
+            str: s = ""
+            while j < n and string.slice(expr, j, j + 1) != "\"" {
+                s = string.concat(s, string.slice(expr, j, j + 1))
+                j = j + 1
+            }
+            array.push(out, string.concat("\"", string.concat(s, "\"")))
+            i = j + 1
+            continue
+        }
+        int: j = i
+        while j < n {
+            str: cc = string.slice(expr, j, j + 1)
+            if cc == " " or cc == "\t" or cc == "(" or cc == ")" or
+               cc == ">" or cc == "<" or cc == "=" or cc == "!" {
+                break
+            }
+            j = j + 1
+        }
+        array.push(out, string.slice(expr, i, j))
+        i = j
+    }
+    return out
+}
+
+// _eval_comparison(df, tokens, i) — evalúa "col op value" desde tokens[i].
+//   Devuelve { hit: 0/1, new_i: int }
+fun _eval_comparison(record: df, arr: tokens, int: i) -> record {
+    str: col = tokens[i]
+    str: op = tokens[i + 1]
+    str: vtok = tokens[i + 2]
+    if string.slice(vtok, 0, 1) == "\"" {
+        // quitar comillas
+        vtok = string.slice(vtok, 1, string.length(vtok) - 1)
+    }
+    int: hit = _cmp_value(df, col, 0, op, vtok, _str_to_float_v2(vtok))
+    return { hit: hit, new_i: i + 3 }
+}
+
+// _eval_atom(df, tokens, i) — evalúa un átomo (comparación).
+fun _eval_atom(record: df, arr: tokens, int: i) -> record {
+    return _eval_comparison(df, tokens, i)
+}
+
+// _eval_or_atom(df, tokens, i) — evalúa AND-chain desde i.
+fun _eval_or_atom(record: df, arr: tokens, int: i) -> record {
+    int: hit = 1
+    int: n = array.size(tokens)
+    while i < n {
+        record: a = _eval_atom(df, tokens, i)
+        hit = a.hit
+        i = a.new_i
+        if i < n {
+            str: tok = tokens[i]
+            if tok == "AND" or tok == "and" or tok == "&&" {
+                // siguiente: si hit==0, todavía puede ser 1 si la próxima AND-chain da 1
+                i = i + 1
+                continue
+            }
+            if tok == "OR" or tok == "or" or tok == "||" {
+                // corta el chain y devuelve
+                record: r = { hit: hit, new_i: i }
+                return r
+            }
+        }
+        break
+    }
+    return { hit: hit, new_i: i }
+}
+
+fun _eval_full(record: df, arr: tokens, int: i) -> int {
+    int: n = array.size(tokens)
+    int: hit = 0
+    while i < n {
+        record: r = _eval_or_atom(df, tokens, i)
+        if hit == 0 { hit = r.hit }
+        if hit == 1 { return 1 }
+        i = r.new_i
+        if i < n {
+            str: tok = tokens[i]
+            if tok == "OR" or tok == "or" or tok == "||" {
+                i = i + 1
+                continue
+            }
+            break
+        }
+        break
+    }
+    return hit
+}
+
+fun query(record: df, str: expr) -> record {
+    arr: tokens = _tokenize(expr)
+    if array.size(tokens) == 0 { return _copy_df(df) }
+    int: n = df._nrows
+    arr: mask = array.create(0)
+    int: i = 0
+    while i < n {
+        // Para cada fila, reevaluar. Para esto hacemos un "scope" donde
+        // temporalmente cambiamos el df — pero como las funciones son puras,
+        // construimos una vista fila-a-fila: usamos _cmp_value directamente.
+        int: hit = _eval_query_row(df, tokens, i)
+        array.push(mask, hit)
+        i = i + 1
+    }
+    return _apply_filter(df, mask)
+}
+
+// _eval_query_row(df, tokens, row) — evalúa la query para UNA fila.
+fun _eval_query_row(record: df, arr: tokens, int: row) -> int {
+    int: i = 0
+    int: n = array.size(tokens)
+    int: hit = 0
+    while i < n {
+        int: and_hit = 1
+        while i < n {
+            // átomo: col op value
+            str: col = tokens[i]
+            str: op = tokens[i + 1]
+            str: vtok = tokens[i + 2]
+            if string.slice(vtok, 0, 1) == "\"" {
+                vtok = string.slice(vtok, 1, string.length(vtok) - 1)
+            }
+            int: cmp = _cmp_value(df, col, row, op, vtok, _str_to_float_v2(vtok))
+            and_hit = cmp
+            i = i + 3
+            if i < n {
+                str: tok = tokens[i]
+                if tok == "AND" or tok == "and" or tok == "&&" {
+                    i = i + 1
+                    continue
+                }
+                if tok == "OR" or tok == "or" or tok == "||" {
+                    break
+                }
+            }
+            break
+        }
+        if hit == 0 { hit = and_hit }
+        if hit == 1 { return 1 }
+        if i < n {
+            str: tok = tokens[i]
+            if tok == "OR" or tok == "or" or tok == "||" {
+                i = i + 1
+                continue
+            }
+            break
+        }
+        break
+    }
+    return hit
+}

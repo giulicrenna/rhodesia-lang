@@ -1,0 +1,34 @@
+// Default parameter values
+// Syntax: fun name(type: param = default) -> ret { ... }
+
+fun greet(str: who, str: greeting = "Hello") -> str {
+    return string.concat(greeting, ", ", who, "!")
+}
+
+fun powerOf(float64: base, int: exponent = 2) -> float64 {
+    float64: result = 1.0
+    for i in range(exponent) {
+        result = result * base
+    }
+    return result
+}
+
+fun window(int: width, int: height, str: title = "Untitled",
+           bool: resizable = true) -> str {
+    return string.concat(title, " ", string.from(width), "x", string.from(height),
+           resizable ? " (resizable)" : " (fixed)")
+}
+
+println("--- default values ---")
+println(greet("World"))
+println(greet("World", greeting: "Hi"))
+println(greet("World", "Hola"))
+
+println("powerOf(5)            =", powerOf(5))
+println("powerOf(5, 3)         =", powerOf(5, 3))
+println("powerOf(2, exponent: 10) =", powerOf(2, exponent: 10))
+
+println(window(800, 600))
+println(window(1024, 768, title: "App"))
+println(window(800, 600, "MyApp", false))
+println(window(height: 768, width: 1024, resizable: false))

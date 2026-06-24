@@ -1,0 +1,266 @@
+// libs/plot/index.rho - plot library entry point.
+//
+// Public API: figure, subplot, current_subplot, title, xlabel, ylabel, xlim,
+// ylim, legend, set_theme, set_linewidth, set_marker_size, set_alpha,
+// set_background_color, set_figure_size, savefig, show.
+//
+// State (figure dimensions + the panel grid + the theme) lives here because
+// Rhodesia's `include` shares function definitions only, not variable
+// declarations. Sibling sub-modules read/write these vars directly.
+//
+// File layout:
+//
+//   libs/plot/
+//     index.rho                    - this file: state vars + public API
+//     format/format.rho            - number formatting
+//     themes/themes.rho            - themes + set_theme()
+//     series/basic.rho             - line, scatter, bar, hist, area, ...
+//     series/heatmap.rho           - heatmap
+//     series/radar.rho             - radar
+//     svg/svg.rho                  - to_svg, axis ticks, panel resolver
+//     svg/render_basic.rho         - line/scatter/bar/hist/area/... SVG
+//     svg/render_grid.rho          - heatmap SVG
+//     svg/render_polar.rho         - radar SVG
+//     svg/legend.rho               - legend block
+//     layout/subplot.rho           - subplot(rows, cols, idx)
+//
+// ponytail: state vars MUST live in index.rho. Rhodesia's `include` shares
+// function definitions across sibling includes but not variable declarations
+// (each include runs its top-level statements in a private scope). So all
+// sub-files are functions-only; the shared mutable state is here.
+
+// --- Pull in functions from sub-files ---
+include plot/format/format
+include plot/themes/themes
+include plot/series/basic
+include plot/series/heatmap
+include plot/series/radar
+include plot/series/boxplot
+include plot/svg/svg
+include plot/svg/render_basic
+include plot/svg/render_grid
+include plot/svg/render_polar
+include plot/svg/render_boxplot
+include plot/svg/render_stack_bars
+include plot/svg/legend
+include plot/layout/subplot
+
+// --- Figure dimensions ---
+int: _W = 800
+int: _H = 510
+
+// --- Subplot grid ---
+int: _NROWS = 1
+int: _NCOLS = 1
+int: _CUR = 0
+
+// --- Panels: each is a map {series, title, xlabel, ylabel, has_xl,
+//     xl_lo, xl_hi, has_yl, yl_lo, yl_hi, legend} ---
+arr: _PANELS = array.create(0)
+
+// --- Theme / palette ---
+str: _THEME_NAME = "default"
+arr: _PALETTE = array.create(0)
+str: _BG_COLOR = "white"
+str: _FG_COLOR = "black"
+str: _GRID_COLOR = "#cccccc"
+str: _AXIS_COLOR = "black"
+int: _CIDX = 0
+
+// --- Heatmap color range (empty = use theme defaults) ---
+str: _HMAP_LO = ""
+str: _HMAP_HI = ""
+
+// --- Styling knobs ---
+float64: _LINE_WIDTH = 1.5
+float64: _MARKER_SIZE = 3.0
+float64: _SERIES_ALPHA = 0.5
+
+// --- Helper: current panel record ---
+fun _cur_panel() -> map {
+    if array.size(_PANELS) < 1 {
+        map: p = mapping.create()
+        mapping.put(p, "series", array.create(0))
+        mapping.put(p, "title", "")
+        mapping.put(p, "xlabel", "")
+        mapping.put(p, "ylabel", "")
+        mapping.put(p, "has_xl", 0)
+        mapping.put(p, "xl_lo", 0.0)
+        mapping.put(p, "xl_hi", 0.0)
+        mapping.put(p, "has_yl", 0)
+        mapping.put(p, "yl_lo", 0.0)
+        mapping.put(p, "yl_hi", 0.0)
+        mapping.put(p, "legend", 0)
+        mapping.put(p, "axes_at_origin", 0)
+        mapping.put(p, "has_xa_pos", 0)
+        mapping.put(p, "xa_pos", 0.0)
+        mapping.put(p, "has_ya_pos", 0)
+        mapping.put(p, "ya_pos", 0.0)
+        array.push(_PANELS, p)
+    }
+    if _CUR >= array.size(_PANELS) { _CUR = 0 }
+    return _PANELS[_CUR]
+}
+
+// --- Helper: current panel's series arr (mutable) ---
+fun _cur_series() -> arr {
+    map: p = _cur_panel()
+    return mapping.get(p, "series")
+}
+
+// --- Public lifecycle ---
+
+fun figure(int: w, int: h) -> int {
+    _W = w
+    _H = h
+    _NROWS = 1
+    _NCOLS = 1
+    _CUR = 0
+    _PANELS = array.create(0)
+    map: p = mapping.create()
+    mapping.put(p, "series", array.create(0))
+    mapping.put(p, "title", "")
+    mapping.put(p, "xlabel", "")
+    mapping.put(p, "ylabel", "")
+    mapping.put(p, "has_xl", 0)
+    mapping.put(p, "xl_lo", 0.0)
+    mapping.put(p, "xl_hi", 0.0)
+    mapping.put(p, "has_yl", 0)
+    mapping.put(p, "yl_lo", 0.0)
+    mapping.put(p, "yl_hi", 0.0)
+    mapping.put(p, "legend", 0)
+    mapping.put(p, "axes_at_origin", 0)
+    mapping.put(p, "has_xa_pos", 0)
+    mapping.put(p, "xa_pos", 0.0)
+    mapping.put(p, "has_ya_pos", 0)
+    mapping.put(p, "ya_pos", 0.0)
+    array.push(_PANELS, p)
+    _CIDX = 0
+    return 0
+}
+
+fun title(str: t) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "title", t)
+    return 0
+}
+
+fun xlabel(str: t) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "xlabel", t)
+    return 0
+}
+
+fun ylabel(str: t) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "ylabel", t)
+    return 0
+}
+
+fun xlim(float64: lo, float64: hi) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "has_xl", 1)
+    mapping.put(p, "xl_lo", lo)
+    mapping.put(p, "xl_hi", hi)
+    return 0
+}
+
+fun ylim(float64: lo, float64: hi) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "has_yl", 1)
+    mapping.put(p, "yl_lo", lo)
+    mapping.put(p, "yl_hi", hi)
+    return 0
+}
+
+fun legend(int: on) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "legend", on)
+    return 0
+}
+
+// axes_at_origin(on)  -> if on != 0, x and y axis lines cross at (0,0) in
+// data space. Default (on == 0): axes at the bottom/left edge of the panel.
+// ponytail: any non-zero is treated as on (consistent with C-like truthy).
+fun axes_at_origin(int: on) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "axes_at_origin", on)
+    return 0
+}
+
+// x_axis_at(y) -> place the x-axis line at data-y = y (i.e. where y = y
+// sits vertically on the panel). Overrides the default bottom-of-panel and
+// the value used by axes_at_origin. Pass any value, including ones outside
+// the data range (it'll be drawn outside the plot area).
+fun x_axis_at(float64: y) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "has_xa_pos", 1)
+    mapping.put(p, "xa_pos", y)
+    return 0
+}
+
+// y_axis_at(x) -> place the y-axis line at data-x = x (i.e. where x = x
+// sits horizontally on the panel). Overrides the default left-of-panel and
+// the value used by axes_at_origin.
+fun y_axis_at(float64: x) -> int {
+    map: p = _cur_panel()
+    mapping.put(p, "has_ya_pos", 1)
+    mapping.put(p, "ya_pos", x)
+    return 0
+}
+
+// --- Style setters (figure-wide) ---
+
+fun set_linewidth(float64: w) -> int {
+    _LINE_WIDTH = w
+    return 0
+}
+
+fun set_marker_size(float64: s) -> int {
+    _MARKER_SIZE = s
+    return 0
+}
+
+fun set_alpha(float64: a) -> int {
+    _SERIES_ALPHA = a
+    return 0
+}
+
+fun set_background_color(str: c) -> int {
+    _BG_COLOR = c
+    return 0
+}
+
+fun set_figure_size(int: w, int: h) -> int {
+    _W = w
+    _H = h
+    return 0
+}
+
+// set_heatmap_colors(lo, hi) — override the heatmap color range.
+// Default: lo = theme background, hi = palette[0]. Pass "" for either to fall
+// back to the default. Affects only the heatmap renderer; other series
+// are untouched. Example:
+//   set_heatmap_colors("#ffffff", "#1f77b4")   // white -> blue
+//   set_heatmap_colors("#000000", "#e60049")   // black -> red
+fun set_heatmap_colors(str: lo, str: hi) -> int {
+    _HMAP_LO = lo
+    _HMAP_HI = hi
+    return 0
+}
+
+// --- Output ---
+
+fun savefig(str: path) -> int {
+    str: svg = to_svg()
+    return io.write_file(path, svg)
+}
+
+fun show() -> int {
+    str: svg = to_svg()
+    print(svg)
+    return 0
+}
+
+// --- Init default theme ---
+set_theme(THEME_DEFAULT)

@@ -16,6 +16,7 @@
 #include "Error.hpp"
 #include "ModuleLoader.hpp"
 #include <iostream>
+#include <unordered_set>
 
 namespace Rhodesia {
 
@@ -35,7 +36,7 @@ class Evaluator : public ASTVisitor {
 public:
     Evaluator() : result_(int64_t(0)), moduleLoader_(std::make_shared<ModuleLoader>()) {}
 
-    // ponytail: build a child Evaluator that shares the parent's module cache.
+    // build a child Evaluator that shares the parent's module cache.
     // This keeps sub-module ASTs alive after the child is destroyed, so the
     // raw `const FunctionDeclNode*` pointers stored in functions_ remain valid.
     explicit Evaluator(std::shared_ptr<ModuleLoader> sharedLoader)
@@ -157,12 +158,12 @@ public:
     void visit(FunctionCallNode& node) override {
         // Check for built-in functions first
         if (Builtins::instance().isBuiltin(node.name)) {
-            std::vector<RhoValue> args;
-            for (auto& arg : node.arguments) {
-                arg->accept(*this);
-                args.push_back(result_);
-            }
-            result_ = Builtins::instance().call(node.name, args, node.location);
+            ArgEvaluator evalArg = [this](ExprNode& e) {
+                e.accept(*this);
+                return result_;
+            };
+            result_ = Builtins::instance().call(node.name, node.arguments,
+                                                evalArg, node.location);
             return;
         }
 
@@ -171,16 +172,7 @@ public:
             RhoValue maybeFunc = symbols_.lookup(node.name, node.location);
             if (std::holds_alternative<std::shared_ptr<RhoFunction>>(maybeFunc)) {
                 auto func = std::get<std::shared_ptr<RhoFunction>>(maybeFunc);
-
-                // Evaluate arguments
-                std::vector<RhoValue> args;
-                for (auto& arg : node.arguments) {
-                    arg->accept(*this);
-                    args.push_back(result_);
-                }
-
-                // Call the function value
-                result_ = callLambda(func, args, node.location);
+                result_ = callLambda(func, node.arguments, node.location);
                 return;
             }
         }
@@ -191,40 +183,28 @@ public:
             throw RuntimeError::undefinedFunction(node.name, node.location);
         }
 
-        // Validate argument count
-        if (node.arguments.size() != funcSig->params.size()) {
-            throw ArgumentError(node.name, "expected " + std::to_string(funcSig->params.size()) +
-                               " arguments, got " + std::to_string(node.arguments.size()), node.location);
+        // Build ParamDescriptor list from the declaration's params (which
+        // include defaultValue, isVariadic, etc.).
+        std::vector<ParamDescriptor> descriptors;
+        descriptors.reserve(funcSig->params.size());
+        for (const auto& p : funcSig->params) {
+            ParamDescriptor d;
+            d.name = p.name;
+            d.type = p.type;
+            d.isVariadic = p.isVariadic;
+            d.defaultValue = p.defaultValue;  // shared ownership with the AST
+            descriptors.push_back(std::move(d));
         }
 
-        // Evaluate arguments and create new scope
-        std::vector<RhoValue> args;
-        for (auto& arg : node.arguments) {
-            arg->accept(*this);
-            args.push_back(result_);
-        }
-
-        // ponytail: implicit numeric coercion at the call site. `for n in
-        // range(...)` makes `n` a float64 even when the user thinks it's an
-        // integer index, and the math library (and many examples) pass such
-        // values to functions declared `int:`. Truncating to int here lets
-        // `power(x, 2*n+1)` and friends keep working without sprinkling
-        // `int(...)` casts through every library. Same path for int→float64.
-        for (size_t i = 0; i < args.size(); ++i) {
-            const RhoType paramType = funcSig->params[i].type;
-            if (paramType == RhoType::Int && std::holds_alternative<double>(args[i])) {
-                args[i] = static_cast<int64_t>(std::get<double>(args[i]));
-            } else if (paramType == RhoType::Float64 && std::holds_alternative<int64_t>(args[i])) {
-                args[i] = static_cast<double>(std::get<int64_t>(args[i]));
-            }
-        }
+        std::vector<RhoValue> bound = bindArguments(descriptors, node.arguments,
+                                                   node.name, node.location);
 
         // Create function scope
         ScopeGuard funcGuard(symbols_);
 
         // Bind parameters
-        for (size_t i = 0; i < args.size(); ++i) {
-            symbols_.declare(funcSig->params[i].name, funcSig->params[i].type, args[i], node.location);
+        for (size_t i = 0; i < descriptors.size(); ++i) {
+            symbols_.declare(descriptors[i].name, descriptors[i].type, bound[i], node.location);
         }
 
         // Execute function body
@@ -241,6 +221,37 @@ public:
         // Check if it's a record field access or method call (variable.field / variable.fn())
         if (symbols_.exists(node.object)) {
             RhoValue obj = symbols_.lookup(node.object, node.location);
+
+            // vec/mat .map(fn) — element-wise mapping (always available, no include)
+            if (node.member == "map") {
+                RhoType rt = getValueType(obj);
+                if (rt == RhoType::Vec || rt == RhoType::Mat) {
+                    if (!node.isCalled) {
+                        throw RuntimeError(".map() requires parentheses and a function argument",
+                                           node.location);
+                    }
+                    if (node.arguments.size() != 1) {
+                        throw RuntimeError(".map() expects exactly 1 argument (a function), got "
+                                           + std::to_string(node.arguments.size()),
+                                           node.location);
+                    }
+                    if (!node.arguments[0].name.empty()) {
+                        throw RuntimeError(".map() does not accept keyword arguments",
+                                           node.location);
+                    }
+                    node.arguments[0].value->accept(*this);
+                    if (!std::holds_alternative<std::shared_ptr<RhoFunction>>(result_)) {
+                        throw TypeError(".map() argument must be a function (got "
+                                        + typeToString(getValueType(result_)) + ")",
+                                        node.location);
+                    }
+                    auto fn = std::get<std::shared_ptr<RhoFunction>>(result_);
+                    result_ = applyVecMap(obj, fn, node.location);
+                    return;
+                }
+                // not a vec/mat — fall through to record/module dispatch
+            }
+
             if (std::holds_alternative<std::shared_ptr<RhoRecord>>(obj)) {
                 auto rec = std::get<std::shared_ptr<RhoRecord>>(obj);
                 RhoValue fieldVal;
@@ -252,12 +263,7 @@ public:
                 // If called with () and the field is a function, invoke it
                 if (node.isCalled && std::holds_alternative<std::shared_ptr<RhoFunction>>(fieldVal)) {
                     auto func = std::get<std::shared_ptr<RhoFunction>>(fieldVal);
-                    std::vector<RhoValue> args;
-                    for (auto& arg : node.arguments) {
-                        arg->accept(*this);
-                        args.push_back(result_);
-                    }
-                    result_ = callLambda(func, args, node.location);
+                    result_ = callLambda(func, node.arguments, node.location);
                 } else {
                     result_ = fieldVal;
                 }
@@ -273,12 +279,12 @@ public:
 
         // Handle module.function() calls (e.g., math.zeros(5))
         if (Builtins::instance().isModuleFunction(node.object, node.member)) {
-            std::vector<RhoValue> args;
-            for (auto& arg : node.arguments) {
-                arg->accept(*this);
-                args.push_back(result_);
-            }
-            result_ = Builtins::instance().callModule(node.object, node.member, args, node.location);
+            ArgEvaluator evalArg = [this](ExprNode& e) {
+                e.accept(*this);
+                return result_;
+            };
+            result_ = Builtins::instance().callModule(node.object, node.member,
+                                                      node.arguments, evalArg, node.location);
             return;
         }
 
@@ -288,6 +294,37 @@ public:
     void visit(ChainedMemberAccessNode& node) override {
         node.object->accept(*this);
         RhoValue obj = result_;
+
+        // vec/mat .map(fn) — element-wise mapping (always available, no include)
+        if (node.field == "map") {
+            RhoType rt = getValueType(obj);
+            if (rt == RhoType::Vec || rt == RhoType::Mat) {
+                if (!node.isCalled) {
+                    throw RuntimeError(".map() requires parentheses and a function argument",
+                                       node.location);
+                }
+                if (node.arguments.size() != 1) {
+                    throw RuntimeError(".map() expects exactly 1 argument (a function), got "
+                                       + std::to_string(node.arguments.size()),
+                                       node.location);
+                }
+                if (!node.arguments[0].name.empty()) {
+                    throw RuntimeError(".map() does not accept keyword arguments",
+                                       node.location);
+                }
+                node.arguments[0].value->accept(*this);
+                if (!std::holds_alternative<std::shared_ptr<RhoFunction>>(result_)) {
+                    throw TypeError(".map() argument must be a function (got "
+                                    + typeToString(getValueType(result_)) + ")",
+                                    node.location);
+                }
+                auto fn = std::get<std::shared_ptr<RhoFunction>>(result_);
+                result_ = applyVecMap(obj, fn, node.location);
+                return;
+            }
+            // not a vec/mat — fall through to record dispatch
+        }
+
         if (!std::holds_alternative<std::shared_ptr<RhoRecord>>(obj)) {
             throw RuntimeError("Chained member access '." + node.field +
                                "' applied to non-record value (type: " +
@@ -303,12 +340,7 @@ public:
         // If called with () and the field is a function, invoke it
         if (node.isCalled && std::holds_alternative<std::shared_ptr<RhoFunction>>(fieldVal)) {
             auto func = std::get<std::shared_ptr<RhoFunction>>(fieldVal);
-            std::vector<RhoValue> args;
-            for (auto& arg : node.arguments) {
-                arg->accept(*this);
-                args.push_back(result_);
-            }
-            result_ = callLambda(func, args, node.location);
+            result_ = callLambda(func, node.arguments, node.location);
         } else {
             result_ = fieldVal;
         }
@@ -400,10 +432,20 @@ public:
             }
         }
 
-        // Extract parameter names
+        // Extract parameter names and rich descriptors (for keyword/default/variadic binding)
         std::vector<std::string> paramNames;
+        std::vector<ParamDescriptor> descriptors;
+        std::vector<RhoType> paramTypes;
+        descriptors.reserve(node.params.size());
         for (const auto& param : node.params) {
             paramNames.push_back(param.name);
+            ParamDescriptor d;
+            d.name = param.name;
+            d.type = param.type.value_or(RhoType::Unknown);
+            d.isVariadic = param.isVariadic;
+            d.defaultValue = param.defaultValue;  // shared ownership with the AST
+            descriptors.push_back(std::move(d));
+            if (param.type.has_value()) paramTypes.push_back(param.type.value());
         }
 
         // Create a non-owning shared_ptr to the lambda body
@@ -416,8 +458,10 @@ public:
             std::move(paramNames),
             bodyPtr,
             node.isExpression,
-            std::move(closure)
+            std::move(closure),
+            std::move(paramTypes)
         );
+        func->setParamDescriptors(std::move(descriptors));
 
         result_ = func;
     }
@@ -581,15 +625,24 @@ public:
         // passed as arguments, or referenced by name.
         std::vector<std::string> paramNames;
         std::vector<RhoType> paramTypes;
+        std::vector<ParamDescriptor> descriptors;
+        descriptors.reserve(node.params.size());
         for (const auto& param : node.params) {
             paramNames.push_back(param.name);
             paramTypes.push_back(param.type);
+            ParamDescriptor d;
+            d.name = param.name;
+            d.type = param.type;
+            d.isVariadic = param.isVariadic;
+            d.defaultValue = param.defaultValue;  // shared ownership with the AST
+            descriptors.push_back(std::move(d));
         }
         std::shared_ptr<void> bodyPtr(node.body.get(), [](void*){});
         auto funcVal = std::make_shared<RhoFunction>(
             std::move(paramNames), bodyPtr, /*isExpression=*/false,
             /*closure=*/std::unordered_map<std::string, RhoValue>{},
             std::move(paramTypes));
+        funcVal->setParamDescriptors(std::move(descriptors));
         // Declare as a variable value; skip silently if already declared in this scope
         // (e.g., re-include or redeclaration) since functions_ already tracks it.
         if (!symbols_.existsInCurrentScope(node.name)) {
@@ -637,6 +690,25 @@ public:
             for (Eigen::Index i = 0; i < vec.size(); ++i) {
                 // Fast unchecked assignment for performance (type is guaranteed to be float64)
                 symbols_.assignUnchecked(node.iterVar, vec(i));
+
+                try {
+                    node.body->accept(*this);
+                } catch (const BreakException&) {
+                    break;
+                } catch (const ContinueException&) {
+                    continue;
+                }
+            }
+        }
+        else if (std::holds_alternative<std::shared_ptr<RhoArray>>(iterable)) {
+            // Handle heterogeneous array (used by *args variadic params)
+            auto arr = std::get<std::shared_ptr<RhoArray>>(iterable);
+
+            ScopeGuard iterGuard(symbols_);
+            symbols_.declare(node.iterVar, RhoType::Unknown, RhoValue{}, node.location);
+
+            for (size_t i = 0; i < arr->size(); ++i) {
+                symbols_.assignUnchecked(node.iterVar, arr->get(i));
 
                 try {
                     node.body->accept(*this);
@@ -1569,6 +1641,34 @@ private:
                 }
                 return Eigen::VectorXd(l / divisor);
             }
+            // Scalar / Vector (broadcast)
+            else if constexpr ((std::is_same_v<L, double> || std::is_same_v<L, int64_t>) &&
+                              std::is_same_v<R, Eigen::VectorXd>) {
+                Eigen::VectorXd result(r.size());
+                for (Eigen::Index i = 0; i < r.size(); ++i) {
+                    if (r(i) == 0.0) {
+                        throw RuntimeError::divisionByZero(loc);
+                    }
+                    result(i) = static_cast<double>(l) / r(i);
+                }
+                return result;
+            }
+            // Vector / Vector (element-wise)
+            else if constexpr (std::is_same_v<L, Eigen::VectorXd> &&
+                              std::is_same_v<R, Eigen::VectorXd>) {
+                if (l.size() != r.size()) {
+                    throw RuntimeError::dimensionMismatch("/",
+                        std::to_string(l.size()), std::to_string(r.size()), loc);
+                }
+                Eigen::VectorXd result(l.size());
+                for (Eigen::Index i = 0; i < l.size(); ++i) {
+                    if (r(i) == 0.0) {
+                        throw RuntimeError::divisionByZero(loc);
+                    }
+                    result(i) = l(i) / r(i);
+                }
+                return result;
+            }
             // Matrix / Scalar
             else if constexpr (std::is_same_v<L, Eigen::MatrixXd> &&
                               (std::is_same_v<R, double> || std::is_same_v<R, int64_t>)) {
@@ -1684,6 +1784,181 @@ private:
     }
 
     /**
+     * @brief Apply a function element-wise over a vec or mat receiver
+     *
+     * Used by `v.map(fn)` and `m.map(fn)` syntax. The function must accept
+     * a single numeric scalar and return a numeric scalar.
+     */
+    RhoValue applyVecMap(const RhoValue& receiver,
+                         const std::shared_ptr<RhoFunction>& fn,
+                         SourceLocation loc) {
+        RhoType rt = getValueType(receiver);
+        if (rt != RhoType::Vec && rt != RhoType::Mat) {
+            throw TypeError(".map() requires vec or mat receiver (got "
+                            + typeToString(rt) + ")", loc);
+        }
+        return std::visit([this, &fn, &loc](const auto& r) -> RhoValue {
+            using T = std::decay_t<decltype(r)>;
+            if constexpr (std::is_same_v<T, Eigen::VectorXd>) {
+                Eigen::VectorXd out(r.size());
+                for (Eigen::Index i = 0; i < r.size(); ++i) {
+                    CallArg arg;
+                    arg.value = std::make_shared<FloatLiteralNode>(r(i), loc);
+                    RhoValue cell = callLambda(fn, {std::move(arg)}, loc);
+                    out(i) = toDouble(cell);
+                }
+                return out;
+            } else if constexpr (std::is_same_v<T, Eigen::MatrixXd>) {
+                Eigen::MatrixXd out(r.rows(), r.cols());
+                for (Eigen::Index i = 0; i < r.rows(); ++i) {
+                    for (Eigen::Index j = 0; j < r.cols(); ++j) {
+                        CallArg arg;
+                        arg.value = std::make_shared<FloatLiteralNode>(r(i, j), loc);
+                        RhoValue cell = callLambda(fn, {std::move(arg)}, loc);
+                        out(i, j) = toDouble(cell);
+                    }
+                }
+                return out;
+            } else {
+                // Unreachable: caller filtered out non-vec/mat types.
+                return RhoValue{};
+            }
+        }, receiver);
+    }
+
+    /**
+     * @brief Bind call-site arguments to a function's parameter list, evaluating
+     *        defaults, unpacking keyword args, and gathering *args rest arrays.
+     * @param params  Parameter descriptors of the callee.
+     * @param callArgs  Positional/keyword args as parsed from the call site.
+     * @param funcName  Name of the function (for error messages).
+     * @param loc  Source location (for error messages).
+     * @return A vector of RhoValue in the same order as `params`, ready to be
+     *         declared as local variables in the callee scope.
+     */
+    std::vector<RhoValue> bindArguments(
+        const std::vector<ParamDescriptor>& params,
+        const std::vector<CallArg>& callArgs,
+        const std::string& funcName,
+        SourceLocation loc)
+    {
+        std::vector<RhoValue> bound(params.size());
+        std::vector<bool> boundFlag(params.size(), false);
+        std::vector<bool> consumed(callArgs.size(), false);
+
+        // 1) Keyword args first: bind to matching parameter by name.
+        for (size_t ci = 0; ci < callArgs.size(); ++ci) {
+            const auto& ca = callArgs[ci];
+            if (ca.name.empty()) continue;
+            bool found = false;
+            for (size_t pi = 0; pi < params.size(); ++pi) {
+                if (params[pi].name != ca.name) continue;
+                if (boundFlag[pi]) {
+                    throw ArgumentError(funcName,
+                        "argument '" + ca.name + "' given multiple values", loc);
+                }
+                ca.value->accept(*this);
+                bound[pi] = result_;
+                boundFlag[pi] = true;
+                consumed[ci] = true;
+                found = true;
+                break;
+            }
+            if (!found) {
+                throw ArgumentError(funcName,
+                    "unknown keyword argument '" + ca.name + "'", loc);
+            }
+        }
+
+        // 2) Collect remaining positional call args in order.
+        std::vector<size_t> positionalCallIdx;
+        for (size_t ci = 0; ci < callArgs.size(); ++ci) {
+            if (callArgs[ci].name.empty() && !consumed[ci]) {
+                positionalCallIdx.push_back(ci);
+            }
+        }
+
+        // 3) Walk the parameter list, drawing from positional args as we go.
+        size_t posCursor = 0;
+        bool sawVariadic = false;
+        for (size_t pi = 0; pi < params.size(); ++pi) {
+            if (boundFlag[pi]) continue;
+            if (params[pi].isVariadic) {
+                // Pack all remaining positional args (and any unused
+                // keyword arg whose name happens to match the variadic) into
+                // a fresh RhoArray (heterogeneous). If the declared element
+                // type is `vec` we also materialize an Eigen::VectorXd copy
+                // so that `for x in rest` can iterate.
+                auto rest = std::make_shared<RhoArray>();
+                Eigen::VectorXd restVec;
+                bool asVec = (params[pi].type == RhoType::Vec);
+                if (asVec) restVec.resize(0);
+                while (posCursor < positionalCallIdx.size()) {
+                    size_t ci = positionalCallIdx[posCursor++];
+                    callArgs[ci].value->accept(*this);
+                    rest->push(result_);
+                    if (asVec) {
+                        restVec.conservativeResize(restVec.size() + 1);
+                        restVec(restVec.size() - 1) = toDouble(result_);
+                    }
+                }
+                bound[pi] = asVec ? RhoValue(restVec) : RhoValue(rest);
+                boundFlag[pi] = true;
+                sawVariadic = true;
+                continue;
+            }
+            if (posCursor < positionalCallIdx.size()) {
+                size_t ci = positionalCallIdx[posCursor++];
+                callArgs[ci].value->accept(*this);
+                bound[pi] = result_;
+                boundFlag[pi] = true;
+            } else {
+                // No more positional args: fall through to defaults.
+                break;
+            }
+        }
+
+        // 4) Fill any remaining slots from defaults.
+        for (size_t pi = 0; pi < params.size(); ++pi) {
+            if (boundFlag[pi]) continue;
+            if (params[pi].defaultValue) {
+                params[pi].defaultValue->accept(*this);
+                bound[pi] = result_;
+                boundFlag[pi] = true;
+            } else {
+                throw ArgumentError(funcName,
+                    "missing required argument '" + params[pi].name + "'", loc);
+            }
+        }
+
+        // 5) If a variadic param exists, it consumes all positionals, so this
+        //    check is only reached for non-variadic functions.
+        if (!sawVariadic && posCursor < positionalCallIdx.size()) {
+            throw ArgumentError(funcName,
+                "too many positional arguments (got "
+                + std::to_string(positionalCallIdx.size())
+                + ", function has " + std::to_string(params.size()) + " parameter(s))",
+                loc);
+        }
+
+        // 6) Implicit numeric coercion (int<->float64) to match declared
+        //    parameter types. Mirrors the pre-existing behavior so library
+        //    code that passes range()-derived floats to int: parameters
+        //    keeps working.
+        for (size_t pi = 0; pi < params.size(); ++pi) {
+            const RhoType pt = params[pi].type;
+            RhoValue& v = bound[pi];
+            if (pt == RhoType::Int && std::holds_alternative<double>(v)) {
+                v = static_cast<int64_t>(std::get<double>(v));
+            } else if (pt == RhoType::Float64 && std::holds_alternative<int64_t>(v)) {
+                v = static_cast<double>(std::get<int64_t>(v));
+            }
+        }
+
+        return bound;
+    }
+
+    /**
      * @brief Call a lambda/function value
      * @param func Function object to call
      * @param args Arguments to pass
@@ -1691,49 +1966,58 @@ private:
      * @return Result value
      */
     RhoValue callLambda(std::shared_ptr<RhoFunction> func,
-                       const std::vector<RhoValue>& args,
+                       const std::vector<CallArg>& callArgs,
                        SourceLocation loc) {
         // Check if it's a native function
         if (func->isNative()) {
-            return func->callNative(args);
-        }
-
-        // Validate argument count
-        if (args.size() != func->arity()) {
-            throw ArgumentError("<lambda>",
-                "expected " + std::to_string(func->arity()) +
-                " arguments, got " + std::to_string(args.size()), loc);
-        }
-
-        // ponytail: same implicit numeric coercion as the named-function
-        // dispatch path. `for n in range(...)` produces float64 even when the
-        // user thinks of it as an integer index, so we widen/narrow at the
-        // call site to match the declared parameter type.
-        std::vector<RhoValue> coercedArgs = args;
-        const auto& paramTypes = func->paramTypes();
-        if (!paramTypes.empty() && paramTypes.size() == coercedArgs.size()) {
-            for (size_t i = 0; i < coercedArgs.size(); ++i) {
-                if (paramTypes[i] == RhoType::Int && std::holds_alternative<double>(coercedArgs[i])) {
-                    coercedArgs[i] = static_cast<int64_t>(std::get<double>(coercedArgs[i]));
-                } else if (paramTypes[i] == RhoType::Float64 && std::holds_alternative<int64_t>(coercedArgs[i])) {
-                    coercedArgs[i] = static_cast<double>(std::get<int64_t>(coercedArgs[i]));
+            std::vector<RhoValue> positional;
+            positional.reserve(callArgs.size());
+            for (const auto& ca : callArgs) {
+                if (!ca.name.empty()) {
+                    throw ArgumentError("<native>",
+                        "keyword arguments are not supported by this function", loc);
                 }
+                ca.value->accept(*this);
+                positional.push_back(result_);
+            }
+            return func->callNative(positional);
+        }
+
+        // Build ParamDescriptor list from the closure's stored descriptors.
+        // If the closure has none (e.g. legacy call), fall back to a positional
+        // list built from names + paramTypes for a graceful error message.
+        std::vector<ParamDescriptor> descriptors = func->paramDescriptors();
+        if (descriptors.empty()) {
+            descriptors.reserve(func->params().size());
+            const auto& names = func->params();
+            const auto& types = func->paramTypes();
+            for (size_t i = 0; i < names.size(); ++i) {
+                ParamDescriptor d;
+                d.name = names[i];
+                d.type = (i < types.size()) ? types[i] : RhoType::Unknown;
+                descriptors.push_back(std::move(d));
             }
         }
+
+        std::vector<RhoValue> bound = bindArguments(descriptors, callArgs, "<lambda>", loc);
 
         // Create new scope for function execution
         ScopeGuard funcGuard(symbols_);
 
-        // Restore closure environment (non-function values only)
-        // Functions will be resolved via the existing symbol table
+        // Build a set of parameter names so we can skip closure vars they shadow.
+        std::unordered_set<std::string> paramSet;
+        for (const auto& d : descriptors) paramSet.insert(d.name);
+
+        // Restore closure environment, skipping any name that a parameter
+        // will bind. The parameter is the visible binding inside the lambda.
         for (const auto& [name, value] : func->closure()) {
+            if (paramSet.count(name)) continue;
             symbols_.declare(name, getValueType(value), value, loc);
         }
 
-        // Bind parameters
-        const auto& params = func->params();
-        for (size_t i = 0; i < coercedArgs.size(); ++i) {
-            symbols_.declare(params[i], getValueType(coercedArgs[i]), coercedArgs[i], loc);
+        // Bind parameters (these now win against any same-named closure var).
+        for (size_t i = 0; i < descriptors.size(); ++i) {
+            symbols_.declare(descriptors[i].name, descriptors[i].type, bound[i], loc);
         }
 
         // Get the body and execute it

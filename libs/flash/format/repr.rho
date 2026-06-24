@@ -1,0 +1,22 @@
+// libs/flash/format/repr.rho
+// repr_df(df) — devuelve una descripción compacta del schema.
+
+fun repr_df(record: df) -> str {
+    str: out = string.concat("DataFrame<",
+                             _int_str(df._nrows), " rows x ",
+                             _int_str(df._ncols), " cols>\n")
+    out = string.concat(out, "Columns:\n")
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        str: dt = mapping.get(df._dtypes, nm)
+        out = string.concat(out, "  ", nm, ": ", dt, "\n")
+        i = i + 1
+    }
+    return out
+}
+
+fun schema(record: df) -> str {
+    return repr_df(df)
+}

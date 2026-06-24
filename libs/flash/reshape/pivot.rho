@@ -1,0 +1,61 @@
+// libs/flash/reshape/pivot.rho
+// pivot(df, index, columns, values) — tabla cruzada (wide).
+// Devuelve df con: index + una col por valor único de `columns`, valores desde `values`.
+
+fun pivot(record: df, str: index_col, str: cols_col, str: vals_col) -> record {
+    _check_col(df, index_col)
+    _check_col(df, cols_col)
+    _check_col(df, vals_col)
+    // valores únicos de index
+    arr: idx_unique = unique(df, index_col)
+    // valores únicos de cols_col
+    arr: col_unique = unique(df, cols_col)
+    int: n_idx = array.size(idx_unique)
+    int: n_col = array.size(col_unique)
+    // Construir tabla: out[idx_pos] =[col_pos] = valor (o NaN=0.0 si falta)
+    vec: vals = _get_vec(df, vals_col)
+    // para cada par (i, j) crear estructura vacía
+    vec: out_v = math.zeros(n_idx * n_col)
+    // inicializar a NaN-equivalente (-1e30)
+    int: k = 0
+    while k < n_idx * n_col {
+        out_v[k] = 0.0 - 1.0e30
+        k = k + 1
+    }
+    // poblar
+    int: r = 0
+    while r < df._nrows {
+        str: idx_v = _cell_to_display(df, index_col, r)
+        str: col_v = _cell_to_display(df, cols_col, r)
+        int: ii = _arr_pos(idx_unique, idx_v)
+        int: jj = _arr_pos(col_unique, col_v)
+        if ii >= 0 and jj >= 0 {
+            out_v[ii * n_col + jj] = vals[r]
+        }
+        r = r + 1
+    }
+    record: out = _new_df()
+    // col index
+    vec: idx_col = math.zeros(n_idx)
+    int: i = 0
+    while i < n_idx {
+        idx_col[i] = i * 1.0
+        i = i + 1
+    }
+    // guardar idx_unique como columna de strings
+    out = _set_col(out, index_col, _wrap_arr(idx_unique), "str")
+    // columnas pivote
+    i = 0
+    while i < n_col {
+        str: cn = col_unique[i]
+        vec: cv = math.zeros(n_idx)
+        int: j = 0
+        while j < n_idx {
+            cv[j] = out_v[j * n_col + i]
+            j = j + 1
+        }
+        out = _set_col(out, cn, _wrap_vec(cv), "float")
+        i = i + 1
+    }
+    return out
+}

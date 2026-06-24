@@ -13,12 +13,6 @@ class RhodesiaLinter {
     }
 
     activate(context) {
-        context.subscriptions.push(
-            vscode.languages.registerCodeActionsProvider('rhodesia', new RhodesiaCodeActionProvider(), {
-                providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
-            })
-        );
-
         if (vscode.window.activeTextEditor
             && vscode.window.activeTextEditor.document.languageId === 'rhodesia') {
             this.validateTextDocument(vscode.window.activeTextEditor.document);
@@ -282,31 +276,6 @@ class RhodesiaLinter {
         this._timers.clear();
         this.diagnosticCollection.clear();
         this.diagnosticCollection.dispose();
-    }
-}
-
-class RhodesiaCodeActionProvider {
-    provideCodeActions(document, range, context, token) {
-        const codeActions = [];
-
-        for (const diagnostic of context.diagnostics) {
-            if (diagnostic.message.includes('missing a return type')) {
-                const fix = new vscode.CodeAction('Add return type -> void', vscode.CodeActionKind.QuickFix);
-                fix.edit = new vscode.WorkspaceEdit();
-                fix.isPreferred = true;
-                fix.diagnostics = [diagnostic];
-
-                const lineText = document.lineAt(diagnostic.range.start.line).text;
-                // Find insertion point: before '{' if present on the same line, else end of line
-                const braceIdx = lineText.indexOf('{');
-                const insertCol = braceIdx !== -1 ? braceIdx : lineText.length;
-                const position = new vscode.Position(diagnostic.range.start.line, insertCol);
-                fix.edit.insert(document.uri, position, '-> void ');
-                codeActions.push(fix);
-            }
-        }
-
-        return codeActions;
     }
 }
 

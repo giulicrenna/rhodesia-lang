@@ -1,0 +1,25 @@
+include plot
+
+println("=== Sin line plot ===")
+
+// y = 1/sin(x), x in [-25, 25]
+// Asymptotes at k*pi, minima at (pi/2 + k*pi, 1).
+// Element-wise via .map(fn) — no manual loop, no zeros+while.
+vec: x = numerical.linspace(-25.0, 25.0, 5000)
+vec: y = x.map(fn(t) -> 1.0 / math.sin(t))
+
+figure(800, 510)
+
+line(x, y, "1/sin(x)", "blue")
+title("Sin")
+xlabel("x")
+ylabel("sin(x)/x")
+legend(1)
+
+// Move the x-axis line up to data-y = 5 (so we can read the asymptotes from
+// above) and the y-axis line to data-x = 2 (shift it off the auto y-axis).
+x_axis_at(5.0)
+y_axis_at(2.0)
+
+int: bytes = savefig("sin_line.svg")
+println("Wrote ", bytes, " bytes to sin_line.svg")

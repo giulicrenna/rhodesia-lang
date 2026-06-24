@@ -1,0 +1,11 @@
+include plot
+println("=== weierstrass_approx ===")
+fun f(float64: x) -> float64 { return math.cos(x) + math.cos(3*x)/3 + math.cos(9*x)/9 }
+figure(800, 510)
+plot(f, -3.14159, 3.14159, "f(x)", "blue")
+title("weierstrass_approx")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("weierstrass_approx.svg")
+println("Wrote ", bytes, " bytes to weierstrass_approx.svg")

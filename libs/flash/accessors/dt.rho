@@ -1,0 +1,360 @@
+// libs/flash/accessors/dt.rho
+// Datetime accessors a nivel de columna. Equivalente a pandas `.dt`.
+//
+// Las columnas datetime se almacenan como arr<str> en formato ISO
+// "YYYY-MM-DD" o "YYYY-MM-DD HH:MM:SS". No usamos el record {year,..} de
+// Rhodesia para mantener la simplicidad columnar y compatibilidad con CSV.
+//
+// API:
+//   dt_year(df, col)             -> df con nueva col "<col>_year"    (int vec)
+//   dt_month(df, col)            -> df con nueva col "<col>_month"   (int vec)
+//   dt_day(df, col)              -> df con nueva col "<col>_day"     (int vec)
+//   dt_dayofweek(df, col)        -> df con nueva col "<col>_dow"     (int vec 0=lun,6=dom)
+//   dt_hour(df, col)             -> df con nueva col "<col>_hour"    (int vec, 0 si solo fecha)
+//   dt_minute(df, col)           -> df con nueva col "<col>_minute"  (int vec)
+//   dt_second(df, col)           -> df con nueva col "<col>_second"  (int vec)
+//   dt_format(df, col, fmt)      -> df con col reformateada (usa datetime.format internamente)
+//   dt_to_timestamp(df, col)     -> df con nueva col "<col>_ts" (float64 unix ts)
+//   dt_diff_days(df, col1, col2) -> df con nueva col "<col1>_minus_<col2>_days"
+//   dt_parse(df, col)            -> df con col parseada a ISO "YYYY-MM-DD" (no-op si ya lo es)
+//
+// ponytail: usamos operaciones de string para extraer componentes. datetime.format
+// requiere un record {year,..}, así que construimos uno por celda — lento.
+
+fun dtc_year(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_year: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        if string.length(v) >= 4 { out[i] = _str_to_int_safe(string.slice(v, 0, 4)) }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_year")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+fun dtc_month(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_month: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        if string.length(v) >= 7 { out[i] = _str_to_int_safe(string.slice(v, 5, 7)) }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_month")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+fun dtc_day(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_day: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        if string.length(v) >= 10 { out[i] = _str_to_int_safe(string.slice(v, 8, 10)) }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_day")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+// dt_dayofweek(df, col) — 0=lunes, 6=domingo. Algoritmo: Zeller o Gauss.
+fun dtc_dayofweek(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_dayofweek: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        if string.length(v) >= 10 {
+            int: y = _intify_f(_str_to_int_safe(string.slice(v, 0, 4)))
+            int: m = _intify_f(_str_to_int_safe(string.slice(v, 5, 7)))
+            int: d = _intify_f(_str_to_int_safe(string.slice(v, 8, 10)))
+            out[i] = _dow(y, m, d) * 1.0
+        }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_dow")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+// _dow(y, m, d) — día de la semana 0=lun..6=dom (algoritmo de Zeller simplificado).
+// Trabaja con float64 internamente y trunca a int al final.
+fun _dow(int: y, int: m, int: d) -> int {
+    float64: yf = y * 1.0
+    float64: mf = m * 1.0
+    float64: df = d * 1.0
+    if mf < 3.0 { mf = mf + 12.0
+    yf = yf - 1.0 }
+    float64: k = yf - math.floor(yf / 100.0) * 100.0
+    float64: j = math.floor(yf / 100.0)
+    float64: h = df + (13.0 * (mf + 1.0)) / 5.0 + k + math.floor(k / 4.0) + math.floor(j / 4.0) - 2.0 * j
+    h = h - math.floor(h / 7.0) * 7.0
+    int: hi = _intify_f(h)
+    if hi < 0 { hi = hi + 7 }
+    if hi == 0 { return 5 }
+    if hi == 1 { return 6 }
+    if hi == 2 { return 0 }
+    if hi == 3 { return 1 }
+    if hi == 4 { return 2 }
+    if hi == 5 { return 3 }
+    return 4
+}
+
+fun dtc_hour(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_hour: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        if string.length(v) >= 13 { out[i] = _str_to_int_safe(string.slice(v, 11, 13)) }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_hour")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+fun dtc_minute(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_minute: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        if string.length(v) >= 16 { out[i] = _str_to_int_safe(string.slice(v, 14, 16)) }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_minute")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+fun dtc_second(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_second: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        if string.length(v) >= 19 { out[i] = _str_to_int_safe(string.slice(v, 17, 19)) }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_second")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "int")
+}
+
+// dt_to_timestamp(df, col) — unix timestamp (float64 segundos).
+// Calculamos via días julianos → segundos. No usamos datetime.timestamp_of
+// porque no existe en Rhodesia; usamos la fórmula civil-from-jdn.
+fun dtc_to_timestamp(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_to_timestamp: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        if string.length(a[i]) >= 10 {
+            int: y = _str_to_int_safe(string.slice(a[i], 0, 4))
+            int: m = _str_to_int_safe(string.slice(a[i], 5, 7))
+            int: d = _str_to_int_safe(string.slice(a[i], 8, 10))
+            int: h = 0
+            int: mi = 0
+            int: sec = 0
+            if string.length(a[i]) >= 19 {
+                h = _str_to_int_safe(string.slice(a[i], 11, 13))
+                mi = _str_to_int_safe(string.slice(a[i], 14, 16))
+                sec = _str_to_int_safe(string.slice(a[i], 17, 19))
+            }
+            int: jdn = _civil_to_jdn(y, m, d)
+            // jdn de 1970-01-01 = 2440588
+            int: days_since_epoch = jdn - 2440588
+            out[i] = days_since_epoch * 86400.0 + h * 3600.0 + mi * 60.0 + sec * 1.0
+        }
+        i = i + 1
+    }
+    str: new_name = string.concat(col, "_ts")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na }, "float")
+}
+
+// _civil_to_jdn(y, m, d) — días julianos (algoritmo de Henry F. Fliegel & Thomas C. Van Flandern).
+fun _civil_to_jdn(int: y, int: m, int: d) -> int {
+    int: a = (14 - m) / 12
+    int: yy = y + 4800 - a
+    int: mm = m + 12 * a - 3
+    return d + (153 * mm + 2) / 5 + 365 * yy + yy / 4 - yy / 100 + yy / 400 - 32045
+}
+
+// _iso_to_dt(s) — convierte "YYYY-MM-DD" o "YYYY-MM-DD HH:MM:SS" a un record {year,..}.
+// ponytail: para timestamps nos apoyamos en datetime.from_timestamp; pero
+// from_timestamp no existe. Como workaround: usamos datetime.make(...).
+fun _iso_to_dt(str: s) -> record {
+    int: y = _str_to_int_safe(string.slice(s, 0, 4))
+    int: m = _str_to_int_safe(string.slice(s, 5, 7))
+    int: d = _str_to_int_safe(string.slice(s, 8, 10))
+    int: h = 0
+    int: mi = 0
+    int: sec = 0
+    if string.length(s) >= 19 {
+        h = _str_to_int_safe(string.slice(s, 11, 13))
+        mi = _str_to_int_safe(string.slice(s, 14, 16))
+        sec = _str_to_int_safe(string.slice(s, 17, 19))
+    }
+    return datetime.make(y, m, d, h, mi, sec)
+}
+
+// dt_format(df, col, fmt) — formatea la col con datetime.format.
+fun dtc_format(record: df, str: col, str: fmt) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_format: must be string/datetime") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    arr: out = array.create(0)
+    int: i = 0
+    while i < n {
+        if string.length(a[i]) >= 10 {
+            record: dt = _iso_to_dt(a[i])
+            array.push(out, datetime.format(dt, fmt))
+        } else {
+            array.push(out, a[i])
+        }
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "str")
+}
+
+// dt_diff_days(df, col1, col2) — nueva col "<col1>_minus_<col2>_days".
+fun dtc_diff_days(record: df, str: col1, str: col2) -> record {
+    _check_col(df, col1)
+    _check_col(df, col2)
+    record: c1 = mapping.get(df._cols, col1)
+    record: c2 = mapping.get(df._cols, col2)
+    if c1.kind != "arr" { _err("dt_diff_days: col1 must be datetime") }
+    if c2.kind != "arr" { _err("dt_diff_days: col2 must be datetime") }
+    arr: a1 = c1.data
+    arr: a2 = c2.data
+    arr: na1 = c1.na
+    int: n = array.size(a1)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        if string.length(a1[i]) >= 10 and i < array.size(a2) and string.length(a2[i]) >= 10 {
+            record: d1 = _iso_to_dt(a1[i])
+            record: d2 = _iso_to_dt(a2[i])
+            out[i] = datetime.diff_days(d1, d2)
+        }
+        i = i + 1
+    }
+    str: new_name = string.concat(col1, "_minus_")
+    new_name = string.concat(string.concat(new_name, col2), "_days")
+    return _set_col(df, new_name, { kind: "vec", data: out, na: na1 }, "float")
+}
+
+// dt_parse(df, col, fmt) — parsea col a ISO "YYYY-MM-DD HH:MM:SS".
+// Soporta formatos: "YYYY-MM-DD", "YYYY/MM/DD", "DD/MM/YYYY", "DD-MM-YYYY", "MM/DD/YYYY".
+fun dtc_parse(record: df, str: col, str: fmt) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" { _err("dt_parse: must be string") }
+    arr: a = c.data
+    arr: na = c.na
+    int: n = array.size(a)
+    arr: out = array.create(0)
+    int: i = 0
+    while i < n {
+        str: v = a[i]
+        str: iso = _parse_date(v, fmt)
+        array.push(out, iso)
+        i = i + 1
+    }
+    return _set_col(df, col, { kind: "arr", data: out, na: na }, "datetime")
+}
+
+fun _parse_date(str: v, str: fmt) -> str {
+    int: n = string.length(v)
+    if n < 8 { return v }
+    if fmt == "YYYY-MM-DD" or fmt == "ISO" or fmt == "iso" {
+        return string.slice(v, 0, 10)
+    }
+    if fmt == "YYYY/MM/DD" {
+        return string.concat(
+            string.concat(
+                string.concat(string.slice(v, 0, 4), "-"),
+                string.concat(string.slice(v, 5, 7), "-")
+            ),
+            string.slice(v, 8, 10)
+        )
+    }
+    if fmt == "DD/MM/YYYY" or fmt == "DD-MM-YYYY" {
+        str: dd = string.slice(v, 0, 2)
+        str: mm = string.slice(v, 3, 5)
+        str: yy = string.slice(v, 6, 10)
+        return string.concat(
+            string.concat(
+                string.concat(yy, "-"),
+                string.concat(mm, "-")
+            ),
+            dd
+        )
+    }
+    if fmt == "MM/DD/YYYY" or fmt == "MM-DD-YYYY" {
+        str: mm = string.slice(v, 0, 2)
+        str: dd = string.slice(v, 3, 5)
+        str: yy = string.slice(v, 6, 10)
+        return string.concat(
+            string.concat(
+                string.concat(yy, "-"),
+                string.concat(mm, "-")
+            ),
+            dd
+        )
+    }
+    // fallback: devolver primeros 10 chars
+    if n >= 10 { return string.slice(v, 0, 10) }
+    return v
+}
+
+// _str_to_int_safe(s) — convierte s a int; 0 si falla.
+fun _str_to_int_safe(str: s) -> float64 {
+    int: n = string.length(s)
+    if n == 0 { return 0.0 }
+    int: v = string.to_int_or(s, 0)
+    return v * 1.0
+}

@@ -1,0 +1,90 @@
+// libs/flash/select/head_tail.rho
+// head(df, n) — primeras n filas
+// tail(df, n) — últimas n filas
+// Preservan la máscara NA de cada columna.
+
+fun head(record: df, int: n) -> record {
+    if n < 0 { n = 0 }
+    if n > df._nrows { n = df._nrows }
+    record: out = _empty_df_like(df)
+    int: i = 0
+    int: nn = array.size(df._names)
+    while i < nn {
+        str: nm = df._names[i]
+        str: dt = mapping.get(df._dtypes, nm)
+        record: c = mapping.get(df._cols, nm)
+        arr: na = c.na
+        arr: na_sub = array.create(0)
+        int: j = 0
+        while j < n {
+            if j < array.size(na) { array.push(na_sub, na[j]) }
+            else { array.push(na_sub, "0") }
+            j = j + 1
+        }
+        if c.kind == "arr" {
+            arr: a = c.data
+            arr: sub = array.create(0)
+            j = 0
+            while j < n {
+                array.push(sub, a[j])
+                j = j + 1
+            }
+            out = _set_col(out, nm, { kind: "arr", data: sub, na: na_sub }, dt)
+        } else {
+            vec: v = c.data
+            vec: sub = math.zeros(n)
+            j = 0
+            while j < n {
+                sub[j] = v[j]
+                j = j + 1
+            }
+            out = _set_col(out, nm, { kind: "vec", data: sub, na: na_sub }, dt)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fun tail(record: df, int: n) -> record {
+    if n < 0 { n = 0 }
+    if n > df._nrows { n = df._nrows }
+    int: start = df._nrows - n
+    record: out = _empty_df_like(df)
+    int: i = 0
+    int: nn = array.size(df._names)
+    while i < nn {
+        str: nm = df._names[i]
+        str: dt = mapping.get(df._dtypes, nm)
+        record: c = mapping.get(df._cols, nm)
+        arr: na = c.na
+        arr: na_sub = array.create(0)
+        int: j = 0
+        while j < n {
+            int: idx = start + j
+            if idx < array.size(na) { array.push(na_sub, na[idx]) }
+            else { array.push(na_sub, "0") }
+            j = j + 1
+        }
+        if c.kind == "arr" {
+            arr: a = c.data
+            arr: sub = array.create(0)
+            j = 0
+            while j < n {
+                array.push(sub, a[start + j])
+                j = j + 1
+            }
+            out = _set_col(out, nm, { kind: "arr", data: sub, na: na_sub }, dt)
+        } else {
+            vec: v = c.data
+            vec: sub = math.zeros(n)
+            j = 0
+            while j < n {
+                sub[j] = v[start + j]
+                j = j + 1
+            }
+            out = _set_col(out, nm, { kind: "vec", data: sub, na: na_sub }, dt)
+        }
+        i = i + 1
+    }
+    return out
+}

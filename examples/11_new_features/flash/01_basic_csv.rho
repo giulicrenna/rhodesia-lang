@@ -1,0 +1,42 @@
+// examples/11_new_features/flash/01_basic_csv.rho
+// Round-trip CSV: leer → inspeccionar → escribir.
+
+include flash
+
+println("=== flash: basic CSV round-trip ===")
+println()
+
+// Crear CSV de prueba
+str: csv = "name,age,score\nAlice,30,88.5\nBob,25,92.0\nCharlie,35,79.5\nDiana,28,95.5\nEve,42,70.0\n"
+io.write_file("flash_demo.csv", csv)
+
+// Leer
+record: df = read_csv("flash_demo.csv")
+
+println("Schema:")
+print(schema(df))
+println()
+
+println("Shape (rows × cols): ", nrow(df), " × ", ncol(df))
+println()
+
+println("Head:")
+show_df(head(df, 3))
+println()
+
+println("Tail:")
+show_df(tail(df, 2))
+println()
+
+// round-trip
+write_csv(df, "flash_demo_out.csv")
+println("Wrote flash_demo_out.csv")
+
+str: csv2 = io.read_file("flash_demo_out.csv")
+println()
+println("--- Round-trip CSV content ---")
+print(csv2)
+
+io.remove("flash_demo.csv")
+io.remove("flash_demo_out.csv")
+println("Done.")

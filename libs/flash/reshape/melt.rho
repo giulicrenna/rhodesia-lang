@@ -1,0 +1,85 @@
+// libs/flash/reshape/melt.rho
+// melt(df, id_vars, value_vars, var_name, val_name) — wide → long
+// Devuelve df con: id_vars + col(var_name) + col(val_name)
+
+fun melt(record: df, arr: id_vars, arr: value_vars, str: var_name, str: val_name) -> record {
+    int: nrows = df._nrows
+    int: nv = array.size(value_vars)
+    int: total = nrows * nv
+    record: out = _new_df()
+    int: ii = 0
+    while ii < array.size(id_vars) {
+        str: nm = id_vars[ii]
+        _check_col(df, nm)
+        record: c = mapping.get(df._cols, nm)
+        if c.kind == "arr" {
+            arr: a = c.data
+            arr: out_a = array.create(0)
+            int: r = 0
+            while r < nrows {
+                int: v = 0
+                while v < nv {
+                    array.push(out_a, a[r])
+                    v = v + 1
+                }
+                r = r + 1
+            }
+            out = _set_col(out, nm, _wrap_arr(out_a), mapping.get(df._dtypes, nm))
+        } else {
+            vec: v = c.data
+            vec: out_v = math.zeros(total)
+            int: r = 0
+            while r < nrows {
+                int: vv = 0
+                while vv < nv {
+                    out_v[r * nv + vv] = v[r]
+                    vv = vv + 1
+                }
+                r = r + 1
+            }
+            out = _set_col(out, nm, _wrap_vec(out_v), mapping.get(df._dtypes, nm))
+        }
+        ii = ii + 1
+    }
+    // variable column: cada value_var repetido nrows veces
+    arr: var_col = array.create(0)
+    int: vi = 0
+    while vi < nv {
+        int: r = 0
+        while r < nrows {
+            array.push(var_col, value_vars[vi])
+            r = r + 1
+        }
+        vi = vi + 1
+    }
+    out = _set_col(out, var_name, _wrap_arr(var_col), "str")
+    // value column
+    vec: val_v = math.zeros(total)
+    int: k = 0
+    int: vi2 = 0
+    while vi2 < nv {
+        str: vname = value_vars[vi2]
+        _check_col(df, vname)
+        record: c = mapping.get(df._cols, vname)
+        if c.kind == "arr" {
+            arr: a = c.data
+            int: r = 0
+            while r < nrows {
+                val_v[k] = _str_to_float_v2(a[r])
+                k = k + 1
+                r = r + 1
+            }
+        } else {
+            vec: vv = c.data
+            int: r = 0
+            while r < nrows {
+                val_v[k] = vv[r]
+                k = k + 1
+                r = r + 1
+            }
+        }
+        vi2 = vi2 + 1
+    }
+    out = _set_col(out, val_name, _wrap_vec(val_v), "float")
+    return out
+}

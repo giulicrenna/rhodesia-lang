@@ -1,0 +1,42 @@
+// examples/11_new_features/flash/06_missing.rho
+// Manejo de missing values.
+
+include flash
+
+println("=== flash: missing data ===")
+println()
+
+str: csv = "name,age,score\nAna,30,88.5\nBob,,92.0\nCharlie,35,\nDiana,28,95.5\nEve,,\nFer,42,80.0\n"
+io.write_file("missing.csv", csv)
+
+record: df = read_csv("missing.csv")
+
+println("Original:")
+show_df(df)
+println()
+
+println("isna (missing counts per col):")
+record: im = isna(df)
+show_df(im)
+println()
+
+println("dropna (drop rows with any missing):")
+record: dn = dropna(df)
+show_df(dn)
+println()
+
+println("fillna (empty strings -> NA):")
+record: filled = fillna(df, "NA")
+show_df(filled)
+println()
+
+println("dropna_col('score') — drop rows where score is missing:")
+show_df(dropna_col(df, "score"))
+println()
+
+println("interpolate_linear('age'):")
+show_df(interpolate_linear(df, "age"))
+println()
+
+io.remove("missing.csv")
+println("Done.")

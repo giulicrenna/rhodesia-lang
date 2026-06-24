@@ -1,0 +1,17 @@
+include plot
+
+println("=== Axes at origin ===")
+
+vec: x = numerical.linspace(-3.14, 3.14, 50)
+vec: y = math.sin(x)
+
+figure(800, 510)
+line(x, y, "sin(x)", "blue")
+title("Sin (cross at origin)")
+xlabel("x")
+ylabel("sin(x)")
+axes_at_origin(1)
+legend(1)
+
+int: bytes = savefig("test_origin.svg")
+println("Wrote ", bytes, " bytes to test_origin.svg")

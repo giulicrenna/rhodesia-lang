@@ -1,0 +1,84 @@
+// themes/themes.rho - Predefined visual themes.
+// ponytail: each theme is a (palette + bg + fg + grid + axis) tuple baked into
+// module vars by set_theme(). Five presets cover the common cases.
+
+str: THEME_DEFAULT  = "default"
+str: THEME_DARK     = "dark"
+str: THEME_PASTEL   = "pastel"
+str: THEME_MONO     = "mono"
+str: THEME_VIBRANT  = "vibrant"
+
+// Build an arr of N strings by repeated array.push.
+fun _make_palette(str: a, str: b, str: c, str: d, str: e, str: f, str: g, str: h, str: i, str: j) -> arr {
+    arr: p = array.create(0)
+    array.push(p, a)
+    array.push(p, b)
+    array.push(p, c)
+    array.push(p, d)
+    array.push(p, e)
+    array.push(p, f)
+    array.push(p, g)
+    array.push(p, h)
+    array.push(p, i)
+    array.push(p, j)
+    return p
+}
+
+fun set_theme(str: name) -> int {
+    if name == THEME_DARK {
+        _THEME_NAME = name
+        _PALETTE = _make_palette("#4c9aff", "#ff6b6b", "#51cf66", "#ffd43b", "#cc5de8", "#ff922b", "#22b8cf", "#868e96", "#fab005", "#e64980")
+        _BG_COLOR = "#1e1e1e"
+        _FG_COLOR = "#e0e0e0"
+        _GRID_COLOR = "#3a3a3a"
+        _AXIS_COLOR = "#888888"
+        return 0
+    }
+    if name == THEME_PASTEL {
+        _THEME_NAME = name
+        _PALETTE = _make_palette("#a8dadc", "#f1a7a1", "#c9b1d0", "#f4c2a1", "#b5d99c", "#f5d4e1", "#d4c5e2", "#a4c2c2", "#e0c9a6", "#9bb7d4")
+        _BG_COLOR = "#fdfcf7"
+        _FG_COLOR = "#444444"
+        _GRID_COLOR = "#dddddd"
+        _AXIS_COLOR = "#666666"
+        return 0
+    }
+    if name == THEME_MONO {
+        _THEME_NAME = name
+        _PALETTE = _make_palette("#000000", "#333333", "#555555", "#777777", "#999999", "#444444", "#222222", "#666666", "#888888", "#aaaaaa")
+        _BG_COLOR = "white"
+        _FG_COLOR = "black"
+        _GRID_COLOR = "#cccccc"
+        _AXIS_COLOR = "black"
+        return 0
+    }
+    if name == THEME_VIBRANT {
+        _THEME_NAME = name
+        _PALETTE = _make_palette("#e60049", "#0bb4ff", "#50e991", "#e6d800", "#9b19f5", "#ffa300", "#dc0ab4", "#b3d4ff", "#00bfa0", "#fdc1c5")
+        _BG_COLOR = "white"
+        _FG_COLOR = "black"
+        _GRID_COLOR = "#dddddd"
+        _AXIS_COLOR = "black"
+        return 0
+    }
+    _THEME_NAME = THEME_DEFAULT
+    _PALETTE = _make_palette("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
+    _BG_COLOR = "white"
+    _FG_COLOR = "black"
+    _GRID_COLOR = "#cccccc"
+    _AXIS_COLOR = "black"
+    return 0
+}
+
+// Color picker from current palette, cycling.
+fun _next_color() -> str {
+    int: pn = array.size(_PALETTE)
+    if pn < 1 { return "#1f77b4" }
+    int: idx = _CIDX
+    _CIDX = _CIDX + 1
+    if idx >= pn {
+        idx = 0
+        _CIDX = 1
+    }
+    return _PALETTE[idx]
+}

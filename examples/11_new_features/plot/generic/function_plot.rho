@@ -1,0 +1,20 @@
+// function_plot.rho - Plot a mathematical function directly.
+// plot() samples the function on a linspace and adds it as a line.
+
+include plot
+
+fun _sin(float64: x) -> float64 {
+    return math.sin(x)
+}
+
+println("=== Function plot ===")
+
+figure(800, 510)
+plot(_sin, 0.0, 2.0 * math.PI, "sin(x)", "red")
+title("Sine wave")
+xlabel("x (radians)")
+ylabel("f(x)")
+legend(1)
+
+int: bytes = savefig("function_plot.svg")
+println("Wrote ", bytes, " bytes to function_plot.svg")

@@ -1,0 +1,137 @@
+// libs/flash/plot/plot.rho
+// Integración con libs/plot. El usuario debe hacer `include plot` ANTES de `include flash`
+// para que las funciones de plot estén disponibles.
+// Esta capa sólo delega — no usa state de flash.
+//
+// Wrappers (12 total):
+//   plot_line(df, x, y)
+//   plot_scatter(df, x, y)
+//   plot_hist(df, col, bins)
+//   plot_bar(df, labels_col, values_col)
+//   plot_area(df, x, y)
+//   plot_fill_between(df, x, y1, y2)
+//   plot_errorbar(df, x, y, err)
+//   plot_stacked_area(df, x, layer_cols, layer_labels)
+//   plot_stack_bars(df, labels_col, layer_cols, layer_labels)
+//   plot_boxplot(df, group_cols, group_labels, orient, notch)
+//   plot_radar(df, axes_col, values_col)
+//   plot_corr_heatmap(df, cols)             - corr_matrix -> heatmap
+
+fun plot_line(record: df, str: x, str: y) -> int {
+    vec: xv = _get_vec(df, x)
+    vec: yv = _get_vec(df, y)
+    str: label = string.concat(y, " vs ", x)
+    line(xv, yv, label, "")
+    return 0
+}
+
+fun plot_scatter(record: df, str: x, str: y) -> int {
+    vec: xv = _get_vec(df, x)
+    vec: yv = _get_vec(df, y)
+    str: label = string.concat(y, " vs ", x)
+    scatter(xv, yv, label, "")
+    return 0
+}
+
+fun plot_hist(record: df, str: col, int: bins) -> int {
+    vec: v = _get_vec(df, col)
+    hist(v, bins, col, "")
+    return 0
+}
+
+fun plot_bar(record: df, str: labels_col, str: values_col) -> int {
+    arr: lbls = _get_strs(df, labels_col)
+    vec: vs = _get_vec(df, values_col)
+    bar(lbls, vs, values_col, "")
+    return 0
+}
+
+fun plot_area(record: df, str: x, str: y) -> int {
+    vec: xv = _get_vec(df, x)
+    vec: yv = _get_vec(df, y)
+    str: label = string.concat(y, " vs ", x)
+    area(xv, yv, label, "")
+    return 0
+}
+
+fun plot_fill_between(record: df, str: x, str: y1, str: y2) -> int {
+    vec: xv = _get_vec(df, x)
+    vec: yv1 = _get_vec(df, y1)
+    vec: yv2 = _get_vec(df, y2)
+    str: label = string.concat(y2, "-", y1)
+    fill_between(xv, yv1, yv2, label, "")
+    return 0
+}
+
+fun plot_errorbar(record: df, str: x, str: y, str: err) -> int {
+    vec: xv = _get_vec(df, x)
+    vec: yv = _get_vec(df, y)
+    vec: ev = _get_vec(df, err)
+    str: label = string.concat(y, " +/- ", err)
+    errorbar(xv, yv, ev, label, "")
+    return 0
+}
+
+fun plot_stacked_area(record: df, str: x, arr: layer_cols, arr: layer_labels) -> int {
+    vec: xv = _get_vec(df, x)
+    arr: layers = array.create(0)
+    int: i = 0
+    int: n = array.size(layer_cols)
+    while i < n {
+        map: lyr = mapping.create()
+        mapping.put(lyr, "y", _get_vec(df, layer_cols[i]))
+        array.push(layers, lyr)
+        i = i + 1
+    }
+    arr: empty_colors = array.create(0)
+    stacked_area(xv, layers, layer_labels, empty_colors)
+    return 0
+}
+
+fun plot_stack_bars(record: df, str: labels_col, arr: layer_cols, arr: layer_labels) -> int {
+    arr: lbls = _get_strs(df, labels_col)
+    arr: layers = array.create(0)
+    int: i = 0
+    int: n = array.size(layer_cols)
+    while i < n {
+        array.push(layers, _get_vec(df, layer_cols[i]))
+        i = i + 1
+    }
+    arr: empty_colors = array.create(0)
+    stack_bars(lbls, layers, layer_labels, empty_colors)
+    return 0
+}
+
+fun plot_boxplot(record: df, arr: group_cols, arr: group_labels, int: orient, int: notch) -> int {
+    arr: groups = array.create(0)
+    int: i = 0
+    int: n = array.size(group_cols)
+    while i < n {
+        array.push(groups, _get_vec(df, group_cols[i]))
+        i = i + 1
+    }
+    boxplot(groups, group_labels, orient, notch, "", "")
+    return 0
+}
+
+fun plot_radar(record: df, str: axes_col, str: values_col) -> int {
+    arr: axes = _get_strs(df, axes_col)
+    vec: vals = _get_vec(df, values_col)
+    radar(axes, vals, values_col, "")
+    return 0
+}
+
+// plot_corr_heatmap(df, cols): correlación de pares de columnas numéricas,
+// rendereada como heatmap. Asume que `cols` son numéricas en `df`.
+fun plot_corr_heatmap(record: df, arr: cols) -> int {
+    record: cm = corr_matrix(df, cols)
+    int: k = array.size(cols)
+    arr: rows = array.create(0)
+    int: i = 0
+    while i < k {
+        array.push(rows, _get_vec(cm, cols[i]))
+        i = i + 1
+    }
+    heatmap(rows, cols, cols, "correlation")
+    return 0
+}

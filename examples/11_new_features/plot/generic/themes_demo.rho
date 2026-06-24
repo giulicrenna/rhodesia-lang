@@ -1,0 +1,60 @@
+// themes_demo.rho - Showcase themes + customization knobs.
+// Renders the same data five times with a different theme + style each.
+
+include plot
+
+fun _sin(float64: x) -> float64 { return math.cos(x) }
+fun _cos(float64: x) -> float64 { return math.sin(x) }
+
+println("=== Themes demo (5 figures) ===")
+
+// 1. Default theme
+figure(800, 510)
+plot(_sin, 0.0, 2.0 * math.PI, "cos(x)", "")
+plot(_cos, 0.0, 2.0 * math.PI, "sin(x)", "")
+title("Default theme")
+legend(1)
+set_theme(THEME_DEFAULT)
+savefig("theme_default.svg")
+
+// 2. Dark theme, thicker lines
+figure(800, 510)
+set_theme(THEME_DARK)
+set_linewidth(4.0)
+set_marker_size(5.0)
+plot(_sin, 0.0, 2.0 * math.PI, "cos(x)", "")
+plot(_cos, 0.0, 2.0 * math.PI, "sin(x)", "")
+title("Dark theme, thick lines")
+legend(1)
+savefig("theme_dark.svg")
+
+// 3. Pastel theme
+figure(800, 510)
+set_theme(THEME_PASTEL)
+set_alpha(0.85)
+plot(_sin, 0.0, 2.0 * math.PI, "cos(x)", "")
+plot(_cos, 0.0, 2.0 * math.PI, "sin(x)", "")
+title("Pastel theme, semi-transparent")
+legend(1)
+savefig("theme_pastel.svg")
+
+// 4. Mono theme
+figure(800, 510)
+set_theme(THEME_MONO)
+plot(_sin, 0.0, 2.0 * math.PI, "cos(x)", "")
+plot(_cos, 0.0, 2.0 * math.PI, "sin(x)", "")
+title("Monochrome theme")
+legend(1)
+savefig("theme_mono.svg")
+
+// 5. Vibrant theme with custom background
+figure(800, 510)
+set_theme(THEME_VIBRANT)
+set_background_color("#f5f5f0")
+plot(_sin, 0.0, 2.0 * math.PI, "cos(x)", "")
+plot(_cos, 0.0, 2.0 * math.PI, "sin(x)", "")
+title("Vibrant theme on cream background")
+legend(1)
+savefig("theme_vibrant.svg")
+
+println("Wrote 5 SVG files (theme_default, theme_dark, theme_pastel, theme_mono, theme_vibrant)")

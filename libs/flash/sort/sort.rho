@@ -1,0 +1,89 @@
+// libs/flash/sort/sort.rho
+// sort_by(df, col, order) — order ∈ {"asc", "desc"}
+// Implementación: counting sort si la columna es numérica y de valores pequeños;
+// si no, bubble sort (O(n²) — ponytail: para n grandes mover a C++ builtin).
+
+fun sort_by(record: df, str: col, str: order) -> record {
+    _check_col(df, col)
+    if order != "asc" and order != "desc" {
+        _err(string.concat("sort_by: order must be 'asc' or 'desc', got '", order, "'"))
+    }
+    int: n = df._nrows
+    // Construir índices [0..n-1]
+    arr: idx = array.create(0)
+    int: k = 0
+    while k < n {
+        array.push(idx, k)
+        k = k + 1
+    }
+    // Bubble sort sobre idx, comparando por la columna
+    record: c = mapping.get(df._cols, col)
+    int: i = 0
+    int: swapped = 1
+    while swapped == 1 {
+        swapped = 0
+        i = 0
+        while i < n - 1 {
+            int: a = idx[i]
+            int: b = idx[i + 1]
+            int: cmp = _cmp_idx(df, c, a, b)
+            if order == "asc" and cmp == 1 {
+                idx[i] = b
+                idx[i + 1] = a
+                swapped = 1
+            }
+            if order == "desc" and cmp == (0 - 1) {
+                idx[i] = b
+                idx[i + 1] = a
+                swapped = 1
+            }
+            i = i + 1
+        }
+    }
+    // Reordenar todas las columnas según idx
+    record: out = _empty_df_like(df)
+    int: nn = array.size(df._names)
+    int: ci = 0
+    while ci < nn {
+        str: nm = df._names[ci]
+        str: dt = mapping.get(df._dtypes, nm)
+        record: cc = mapping.get(df._cols, nm)
+        if cc.kind == "arr" {
+            arr: a = cc.data
+            arr: sorted = array.create(0)
+            int: j = 0
+            while j < n {
+                array.push(sorted, a[idx[j]])
+                j = j + 1
+            }
+            out = _set_col(out, nm, _wrap_arr(sorted), dt)
+        } else {
+            vec: v = cc.data
+            vec: sorted = math.zeros(n)
+            int: j = 0
+            while j < n {
+                sorted[j] = v[idx[j]]
+                j = j + 1
+            }
+            out = _set_col(out, nm, _wrap_vec(sorted), dt)
+        }
+        ci = ci + 1
+    }
+    return out
+}
+
+// _cmp_idx(df, col, a, b) — 1 si col[a] > col[b], -1 si <, 0 si igual.
+fun _cmp_idx(record: df, record: c, int: a, int: b) -> int {
+    if c.kind == "arr" {
+        arr: arr_data = c.data
+        str: va = arr_data[a]
+        str: vb = arr_data[b]
+        if va == vb { return 0 }
+        if _str_gt(va, vb) == 1 { return 1 }
+        return -1
+    }
+    vec: v = c.data
+    if v[a] > v[b] { return 1 }
+    if v[a] < v[b] { return -1 }
+    return 0
+}

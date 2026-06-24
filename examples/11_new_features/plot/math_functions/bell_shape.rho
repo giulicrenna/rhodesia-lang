@@ -1,0 +1,11 @@
+include plot
+println("=== bell_shape ===")
+fun f(float64: x) -> float64 { return 1 / (1 + x*x*x*x) }
+figure(800, 510)
+plot(f, -2, 2, "f(x)", "blue")
+title("bell_shape")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("bell_shape.svg")
+println("Wrote ", bytes, " bytes to bell_shape.svg")

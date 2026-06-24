@@ -1,0 +1,11 @@
+include plot
+println("=== sawtooth ===")
+fun f(float64: x) -> float64 { return x - 2 * math.PI * math.floor(x / (2 * math.PI)) }
+figure(800, 510)
+plot(f, 0, 12.566, "f(x)", "blue")
+title("sawtooth")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("sawtooth.svg")
+println("Wrote ", bytes, " bytes to sawtooth.svg")

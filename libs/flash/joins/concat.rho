@@ -1,0 +1,114 @@
+// libs/flash/joins/concat.rho
+// concat(arr<df>, axis) — axis ∈ {"vertical", "horizontal"}
+
+fun concat(arr: dfs, str: axis) -> record {
+    if array.size(dfs) == 0 { return _new_df() }
+    if axis != "vertical" and axis != "horizontal" {
+        _err(string.concat("concat: axis must be vertical|horizontal, got '", axis, "'"))
+    }
+    record: first = dfs[0]
+    if axis == "vertical" {
+        return _concat_v(dfs)
+    }
+    return _concat_h(dfs)
+}
+
+fun _concat_v(arr: dfs) -> record {
+    record: first = dfs[0]
+    // Verificar mismo esquema
+    int: i = 1
+    int: ndfs = array.size(dfs)
+    while i < ndfs {
+        record: d = dfs[i]
+        if d._ncols != first._ncols {
+            _err("concat vertical: schemas differ")
+        }
+        int: j = 0
+        int: nn = array.size(d._names)
+        while j < nn {
+            if d._names[j] != first._names[j] {
+                _err("concat vertical: column order differs")
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    record: out = _empty_df_like(first)
+    int: nn = array.size(first._names)
+    int: ci = 0
+    while ci < nn {
+        str: nm = first._names[ci]
+        str: dt = mapping.get(first._dtypes, nm)
+        record: c0 = mapping.get(first._cols, nm)
+        if c0.kind == "arr" {
+            arr: out_a = array.create(0)
+            int: di = 0
+            while di < ndfs {
+                record: d = dfs[di]
+                record: c = mapping.get(d._cols, nm)
+                arr: a = c.data
+                int: k = 0
+                while k < array.size(a) {
+                    array.push(out_a, a[k])
+                    k = k + 1
+                }
+                di = di + 1
+            }
+            out = _set_col(out, nm, _wrap_arr(out_a), dt)
+        } else {
+            int: total = 0
+            int: di = 0
+            while di < ndfs {
+                total = total + dfs[di]._nrows
+                di = di + 1
+            }
+            vec: out_v = math.zeros(total)
+            int: pos = 0
+            di = 0
+            while di < ndfs {
+                record: d = dfs[di]
+                record: c = mapping.get(d._cols, nm)
+                vec: v = c.data
+                int: k = 0
+                while k < math.size(v) {
+                    out_v[pos] = v[k]
+                    pos = pos + 1
+                    k = k + 1
+                }
+                di = di + 1
+            }
+            out = _set_col(out, nm, _wrap_vec(out_v), dt)
+        }
+        ci = ci + 1
+    }
+    return out
+}
+
+fun _concat_h(arr: dfs) -> record {
+    // Asume misma cantidad de filas
+    record: first = dfs[0]
+    int: ndfs = array.size(dfs)
+    int: i = 1
+    while i < ndfs {
+        if dfs[i]._nrows != first._nrows {
+            _err("concat horizontal: row counts differ")
+        }
+        i = i + 1
+    }
+    record: out = _copy_df(first)
+    i = 1
+    while i < ndfs {
+        record: d = dfs[i]
+        int: j = 0
+        int: nn = array.size(d._names)
+        while j < nn {
+            str: nm = d._names[j]
+            record: c = mapping.get(d._cols, nm)
+            str: dt = mapping.get(d._dtypes, nm)
+            out = _set_col(out, nm, c, dt)
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return out
+}

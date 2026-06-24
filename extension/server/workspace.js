@@ -1,8 +1,22 @@
 const vscode = require('vscode');
 const path = require('path');
+const fs = require('fs');
 const { parseSymbols, getAvailableLibPaths } = require('./doxygenParser');
 
 const LIBS_BASE = path.resolve(__dirname, '../../libs');
+
+const _symbolCache = new Map();
+
+function _getCachedSymbols(filePath) {
+    let stat;
+    try { stat = fs.statSync(filePath); }
+    catch (_) { return null; }
+    const cached = _symbolCache.get(filePath);
+    if (cached && cached.mtime === stat.mtimeMs) return cached.symbols;
+    const symbols = parseSymbols(filePath);
+    _symbolCache.set(filePath, { symbols, mtime: stat.mtimeMs });
+    return symbols;
+}
 
 /**
  * Walk a file tree (bounded to `root` to avoid scanning node_modules) and
@@ -64,9 +78,7 @@ async function symbolsForFile(filePath, query = '') {
 
 /**
  * Workspace symbol provider: searches every `.rho` file in the workspace.
- * Ponytail: no index, no caching — re-scans on every query. The number of
- * `.rho` files in a typical Rhodesia project is small enough that a single
- * fs walk + regex parse is fast. Add an index when this becomes a hotspot.
+ * Uses mtime-based cache — re-parses only when file changed.
  */
 async function provideWorkspaceSymbols(query, token) {
     const folders = vscode.workspace.workspaceFolders || [];
@@ -77,7 +89,27 @@ async function provideWorkspaceSymbols(query, token) {
         const files = await findRhoFiles(folder.uri.fsPath);
         for (const file of files) {
             if (token.isCancellationRequested) return all;
-            all.push(...await symbolsForFile(file, query));
+            const syms = _getCachedSymbols(file);
+            if (!syms) continue;
+            const q = query.toLowerCase();
+            for (const fn of syms.functions || []) {
+                if (q && !fn.label.toLowerCase().includes(q)) continue;
+                const line = fn._line || 0;
+                all.push(new vscode.SymbolInformation(
+                    fn.label, vscode.SymbolKind.Function,
+                    path.basename(file),
+                    new vscode.Location(vscode.Uri.file(file), new vscode.Range(line,0,line,0))
+                ));
+            }
+            for (const c of syms.constants || []) {
+                if (q && !c.label.toLowerCase().includes(q)) continue;
+                const line = c._line || 0;
+                all.push(new vscode.SymbolInformation(
+                    c.label, vscode.SymbolKind.Constant,
+                    path.basename(file),
+                    new vscode.Location(vscode.Uri.file(file), new vscode.Range(line,0,line,0))
+                ));
+            }
         }
     }
     return all;

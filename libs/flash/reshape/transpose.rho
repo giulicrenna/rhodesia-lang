@@ -1,0 +1,34 @@
+// libs/flash/reshape/transpose.rho
+// transpose_df(df) — intercambia filas y columnas.
+// Las nuevas filas son las columnas del df original (etiquetadas col_0, col_1, ...).
+// Las nuevas columnas son las filas originales (etiquetadas row_0, row_1, ...).
+// Todos los valores se serializan a str (transpose_df devuelve un df de strings).
+
+fun transpose_df(record: df) -> record {
+    record: out = _new_df()
+    int: nn = array.size(df._names)
+    int: nr = df._nrows
+    int: i = 0
+    while i < nr {
+        arr: colvals = array.create(0)
+        int: ci = 0
+        while ci < nn {
+            str: nm = df._names[ci]
+            record: c = mapping.get(df._cols, nm)
+            str: val_s = ""
+            if c.kind == "arr" {
+                arr: a = c.data
+                if i < array.size(a) { val_s = a[i] }
+            } else {
+                vec: v = c.data
+                if i < math.size(v) { val_s = _float_to_str(v[i]) }
+            }
+            array.push(colvals, val_s)
+            ci = ci + 1
+        }
+        str: row_name = string.concat("row_", _int_str(i))
+        out = _set_col(out, row_name, _wrap_arr(colvals), "str")
+        i = i + 1
+    }
+    return out
+}

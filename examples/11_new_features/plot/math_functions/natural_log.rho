@@ -1,0 +1,11 @@
+include plot
+println("=== natural_log ===")
+fun f(float64: x) -> float64 { return math.log(x) }
+figure(800, 510)
+plot(f, 0.01, 5, "f(x)", "blue")
+title("natural_log")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("natural_log.svg")
+println("Wrote ", bytes, " bytes to natural_log.svg")

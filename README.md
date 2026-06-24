@@ -37,6 +37,7 @@
 - **Clean Syntax**: Intuitive declaration syntax: `type: name = value`
 - **Module System**: Import and organize code with selective imports and aliases
 - **User-defined Functions**: First-class functions with type annotations
+- **Flexible Parameter Handling**: Default values, `*args` variadic, and keyword arguments (`f(name: value)`) for both user functions and builtins
 - **Interactive REPL**: Explore and prototype interactively
 
 ---
@@ -221,10 +222,24 @@ for i in range(100) {
 
 ```rhodesia
 // Function definition syntax
-fun function_name(type: param1, type: param2) -> return_type {
+fun function_name(type: param1, type: param2 = default) -> return_type {
     // body
     return value
 }
+
+// Default values, keyword args, and variadic parameters
+fun window(int: width, int: height, string: title = "Untitled") -> string {
+    return string.concat(title, " ", string.from(width), "x", string.from(height))
+}
+print(window(800, 600))                              // positional
+print(window(height: 768, width: 1024, title: "App")) // keyword, any order
+
+fun sumAll(int: first, *int: rest) -> int {
+    int: total = first
+    for n in rest { total = total + n }
+    return total
+}
+print(sumAll(1, 2, 3, 4, 5))   // 15
 
 // Example: Euclidean norm
 fun euclidean_norm(vec: v) -> float64 {
@@ -473,6 +488,7 @@ println("Factorial of", n, "is", factorial)
 - **[Documentation Home](docs/index.md)**: Full documentation index
 - **[Standard Library](docs/standard-library/functions.md)**: Built-in modules and functions
 - **[Net Module](docs/standard-library/net.md)**: TCP sockets and HTTP client reference
+- **[Plot Library](docs/standard-library/plot.md)**: Matplotlib-like 2D plotting (SVG output)
 - **[Modules Examples](docs/examples/modules.md)**: How to organize and import modules
 - **[Getting Started](docs/getting-started.md)**: Installation, build, and first run
 

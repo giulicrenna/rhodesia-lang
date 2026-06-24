@@ -9,6 +9,17 @@ const { provideSemanticTokens, TOKEN_TYPES, TOKEN_MODIFIERS } = require('./serve
 const { provideWorkspaceSymbols, provideReferences } = require('./server/workspace');
 const { provideRenameEdits, provideCodeLenses, provideInlayHints } = require('./server/refactor');
 const { parseBuiltinLines } = require('./server/cppSourceParser');
+const { provideFoldingRanges } = require('./server/folding');
+const { provideDocumentHighlights } = require('./server/highlights');
+const { provideSelectionRanges } = require('./server/selection');
+const { provideCodeActions } = require('./server/codeActions');
+const { RhodesiaCallHierarchyProvider } = require('./server/callHierarchy');
+const { runCompiler } = require('./server/compilerDiag');
+const { createRhodesiaDebugFactory } = require('./server/debugger');
+const { provideLinkedEditingRanges } = require('./server/linkedEdit');
+const { provideDocumentColors, provideColorPresentations } = require('./server/colors');
+const { provideInlineValues } = require('./server/inlineValues');
+const { RhodesiaTypeHierarchyProvider } = require('./server/typeHierarchy');
 
 // Pre-compute "module.func" -> line map by parsing Builtins.hpp +
 // NetworkModule.hpp so module function go-to-def can jump to the actual
@@ -150,142 +161,161 @@ function activate(context) {
     );
 
     // ----------------------------------------------------------------
-    // Hover provider — shows signature and documentation
+    // Hover provider — shows signature, documentation and parameters
     // Handles both plain names (sqrt) and module-qualified (math.sqrt)
+    // Wraps individual sections in try-catch so a local parse failure
+    // doesn't prevent builtin/module hover from showing.
     // ----------------------------------------------------------------
     context.subscriptions.push(
         vscode.languages.registerHoverProvider('rhodesia', {
             provideHover(document, position, token) {
-                const wordRange = document.getWordRangeAtPosition(position);
-                if (!wordRange) return null;
+                try {
+                    const wordRange = document.getWordRangeAtPosition(position);
+                    if (!wordRange) return null;
 
-                const word = document.getText(wordRange);
-                const line = document.lineAt(position).text;
+                    const word = document.getText(wordRange);
+                    const line = document.lineAt(position).text;
 
-                // Check for module-qualified access: "module.word"
-                // Look at the character just before the word range start
-                const wordStart = wordRange.start.character;
-                const prefix = wordStart >= 2 ? line.substring(0, wordStart) : '';
-                const moduleQualMatch = prefix.match(/\b(\w+)\.\s*$/);
+                    // Check for module-qualified access: "module.word"
+                    const wordStart = wordRange.start.character;
+                    const prefix = wordStart >= 2 ? line.substring(0, wordStart) : '';
+                    const moduleQualMatch = prefix.match(/\b(\w+)\.\s*$/);
 
-                if (moduleQualMatch) {
-                    const moduleName = moduleQualMatch[1];
-                    const qualKey = `${moduleName}.${word}`;
+                    if (moduleQualMatch) {
+                        const moduleName = moduleQualMatch[1];
+                        const qualKey = `${moduleName}.${word}`;
 
-                    // Check module function
-                    const funcDesc = moduleFuncMap.get(qualKey);
-                    if (funcDesc) {
+                        const funcDesc = moduleFuncMap.get(qualKey);
+                        if (funcDesc) {
+                            const md = new vscode.MarkdownString();
+                            md.appendCodeblock(funcDesc.detail, 'rhodesia');
+                            md.appendText('\n' + funcDesc.documentation);
+                            if (funcDesc.signatures && funcDesc.signatures[0] && funcDesc.signatures[0].parameters) {
+                                funcDesc.signatures[0].parameters.forEach(p => {
+                                    md.appendText(`\n- \`${p.label}\`: ${p.documentation}`);
+                                });
+                            }
+                            return new vscode.Hover(md);
+                        }
+
+                        const constDesc = moduleConstMap.get(qualKey);
+                        if (constDesc) {
+                            const md = new vscode.MarkdownString();
+                            md.appendCodeblock(`${moduleName}.${constDesc.label}: ${constDesc.detail}`, 'rhodesia');
+                            md.appendText('\n' + constDesc.documentation);
+                            return new vscode.Hover(md);
+                        }
+                    }
+
+                    // Type hint for variable declarations
+                    if (line.match(/\b(int|float64|vec|mat|string|void|bool)\s*:\s*\w+/)) {
+                        const typeMatch = line.match(/\b(int|float64|vec|mat|string|void|bool)\s*:/);
+                        if (typeMatch && word === typeMatch[1]) {
+                            return new vscode.Hover(new vscode.MarkdownString(`**Type:** \`${typeMatch[1]}\``));
+                        }
+                    }
+
+                    // Local symbols (wrapped in try-catch)
+                    let localSyms;
+                    try {
+                        const docText = document.getText();
+                        localSyms = parseDocumentText(docText, document.uri.fsPath);
+                    } catch (parseErr) {
+                        console.error('[Rhodesia] parseDocumentText error:', parseErr);
+                        localSyms = { functions: [], constants: [], structs: [], enums: [] };
+                    }
+
+                    const localFn = localSyms.functions.find(f => f.label === word);
+                    if (localFn) {
                         const md = new vscode.MarkdownString();
-                        md.appendCodeblock(funcDesc.detail, 'rhodesia');
-                        md.appendText('\n' + funcDesc.documentation);
+                        md.appendCodeblock(localFn.detail, 'rhodesia');
+                        if (localFn._return) md.appendText(`\n**Returns:** \`${localFn._return}\`\n`);
+                        if (localFn.documentation) md.appendText('\n' + localFn.documentation);
                         return new vscode.Hover(md);
                     }
 
-                    // Check module constant
-                    const constDesc = moduleConstMap.get(qualKey);
-                    if (constDesc) {
+                    const localVar = localSyms.constants.find(v => v.label === word);
+                    if (localVar) {
                         const md = new vscode.MarkdownString();
-                        md.appendCodeblock(`${moduleName}.${constDesc.label}: ${constDesc.detail}`, 'rhodesia');
-                        md.appendText('\n' + constDesc.documentation);
+                        const kindLabel =
+                            localVar.kind === 'const' ? '**Constant**' :
+                            localVar.kind === 'let'   ? '**Variable**' :
+                            localVar.kind === 'destructure' ? '**Destructured binding**' :
+                                                              '**Variable**';
+                        md.appendMarkdown(`${kindLabel}: \`${localVar.detail}\`\n\n`);
+                        if (localVar.documentation) md.appendMarkdown(localVar.documentation + '\n');
                         return new vscode.Hover(md);
                     }
-                }
 
-                // Type hint for variable declarations: "type: varname"
-                if (line.match(/\b(int|float64|vec|mat|string|void|bool)\s*:\s*\w+/)) {
-                    const typeMatch = line.match(/\b(int|float64|vec|mat|string|void|bool)\s*:/);
-                    if (typeMatch && word === typeMatch[1]) {
-                        return new vscode.Hover(new vscode.MarkdownString(`**Type:** \`${typeMatch[1]}\``));
-                    }
-                }
-
-                // Local symbols: plain functions, variables, structs, enums, and
-                // aliased include symbols. parseDocumentText runs once per hover;
-                // it does not run on every keystroke so cost is acceptable.
-                const docText = document.getText();
-                const localSyms = parseDocumentText(docText, document.uri.fsPath);
-
-                // 2a. Local function
-                const localFn = localSyms.functions.find(f => f.label === word);
-                if (localFn) {
-                    const md = new vscode.MarkdownString();
-                    md.appendCodeblock(localFn.detail, 'rhodesia');
-                    if (localFn._return) md.appendText(`\n**Returns:** \`${localFn._return}\`\n`);
-                    if (localFn.documentation) md.appendText('\n' + localFn.documentation);
-                    return new vscode.Hover(md);
-                }
-
-                // 2b. Local variable (type/let/const/destructure)
-                const localVar = localSyms.constants.find(v => v.label === word);
-                if (localVar) {
-                    const md = new vscode.MarkdownString();
-                    const kindLabel =
-                        localVar.kind === 'const' ? '**Constant**' :
-                        localVar.kind === 'let'   ? '**Variable**' :
-                        localVar.kind === 'destructure' ? '**Destructured binding**' :
-                                                          '**Variable**';
-                    md.appendMarkdown(`${kindLabel}: \`${localVar.detail}\`\n\n`);
-                    if (localVar.documentation) md.appendMarkdown(localVar.documentation + '\n');
-                    return new vscode.Hover(md);
-                }
-
-                // 2c. Local struct
-                const localStruct = localSyms.structs.find(s => s.label === word);
-                if (localStruct) {
-                    const md = new vscode.MarkdownString();
-                    md.appendCodeblock(`record ${localStruct.label} { ${localStruct.fields.join(', ')} }`, 'rhodesia');
-                    if (localStruct.documentation) md.appendText('\n' + localStruct.documentation);
-                    return new vscode.Hover(md);
-                }
-
-                // 2d. Local enum
-                const localEnum = localSyms.enums.find(e => e.label === word);
-                if (localEnum) {
-                    const md = new vscode.MarkdownString();
-                    md.appendCodeblock(`enum ${localEnum.label} { ${localEnum.members.join(', ')} }`, 'rhodesia');
-                    if (localEnum.documentation) md.appendText('\n' + localEnum.documentation);
-                    return new vscode.Hover(md);
-                }
-
-                // 2e. Aliased include symbol: `PI` in `include test_module{MODULE_PI as PI}`
-                const aliased = resolveIncludeAlias(docText, word);
-                if (aliased) {
-                    const parsed = parseIncludedFile(aliased.modulePath);
-                    const sym =
-                        (parsed.functions || []).find(s => s.label === aliased.originalLabel) ||
-                        (parsed.constants || []).find(s => s.label === aliased.originalLabel);
-                    if (sym) {
+                    const localStruct = localSyms.structs.find(s => s.label === word);
+                    if (localStruct) {
                         const md = new vscode.MarkdownString();
-                        md.appendMarkdown(`**Aliased import** — \`${word}\` → \`${aliased.modulePath}.${aliased.originalLabel}\`\n\n`);
-                        md.appendCodeblock(sym.detail, 'rhodesia');
-                        if (sym.documentation) md.appendText('\n' + sym.documentation);
+                        md.appendCodeblock(`record ${localStruct.label} { ${localStruct.fields.join(', ')} }`, 'rhodesia');
+                        if (localStruct.documentation) md.appendText('\n' + localStruct.documentation);
                         return new vscode.Hover(md);
                     }
-                }
 
-                // Global built-in function lookup
-                const descriptor = builtinMap.get(word);
-                if (descriptor) {
-                    const md = new vscode.MarkdownString();
-                    md.appendCodeblock(descriptor.detail, 'rhodesia');
-                    md.appendText('\n' + descriptor.documentation);
-                    return new vscode.Hover(md);
-                }
+                    const localEnum = localSyms.enums.find(e => e.label === word);
+                    if (localEnum) {
+                        const md = new vscode.MarkdownString();
+                        md.appendCodeblock(`enum ${localEnum.label} { ${localEnum.members.join(', ')} }`, 'rhodesia');
+                        if (localEnum.documentation) md.appendText('\n' + localEnum.documentation);
+                        return new vscode.Hover(md);
+                    }
 
-                // Module name hover: hovering over "math", "stats", etc.
-                if (moduleDescriptors[word]) {
-                    const mod = moduleDescriptors[word];
-                    const funcCount = (mod.functions || []).length;
-                    const constCount = (mod.constants || []).length;
-                    const md = new vscode.MarkdownString();
-                    md.appendMarkdown(`**Module \`${word}\`**\n\n`);
-                    if (funcCount > 0) md.appendMarkdown(`${funcCount} function${funcCount !== 1 ? 's' : ''}`);
-                    if (constCount > 0) md.appendMarkdown(`, ${constCount} constant${constCount !== 1 ? 's' : ''}`);
-                    md.appendMarkdown(`\n\nType \`${word}.\` to see all members.`);
-                    return new vscode.Hover(md);
-                }
+                    // Aliased include symbol
+                    try {
+                        const docText = document.getText();
+                        const aliased = resolveIncludeAlias(docText, word);
+                        if (aliased) {
+                            const parsed = parseIncludedFile(aliased.modulePath);
+                            const sym =
+                                (parsed.functions || []).find(s => s.label === aliased.originalLabel) ||
+                                (parsed.constants || []).find(s => s.label === aliased.originalLabel);
+                            if (sym) {
+                                const md = new vscode.MarkdownString();
+                                md.appendMarkdown(`**Aliased import** — \`${word}\` → \`${aliased.modulePath}.${aliased.originalLabel}\`\n\n`);
+                                md.appendCodeblock(sym.detail, 'rhodesia');
+                                if (sym.documentation) md.appendText('\n' + sym.documentation);
+                                return new vscode.Hover(md);
+                            }
+                        }
+                    } catch (aliasErr) {
+                        console.error('[Rhodesia] resolveIncludeAlias error:', aliasErr);
+                    }
 
-                return null;
+                    // Global built-in function lookup
+                    const descriptor = builtinMap.get(word);
+                    if (descriptor) {
+                        const md = new vscode.MarkdownString();
+                        md.appendCodeblock(descriptor.detail, 'rhodesia');
+                        md.appendText('\n' + descriptor.documentation);
+                        if (descriptor.signatures && descriptor.signatures[0] && descriptor.signatures[0].parameters) {
+                            descriptor.signatures[0].parameters.forEach(p => {
+                                md.appendText(`\n- \`${p.label}\`: ${p.documentation}`);
+                            });
+                        }
+                        return new vscode.Hover(md);
+                    }
+
+                    // Module name hover
+                    if (moduleDescriptors[word]) {
+                        const mod = moduleDescriptors[word];
+                        const funcCount = (mod.functions || []).length;
+                        const constCount = (mod.constants || []).length;
+                        const md = new vscode.MarkdownString();
+                        md.appendMarkdown(`**Module \`${word}\`**\n\n`);
+                        if (funcCount > 0) md.appendMarkdown(`${funcCount} function${funcCount !== 1 ? 's' : ''}`);
+                        if (constCount > 0) md.appendMarkdown(`, ${constCount} constant${constCount !== 1 ? 's' : ''}`);
+                        md.appendMarkdown(`\n\nType \`${word}.\` to see all members.`);
+                        return new vscode.Hover(md);
+                    }
+
+                    return null;
+                } catch (err) {
+                    console.error('[Rhodesia] Hover provider error:', err);
+                    return null;
+                }
             }
         })
     );
@@ -403,7 +433,7 @@ function activate(context) {
                 const wordStart = wordRange.start.character;
                 const prefix = wordStart >= 2 ? line.substring(0, wordStart) : '';
                 const moduleQualMatch = prefix.match(/\b(\w+)\.\s*$/);
-                // ponytail: detection of cursor on a module-name prefix is split
+                // detection of cursor on a module-name prefix is split
                 // across two regexes — `moduleQualMatch` covers "cursor on func
                 // name in `module.func`" and `charAfter === '.'` covers "cursor
                 // on `module` itself". A single grammar would be cleaner but
@@ -508,6 +538,107 @@ function activate(context) {
                 return null;
             }
         })
+    );
+
+    // Folding ranges
+    context.subscriptions.push(
+        vscode.languages.registerFoldingRangeProvider('rhodesia', { provideFoldingRanges })
+    );
+
+    // Document highlights
+    context.subscriptions.push(
+        vscode.languages.registerDocumentHighlightProvider('rhodesia', { provideDocumentHighlights })
+    );
+
+    // Selection ranges
+    context.subscriptions.push(
+        vscode.languages.registerSelectionRangeProvider('rhodesia', { provideSelectionRanges })
+    );
+
+    // Code actions (quick fixes)
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider('rhodesia', {
+            provideCodeActions
+        }, {
+            providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
+        })
+    );
+
+    // Call hierarchy — Peek Callers / Call Hierarchy
+    const callHierarchyProvider = new RhodesiaCallHierarchyProvider();
+    context.subscriptions.push(
+        vscode.languages.registerCallHierarchyProvider('rhodesia', callHierarchyProvider)
+    );
+
+    // Output channel for extension logs
+    const outputChannel = vscode.window.createOutputChannel('Rhodesia');
+    context.subscriptions.push(outputChannel);
+    outputChannel.appendLine('Rhodesia extension activated');
+
+    // Compiler diagnostics — run rhodesia.exe on save
+    const compilerDiagCollection = vscode.languages.createDiagnosticCollection('rhodesia-compiler');
+    context.subscriptions.push(compilerDiagCollection);
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(async (document) => {
+            if (document.languageId !== 'rhodesia') return;
+            const config = vscode.workspace.getConfiguration('rhodesia');
+            if (!config.get('enableLinting', true)) return;
+            const diags = await runCompiler(document);
+            compilerDiagCollection.set(document.uri, diags);
+        })
+    );
+
+    // Debug adapter
+    const debugFactory = createRhodesiaDebugFactory();
+    context.subscriptions.push(
+        vscode.debug.registerDebugConfigurationProvider('rhodesia', debugFactory)
+    );
+
+    // Linked editing ranges — edit matching braces
+    context.subscriptions.push(
+        vscode.languages.registerLinkedEditingRangeProvider('rhodesia', { provideLinkedEditingRanges })
+    );
+
+    // Color provider — hex/rgb color picker
+    context.subscriptions.push(
+        vscode.languages.registerColorProvider('rhodesia', { provideDocumentColors, provideColorPresentations })
+    );
+
+    // Inline values — show variable values inline during debug
+    context.subscriptions.push(
+        vscode.languages.registerInlineValuesProvider('rhodesia', { provideInlineValues })
+    );
+
+    // Type hierarchy — show subtypes (records/enums)
+    const typeHierarchyProvider = new RhodesiaTypeHierarchyProvider();
+    context.subscriptions.push(
+        vscode.languages.registerTypeHierarchyProvider('rhodesia', typeHierarchyProvider)
+    );
+
+    // Status bar item — shows ".rho" when editing a .rho file
+    const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBar.text = '$(circuit-board) .rho';
+    statusBar.tooltip = 'Rhodesia Language';
+    statusBar.command = 'rhodesia.showInfo';
+    context.subscriptions.push(statusBar);
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+            if (editor && editor.document.languageId === 'rhodesia') {
+                statusBar.show();
+            } else {
+                statusBar.hide();
+            }
+        })
+    );
+    if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.languageId === 'rhodesia') {
+        statusBar.show();
+    }
+
+    // Commit character provider — triggers autocomplete on {, (, [, ., space, :
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider('rhodesia', {
+            provideCompletionItems() { return []; }
+        }, '{', '(', '[', '.', ' ', ':')
     );
 
     // Info command

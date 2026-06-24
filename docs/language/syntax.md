@@ -205,11 +205,17 @@ for i in range(10) {
 ### Function Declaration
 
 ```rhodesia
-fun function_name(param_type: param_name, ...) -> return_type {
+fun function_name(param_type: param_name = default, ...) -> return_type {
     // function body
     return value
 }
 ```
+
+A parameter can be:
+- **typed + named**: `int: x`
+- **with a default**: `int: x = 5`
+- **variadic** (last in the list): `*int: rest` — collects remaining
+  positional arguments into a `vec` (or `arr` if the type is non-numeric)
 
 ### Function Examples
 
@@ -225,8 +231,20 @@ fun distance(vec: p1, vec: p2) -> float64 {
     return norm(diff)
 }
 
+// Default value
+fun greet(string: name, string: greeting = "Hello") -> string {
+    return string.concat(greeting, ", ", name)
+}
+
+// Variadic
+fun sumAll(int: first, *int: rest) -> int {
+    int: total = first
+    for n in rest { total = total + n }
+    return total
+}
+
 // Void function
-fun greet(string: name) -> void {
+fun log(string: name) -> void {
     println("Hello,", name, "!")
 }
 
@@ -247,6 +265,11 @@ vec: point1 = [0, 0]
 vec: point2 = [3, 4]
 float64: dist = distance(point1, point2)
 greet("World")
+
+// Positional + keyword mix
+print(greet("World", greeting: "Hi"))
+print(makeWindow(width: 1024, height: 768))
+print(math.sqrt(x: 16))
 ```
 
 ## Code Examples

@@ -1,0 +1,41 @@
+// stack_bars.rho - Vertical stacked bars: budget breakdown by quarter.
+
+include plot
+
+println("=== stack_bars ===")
+
+arr: labels = array.create(0)
+array.push(labels, "Q1")
+array.push(labels, "Q2")
+array.push(labels, "Q3")
+array.push(labels, "Q4")
+
+// Three layers, each with one value per category
+arr: layers = array.create(0)
+arr: layer_labels = array.create(0)
+arr: colors = array.create(0)
+
+vec: salaries = [40.0, 45.0, 50.0, 55.0]
+vec: rent = [20.0, 20.0, 20.0, 20.0]
+vec: misc = [10.0, 15.0, 12.0, 18.0]
+array.push(layers, salaries)
+array.push(layers, rent)
+array.push(layers, misc)
+
+array.push(layer_labels, "salaries")
+array.push(layer_labels, "rent")
+array.push(layer_labels, "misc")
+
+array.push(colors, "#1f77b4")
+array.push(colors, "#ff7f0e")
+array.push(colors, "#2ca02c")
+
+figure(800, 510)
+stack_bars(labels, layers, layer_labels, colors)
+title("Quarterly budget breakdown")
+xlabel("quarter")
+ylabel("amount (k$)")
+legend(1)
+
+int: bytes = savefig("stack_bars.svg")
+println("Wrote ", bytes, " bytes to stack_bars.svg")

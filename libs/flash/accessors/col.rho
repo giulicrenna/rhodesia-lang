@@ -1,0 +1,18 @@
+// libs/flash/accessors/col.rho
+// Acceso directo a una columna como vec (numérica) o arr<str> (string).
+// Habilita usar funciones de libs/plot (y otros APIs que esperan vec/arr) sin
+// pasar por un wrapper plot_*:
+//
+//   line(col_v(df, "x"), col_v(df, "y"), "label", "")
+//
+// Variantes por tipo de retorno (Rhodesia no tiene overloading):
+//   col_v(df, name) -> vec         - columna numérica
+//   col_s(df, name) -> arr<str>    - columna de strings
+
+fun col_v(record: df, str: name) -> vec {
+    return _get_vec(df, name)
+}
+
+fun col_s(record: df, str: name) -> arr {
+    return _get_strs(df, name)
+}

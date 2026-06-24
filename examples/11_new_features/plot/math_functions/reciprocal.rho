@@ -1,0 +1,11 @@
+include plot
+println("=== reciprocal ===")
+fun f(float64: x) -> float64 { return 1 / x }
+figure(800, 510)
+plot(f, 0.1, 5, "f(x)", "blue")
+title("reciprocal")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("reciprocal.svg")
+println("Wrote ", bytes, " bytes to reciprocal.svg")

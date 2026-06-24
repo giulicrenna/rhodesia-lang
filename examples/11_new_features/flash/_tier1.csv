@@ -1,0 +1,9 @@
+user_id,country,plan,signup_date,revenue
+1,argentina,pro,2024-03-15,120.50
+2,brazil,free,2024-04-01,0.00
+3,argentina,pro,2024-03-22,89.99
+4,chile,pro,2024-05-10,150.00
+5,brazil,pro,2024-05-12,75.50
+6,argentina,free,2024-06-01,0.00
+7,chile,pro,2024-06-15,200.00
+8,argentina,pro,2024-07-03,99.00

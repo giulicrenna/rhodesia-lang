@@ -1,0 +1,11 @@
+include plot
+println("=== sigmoid ===")
+fun f(float64: x) -> float64 { return 1 / (1 + math.exp(-x)) }
+figure(800, 510)
+plot(f, -6, 6, "f(x)", "blue")
+title("sigmoid")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("sigmoid.svg")
+println("Wrote ", bytes, " bytes to sigmoid.svg")

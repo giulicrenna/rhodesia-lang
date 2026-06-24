@@ -1,0 +1,84 @@
+// svg/render_stack_bars.rho - Vertical stacked bars.
+// Each category (x index 0..nc-1) gets a vertical bar split into segments
+// (one per layer), stacked from y=0 upward. Category labels go below.
+
+fun _render_stack_bars(map: s, float64: xmin, float64: xrange, float64: ymin, float64: yrange, int: pw, int: ph) -> str {
+    arr: layers = mapping.get(s, "layers")
+    arr: labels = mapping.get(s, "labels")
+    int: nc = array.size(labels)
+    int: nl = array.size(layers)
+    if nc < 1 { return "" }
+    if nl < 1 { return "" }
+
+    // Compute total per category (cumulative y at the top of each bar).
+    vec: total = math.zeros(nc)
+    int: li = 0
+    while li < nl {
+        map: lyr = layers[li]
+        vec: yv = mapping.get(lyr, "y")
+        int: i = 0
+        while i < nc {
+            total[i] = total[i] + yv[i]
+            i = i + 1
+        }
+        li = li + 1
+    }
+
+    // Bar width: same as bar() - slot over nc, with 0.6 fill.
+    float64: slot = pw / nc
+    float64: bw = slot * 0.6
+    float64: base_py = _y_to_px(0.0, ymin, yrange, ph)
+
+    str: out = ""
+    int: ci = 0
+    while ci < nc {
+        float64: slot_cx = slot * ci + slot / 2.0
+        float64: x_left = slot_cx - bw / 2.0
+        float64: x_right = slot_cx + bw / 2.0
+        float64: cum = 0.0
+        int: lj = 0
+        while lj < nl {
+            map: lyr = layers[lj]
+            vec: yv = mapping.get(lyr, "y")
+            str: col = mapping.get(lyr, "color")
+            float64: yv_ci = yv[ci]
+            cum = cum + yv_ci
+            // top of this segment is at total[cum_so_far_minus_this] ... no,
+            // segment is from previous cum to current cum.
+            float64: bot = cum - yv_ci
+            float64: top = cum
+            float64: y_top = _y_to_px(top, ymin, yrange, ph)
+            float64: y_bot = _y_to_px(bot, ymin, yrange, ph)
+            float64: h = y_bot - y_top
+            if h < 0.0 { h = 0.0 }
+            out = string.concat(out, "<rect x=\"")
+            out = string.concat(out, _num_to_str(x_left))
+            out = string.concat(out, "\" y=\"")
+            out = string.concat(out, _num_to_str(y_top))
+            out = string.concat(out, "\" width=\"")
+            out = string.concat(out, _num_to_str(bw))
+            out = string.concat(out, "\" height=\"")
+            out = string.concat(out, _num_to_str(h))
+            out = string.concat(out, "\" fill=\"")
+            out = string.concat(out, col)
+            out = string.concat(out, "\" fill-opacity=\"0.7\" stroke=\"")
+            out = string.concat(out, col)
+            out = string.concat(out, "\" stroke-width=\"0.5\"/>")
+            lj = lj + 1
+        }
+        // Category label below
+        float64: ly = ph + 18.0
+        str: lt = "<text x=\""
+        lt = string.concat(lt, _num_to_str(slot_cx))
+        lt = string.concat(lt, "\" y=\"")
+        lt = string.concat(lt, _num_to_str(ly))
+        lt = string.concat(lt, "\" text-anchor=\"middle\" font-size=\"11\" font-family=\"sans-serif\" fill=\"")
+        lt = string.concat(lt, _FG_COLOR)
+        lt = string.concat(lt, "\">")
+        lt = string.concat(lt, labels[ci])
+        lt = string.concat(lt, "</text>")
+        out = string.concat(out, lt)
+        ci = ci + 1
+    }
+    return out
+}

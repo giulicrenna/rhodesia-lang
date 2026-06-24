@@ -1,0 +1,11 @@
+include plot
+println("=== sqrt ===")
+fun f(float64: x) -> float64 { return math.sqrt(x) }
+figure(800, 510)
+plot(f, 0, 10, "f(x)", "blue")
+title("sqrt")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("sqrt.svg")
+println("Wrote ", bytes, " bytes to sqrt.svg")

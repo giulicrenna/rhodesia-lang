@@ -1,0 +1,62 @@
+// libs/flash/stats/rank.rho
+// rank_col(df, col) -> vec con rango (1 = más bajo) o "average"
+
+fun rank_col(record: df, str: col) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: ranks = math.zeros(n)
+    arr: idx = array.create(0)
+    int: i = 0
+    while i < n {
+        array.push(idx, i)
+        i = i + 1
+    }
+    // Sort indices by value ascending
+    int: swapped = 1
+    while swapped == 1 {
+        swapped = 0
+        i = 0
+        while i < n - 1 {
+            int: a = idx[i]
+            int: b = idx[i + 1]
+            if v[a] > v[b] {
+                idx[i] = b
+                idx[i + 1] = a
+                swapped = 1
+            }
+            i = i + 1
+        }
+    }
+    // Asignar ranks con ties averaging
+    i = 0
+    while i < n {
+        int: j = i
+        // Verificar bounds antes de acceder a idx[j+1]
+        int: more = 0
+        if j + 1 < n {
+            if v[idx[j + 1]] == v[idx[i]] { more = 1 }
+        }
+        while more == 1 {
+            j = j + 1
+            more = 0
+            if j + 1 < n {
+                if v[idx[j + 1]] == v[idx[i]] { more = 1 }
+            }
+        }
+        float64: rk = (i + j) / 2.0 + 1.0
+        int: k = i
+        while k <= j {
+            ranks[idx[k]] = rk
+            k = k + 1
+        }
+        i = j + 1
+    }
+    return ranks
+}
+
+fun rank_df(record: df, str: col, str: name) -> record {
+    vec: rk = rank_col(df, col)
+    record: out = _copy_df(df)
+    out = _set_col(out, name, _wrap_vec(rk), "float")
+    return out
+}

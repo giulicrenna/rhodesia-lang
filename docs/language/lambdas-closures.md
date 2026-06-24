@@ -12,6 +12,24 @@ at the point of definition and carry that environment with them. This page
 covers capturing, function factories, and the most common higher-order
 patterns.
 
+Lambdas accept the same parameter features as named functions:
+**default values**, **keyword arguments** at the call site, and
+**variadic** `*type: name`. See [Functions](functions.md#default-parameter-values)
+for the syntax — only a quick example here:
+
+```rhodesia
+function: greet = lambda(string: who, string: greeting = "Hi") -> greeting
+print(greet("World"))                  // "Hi"
+print(greet("World", greeting: "Yo"))  // "Yo"
+
+function: collect = lambda(*vec: rest) {
+    vec: r = [0.0]
+    for x in rest { r = r + [x] }
+    return r
+}
+print(collect(1.0, 2.0, 3.0))          // [1, 2, 3]
+```
+
 See [examples/05_functions](../examples/basics.md) for runnable samples.
 
 ## Closures Capture by Reference

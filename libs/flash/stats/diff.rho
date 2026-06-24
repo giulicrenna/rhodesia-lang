@@ -1,0 +1,70 @@
+// libs/flash/stats/diff.rho
+// diff_col(df, col, periods) -> vec; primera(s) posiciones = NaN-equivalente (0.0)
+// pct_change_col(df, col)     -> vec
+
+fun diff_col(record: df, str: col, int: periods) -> record {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    if periods < 1 { periods = 1 }
+    if periods > n - 1 { periods = n - 1 }
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < periods {
+        out[i] = 0.0
+        i = i + 1
+    }
+    i = periods
+    while i < n {
+        out[i] = v[i] - v[i - periods]
+        i = i + 1
+    }
+    record: r = _copy_df(df)
+    r = _set_col(r, col, _wrap_vec(out), "float")
+    return r
+}
+
+fun diff_col_v(record: df, str: col, int: periods) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    if periods < 1 { periods = 1 }
+    if periods > n - 1 { periods = n - 1 }
+    vec: out = math.zeros(n)
+    int: i = periods
+    while i < n {
+        out[i] = v[i] - v[i - periods]
+        i = i + 1
+    }
+    return out
+}
+
+fun pct_change_col(record: df, str: col) -> record {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    if n < 2 { return _copy_df(df) }
+    int: i = 1
+    while i < n {
+        if v[i - 1] != 0.0 {
+            out[i] = (v[i] - v[i - 1]) / v[i - 1]
+        }
+        i = i + 1
+    }
+    record: r = _copy_df(df)
+    r = _set_col(r, col, _wrap_vec(out), "float")
+    return r
+}
+
+fun pct_change_v(record: df, str: col) -> vec {
+    vec: v = _get_vec(df, col)
+    int: n = math.size(v)
+    vec: out = math.zeros(n)
+    if n < 2 { return out }
+    int: i = 1
+    while i < n {
+        if v[i - 1] != 0.0 {
+            out[i] = (v[i] - v[i - 1]) / v[i - 1]
+        }
+        i = i + 1
+    }
+    return out
+}

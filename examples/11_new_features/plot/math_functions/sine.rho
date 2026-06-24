@@ -1,0 +1,11 @@
+include plot
+println("=== sine ===")
+fun f(float64: x) -> float64 { return math.sin(x) }
+figure(800, 510)
+plot(f, -6.283185, 6.283185, "f(x)", "blue")
+title("sine")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("sine.svg")
+println("Wrote ", bytes, " bytes to sine.svg")

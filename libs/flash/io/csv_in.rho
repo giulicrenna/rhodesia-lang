@@ -1,0 +1,221 @@
+// libs/flash/io/csv_in.rho
+// Parser CSV → DataFrame.
+// No usa string.split (placeholder en Rhodesia). Implementa su propio split.
+//
+// Soporta:
+//   - separador configurable (default ",")
+//   - campos entrecomillados con "..." (con comilla escapada como "")
+//   - primera línea = header
+//   - inferencia automática de dtype por columna
+//   - celdas vacías se guardan como "" para strings o NaN-equivalente (0.0 + flag)
+//     Para NaN usamos float64::nan-style: valor sentinel -1e300 (documentado).
+//
+// API:
+//   read_csv(path)                       -> DataFrame
+//   read_csv(path, str: sep)             -> DataFrame
+//   read_csv(path, str: sep, int: header)-> DataFrame  (header=1 primera línea es header)
+
+// --- Split con comillas (devuelve arr<str>) ---
+
+// _csv_split(line, sep) — split CSV que respeta comillas.
+fun _csv_split(str: line, str: sep) -> arr {
+    arr: out = array.create(0)
+    str: cur = ""
+    int: in_quote = 0
+    int: i = 0
+    int: n = string.length(line)
+    int: sep_len = string.length(sep)
+    while i < n {
+        str: c = string.slice(line, i, i + 1)
+        if in_quote == 1 {
+            if c == "\"" {
+                // Verificar si es escape ""
+                if i + 1 < n and string.slice(line, i + 1, i + 2) == "\"" {
+                    cur = string.concat(cur, "\"")
+                    i = i + 2
+                    continue
+                }
+                in_quote = 0
+                i = i + 1
+                continue
+            }
+            cur = string.concat(cur, c)
+            i = i + 1
+            continue
+        }
+        // No estamos dentro de comillas
+        if c == "\"" {
+            in_quote = 1
+            i = i + 1
+            continue
+        }
+        // ¿es el separador?
+        if sep_len == 1 {
+            if c == sep {
+                array.push(out, cur)
+                cur = ""
+                i = i + 1
+                continue
+            }
+        } else {
+            // separador multi-char
+            if _starts_at(line, sep, i) {
+                array.push(out, cur)
+                cur = ""
+                i = i + sep_len
+                continue
+            }
+        }
+        cur = string.concat(cur, c)
+        i = i + 1
+    }
+    array.push(out, cur)
+    return out
+}
+
+// _starts_at(s, sub, at) — 1 si s[at..at+len(sub)] == sub.
+fun _starts_at(str: s, str: sub, int: at) -> int {
+    int: sn = string.length(s)
+    int: un = string.length(sub)
+    if at + un > sn { return 0 }
+    int: i = 0
+    while i < un {
+        if string.slice(s, at + i, at + i + 1) != string.slice(sub, i, i + 1) { return 0 }
+        i = i + 1
+    }
+    return 1
+}
+
+// --- Lectura de archivo línea por línea ---
+
+// _read_lines(path) — devuelve arr<str> con cada línea (sin \n final).
+fun _read_lines(str: path) -> arr {
+    arr: out = array.create(0)
+    if io.exists(path) == 0 {
+        _err(string.concat("file not found: ", path))
+    }
+    str: content = io.read_file(path)
+    int: i = 0
+    int: n = string.length(content)
+    str: cur = ""
+    while i < n {
+        str: c = string.slice(content, i, i + 1)
+        if c == "\n" {
+            array.push(out, cur)
+            cur = ""
+            i = i + 1
+            continue
+        }
+        if c == "\r" {
+            // saltar
+            i = i + 1
+            continue
+        }
+        cur = string.concat(cur, c)
+        i = i + 1
+    }
+    if string.length(cur) > 0 {
+        array.push(out, cur)
+    }
+    return out
+}
+
+// --- API pública ---
+
+fun read_csv(str: path) -> record {
+    return read_csv_sep(path, ",", 1)
+}
+
+// read_csv_dates(path, date_cols_csv) — parsea las columnas indicadas en date_cols_csv
+// (separadas por coma) como datetime ISO "YYYY-MM-DD".
+// Las celdas vacías quedan NA.
+fun read_csv_dates(str: path, str: date_cols_csv) -> record {
+    record: df = read_csv_sep(path, ",", 1)
+    if string.length(date_cols_csv) == 0 { return df }
+    arr: date_cols = _rho_split(date_cols_csv, ",")
+    int: i = 0
+    int: n = array.size(date_cols)
+    while i < n {
+        str: cn = date_cols[i]
+        if _has_col(df, cn) {
+            df = dtc_parse(df, cn, "iso")
+        }
+        i = i + 1
+    }
+    return df
+}
+
+// read_csv_dates_fmt(path, date_cols_csv, fmt) — versión con formato explícito.
+fun read_csv_dates_fmt(str: path, str: date_cols_csv, str: fmt) -> record {
+    record: df = read_csv_sep(path, ",", 1)
+    if string.length(date_cols_csv) == 0 { return df }
+    arr: date_cols = _rho_split(date_cols_csv, ",")
+    int: i = 0
+    int: n = array.size(date_cols)
+    while i < n {
+        str: cn = date_cols[i]
+        if _has_col(df, cn) {
+            df = dtc_parse(df, cn, fmt)
+        }
+        i = i + 1
+    }
+    return df
+}
+
+fun read_csv_sep(str: path, str: sep, int: header) -> record {
+    arr: lines = _read_lines(path)
+    if array.size(lines) == 0 {
+        return _new_df()
+    }
+    arr: hdr = _csv_split(lines[0], sep)
+    if header == 0 {
+        // sin header — generar nombres col_0, col_1, ...
+        int: i = 0
+        int: n = array.size(hdr)
+        while i < n {
+            hdr[i] = string.concat("col_", _int_str(i))
+            i = i + 1
+        }
+    }
+    // Construir dict nombre → arr<str> temporal
+    int: ncols = array.size(hdr)
+    arr: col_strs = array.create(0)
+    int: k = 0
+    while k < ncols {
+        array.push(col_strs, array.create(0))
+        k = k + 1
+    }
+    int: start = 0
+    if header == 1 { start = 1 }
+    int: li = start
+    int: ln = array.size(lines)
+    while li < ln {
+        str: line = lines[li]
+        if string.length(line) == 0 {
+            li = li + 1
+            continue
+        }
+        arr: cells = _csv_split(line, sep)
+        int: ci = 0
+        while ci < ncols {
+            if ci < array.size(cells) {
+                array.push(col_strs[ci], cells[ci])
+            } else {
+                array.push(col_strs[ci], "")
+            }
+            ci = ci + 1
+        }
+        li = li + 1
+    }
+    // Construir DataFrame: inferir dtype por columna
+    record: df = _new_df()
+    int: ci = 0
+    while ci < ncols {
+        str: nm = hdr[ci]
+        str: dt = _infer_dtype(col_strs[ci])
+        record: cdata = _coerce_col(col_strs[ci], dt)
+        df = _set_col(df, nm, cdata, dt)
+        ci = ci + 1
+    }
+    return df
+}

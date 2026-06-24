@@ -1,0 +1,11 @@
+include plot
+println("=== log10 ===")
+fun f(float64: x) -> float64 { return math.log(x) / math.log(10) }
+figure(800, 510)
+plot(f, 0.01, 100, "f(x)", "blue")
+title("log10")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("log10.svg")
+println("Wrote ", bytes, " bytes to log10.svg")

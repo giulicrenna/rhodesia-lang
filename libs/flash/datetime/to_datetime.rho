@@ -1,0 +1,65 @@
+// libs/flash/datetime/to_datetime.rho
+// to_datetime(df, col) — convierte la columna str a dtype "datetime" (formato ISO).
+
+fun to_datetime(record: df, str: col) -> record {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind != "arr" {
+        _err(string.concat("to_datetime: column '", col, "' is not string"))
+    }
+    record: out = _copy_df(df)
+    record: cc = mapping.get(out._cols, col)
+    arr: a = cc.data
+    int: n = array.size(a)
+    int: i = 0
+    while i < n {
+        if _is_datetime_str(a[i]) == 0 {
+            _err(string.concat("to_datetime: '", a[i], "' is not a valid ISO date"))
+        }
+        i = i + 1
+    }
+    mapping.put(out._dtypes, col, "datetime")
+    return out
+}
+
+// dt_year(df, col)   -> vec
+// dt_month(df, col)  -> vec
+// dt_day(df, col)    -> vec
+fun dt_year(record: df, str: col) -> vec {
+    arr: a = _get_strs(df, col)
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: y = string.slice(a[i], 0, 4)
+        out[i] = _str_to_float_v2(y)
+        i = i + 1
+    }
+    return out
+}
+
+fun dt_month(record: df, str: col) -> vec {
+    arr: a = _get_strs(df, col)
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: m = string.slice(a[i], 5, 7)
+        out[i] = _str_to_float_v2(m)
+        i = i + 1
+    }
+    return out
+}
+
+fun dt_day(record: df, str: col) -> vec {
+    arr: a = _get_strs(df, col)
+    int: n = array.size(a)
+    vec: out = math.zeros(n)
+    int: i = 0
+    while i < n {
+        str: d = string.slice(a[i], 8, 10)
+        out[i] = _str_to_float_v2(d)
+        i = i + 1
+    }
+    return out
+}

@@ -1,0 +1,202 @@
+// libs/flash/convert/convert.rho
+// Conversiones entre DataFrame y tipos Rhodesia nativos.
+//
+// API:
+//   to_dict(df)          -> map<str, vec|arr<str>>
+//       Devuelve un map donde cada col se accede por nombre.
+//       Para cols numéricas el valor es vec; para str/datetime es arr<str>.
+//       Los NA se mantienen como 0.0 (num) o "" (str). Para preservar NA usar
+//       to_dict_with_na.
+//
+//   to_dict_with_na(df)  -> map<str, record{data, na}>
+//       Igual a to_dict pero cada col viene como un record {data, na}.
+//
+//   to_records(df)       -> arr<record>
+//       Cada fila es un record {col1: val1, col2: val2, ...}.
+//       Para numéricas val es float64; para str val es str.
+//
+//   from_records(records, dtypes) -> record
+//       Inverso de to_records. dtypes es map<str, str>.
+//
+//   to_list(df, col)     -> arr (vec|num) o arr<str>
+//       Devuelve la col como arr nativo de Rhodesia.
+//
+//   to_arrays(df)        -> map<str, vec|arr<str>>
+//       Alias de to_dict.
+//
+// ponytail: Rhodesia no tiene tuplas ni nulls; NA se materializa como 0.0/"".
+// Para NA-aware usar to_records_with_na.
+
+fun to_dict(record: df) -> map {
+    map: out = mapping.create()
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        record: c = mapping.get(df._cols, nm)
+        if c.kind == "vec" {
+            vec: v = c.data
+            mapping.put(out, nm, v)
+        } else {
+            arr: a = c.data
+            mapping.put(out, nm, a)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fun to_dict_with_na(record: df) -> map {
+    map: out = mapping.create()
+    int: i = 0
+    int: n = array.size(df._names)
+    while i < n {
+        str: nm = df._names[i]
+        record: c = mapping.get(df._cols, nm)
+        record: with_na = { data: c.data, na: c.na }
+        mapping.put(out, nm, with_na)
+        i = i + 1
+    }
+    return out
+}
+
+fun to_list(record: df, str: col) -> arr {
+    _check_col(df, col)
+    record: c = mapping.get(df._cols, col)
+    if c.kind == "vec" {
+        // Rhodesia no tiene conversión directa vec→arr. Devolvemos el vec.
+        return c.data
+    }
+    return c.data
+}
+
+fun to_records(record: df) -> arr {
+    arr: out = array.create(0)
+    int: r = 0
+    int: nr = df._nrows
+    while r < nr {
+        map: row = mapping.create()
+        int: ci = 0
+        int: nn = array.size(df._names)
+        while ci < nn {
+            str: nm = df._names[ci]
+            record: c = mapping.get(df._cols, nm)
+            if c.kind == "vec" {
+                vec: v = c.data
+                float64: vx = 0.0
+                if r < math.size(v) { vx = v[r] }
+                mapping.put(row, nm, vx)
+            } else {
+                arr: a = c.data
+                str: vs = ""
+                if r < array.size(a) { vs = a[r] }
+                mapping.put(row, nm, vs)
+            }
+            ci = ci + 1
+        }
+        array.push(out, row)
+        r = r + 1
+    }
+    return out
+}
+
+// to_records_with_na(df) — cada valor es un record {v, na}.
+fun to_records_with_na(record: df) -> arr {
+    arr: out = array.create(0)
+    int: r = 0
+    int: nr = df._nrows
+    while r < nr {
+        map: row = mapping.create()
+        int: ci = 0
+        int: nn = array.size(df._names)
+        while ci < nn {
+            str: nm = df._names[ci]
+            record: c = mapping.get(df._cols, nm)
+            arr: na = c.na
+            int: is_na = 0
+            if r < array.size(na) and na[r] == "1" { is_na = 1 }
+            if c.kind == "vec" {
+                vec: v = c.data
+                float64: vx = 0.0
+                if r < math.size(v) { vx = v[r] }
+                mapping.put(row, nm, { v: vx, na: is_na })
+            } else {
+                arr: a = c.data
+                str: vs = ""
+                if r < array.size(a) { vs = a[r] }
+                mapping.put(row, nm, { v: vs, na: is_na })
+            }
+            ci = ci + 1
+        }
+        array.push(out, row)
+        r = r + 1
+    }
+    return out
+}
+
+// from_records(records, names, dtypes) — arr<record> → DataFrame.
+// El usuario pasa `names` (arr<str>) explícito porque mapping.keys en Rhodesia
+// solo devuelve el count. dtypes es map<str, str>.
+fun from_records(arr: records, arr: names, map: dtypes) -> record {
+    record: df = _new_df()
+    int: n = array.size(records)
+    int: k = 0
+    int: nn = array.size(names)
+    while k < nn {
+        str: nm = names[k]
+        str: dt = "str"
+        if mapping.has(dtypes, nm) { dt = mapping.get(dtypes, nm) }
+        if dt == "str" or dt == "datetime" {
+            arr: buf = array.create(0)
+            arr: na_buf = array.create(0)
+            int: r = 0
+            while r < n {
+                map: row = records[r]
+                if mapping.has(row, nm) {
+                    str: v = mapping.get(row, nm)
+                    array.push(buf, v)
+                    if string.length(v) == 0 { array.push(na_buf, "1") }
+                    else { array.push(na_buf, "0") }
+                } else {
+                    array.push(buf, "")
+                    array.push(na_buf, "1")
+                }
+                r = r + 1
+            }
+            df = _set_col(df, nm, { kind: "arr", data: buf, na: na_buf }, dt)
+        } else {
+            vec: vbuf = math.zeros(n)
+            arr: na_buf = array.create(0)
+            int: r = 0
+            while r < n {
+                map: row = records[r]
+                if mapping.has(row, nm) {
+                    float64: v = mapping.get(row, nm)
+                    vbuf[r] = v
+                    if v == 0.0 { array.push(na_buf, "1") }
+                    else { array.push(na_buf, "0") }
+                } else {
+                    vbuf[r] = 0.0
+                    array.push(na_buf, "1")
+                }
+                r = r + 1
+            }
+            df = _set_col(df, nm, { kind: "vec", data: vbuf, na: na_buf }, dt)
+        }
+        k = k + 1
+    }
+    return df
+}
+
+// _record_keys(rec) — devuelve arr<str> con los keys del record (orden de inserción).
+// ponytail: mapping.keys en Rhodesia solo devuelve el count, no los keys.
+// Esta función solo cuenta — usar col_names() del df para iterar keys.
+fun _record_keys(record: r) -> arr {
+    arr: out = array.create(0)
+    return out
+}
+
+// to_arrays(df) — alias de to_dict.
+fun to_arrays(record: df) -> map {
+    return to_dict(df)
+}

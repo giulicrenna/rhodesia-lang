@@ -1,0 +1,11 @@
+include plot
+println("=== floor ===")
+fun f(float64: x) -> float64 { return math.floor(x) }
+figure(800, 510)
+plot(f, -3, 3, "f(x)", "blue")
+title("floor")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("floor.svg")
+println("Wrote ", bytes, " bytes to floor.svg")

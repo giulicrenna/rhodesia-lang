@@ -23,9 +23,9 @@
 
 namespace Rhodesia {
 
-// ----
+
 // CompilerError
-// ----
+
 
 class CompilerError : public std::runtime_error {
 public:
@@ -33,9 +33,9 @@ public:
         : std::runtime_error("CompilerError: " + msg) {}
 };
 
-// ----
+
 // Compiler
-// ----
+
 
 class Compiler : public ASTVisitor {
 public:
@@ -245,7 +245,7 @@ public:
     void visit(FunctionCallNode& node) override {
         if (Builtins::instance().isBuiltin(node.name)) {
             for (auto& arg : node.arguments) {
-                arg->accept(*this);
+                arg.value->accept(*this);
             }
             int nameIdx = chunk().addName(node.name);
             int argc    = static_cast<int>(node.arguments.size());
@@ -267,7 +267,7 @@ public:
                 }
             }
             for (auto& arg : node.arguments) {
-                arg->accept(*this);
+                arg.value->accept(*this);
             }
             chunk().emit(Opcode::CALL, static_cast<int32_t>(node.arguments.size()));
         }
@@ -303,7 +303,7 @@ public:
         } else {
             // Module function call: object.member(args...)
             for (auto& arg : node.arguments) {
-                arg->accept(*this);
+                arg.value->accept(*this);
             }
             int nameIdx = chunk().addName(fullName);
             int argc    = static_cast<int>(node.arguments.size());

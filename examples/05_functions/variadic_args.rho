@@ -1,0 +1,49 @@
+// Variadic parameters with *type: name
+// The trailing *type: name collects all remaining positional args
+// into a vec (RhoArray) bound to `name`.
+
+// Sum any number of ints
+fun sumAll(int: first, *int: rest) -> int {
+    int: total = first
+    for n in rest {
+        total = total + n
+    }
+    return total
+}
+
+print("--- variadic ints ---")
+print("sumAll(1, 2, 3, 4, 5) =", sumAll(1, 2, 3, 4, 5))
+print("sumAll(10)            =", sumAll(10))
+print("sumAll(0, 0, 0)       =", sumAll(0, 0, 0))
+
+// Variadic with floats
+fun stats(float64: first, *float64: rest) -> str {
+    float64: total = first
+    float64: mn = first
+    float64: mx = first
+    int: n = 1
+    for x in rest {
+        total = total + x
+        if x < mn { mn = x }
+        if x > mx { mx = x }
+        n = n + 1
+    }
+    return string.concat("n=", string.from(n),
+                         " mean=", string.from(total / n),
+                         " min=", string.from(mn),
+                         " max=", string.from(mx))
+}
+
+print("--- variadic floats ---")
+print(stats(3.5, 1.0, 4.5, 9.0, 2.0, 6.5))
+
+// Variadic in lambdas
+function: collect = lambda(*vec: rest) {
+    vec: result = [0.0]
+    for x in rest {
+        result = result + [x]
+    }
+    return result
+}
+print("--- lambda variadic ---")
+print(collect(1.0, 2.0, 3.0, 4.0))

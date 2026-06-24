@@ -59,7 +59,12 @@ private:
     const Token& peek() const {
         return tokens_[current_];
     }
-    
+
+    const Token& peekNext() const {
+        if (current_ + 1 < tokens_.size()) return tokens_[current_ + 1];
+        return tokens_.back();  // EOF
+    }
+
     const Token& previous() const {
         return tokens_[current_ - 1];
     }
@@ -308,14 +313,20 @@ private:
             do {
                 FunctionParam param;
                 param.location = peek().location;
+                if (match(TokenType::Star)) {
+                    param.isVariadic = true;
+                }
                 param.type = parseType();
                 consume(TokenType::Colon, "':' after parameter type");
                 Token pname = consume(TokenType::Identifier, "parameter name");
                 param.name = pname.value;
+                if (match(TokenType::Assign)) {
+                    param.defaultValue = std::shared_ptr<ExprNode>(parseExpression().release());
+                }
                 params.push_back(param);
             } while (match(TokenType::Comma));
         }
-        
+
         consume(TokenType::RParen, "')' after parameters");
         consume(TokenType::Arrow, "'->' before return type");
         
@@ -754,11 +765,27 @@ private:
                 if (ident) {
                     // Simple identifier.member — MemberAccessNode (modules + records)
                     if (match(TokenType::LParen)) {
-                        std::vector<ExprPtr> args;
+                        std::vector<CallArg> args;
+                        bool seenKeyword = false;
+                        auto parseCallArg = [&]() -> CallArg {
+                            if (check(TokenType::Identifier) && peekNext().type == TokenType::Colon) {
+                                Token nameTok = consume(TokenType::Identifier, "keyword name");
+                                consume(TokenType::Colon, "':' after keyword name");
+                                return CallArg{nameTok.value, std::shared_ptr<ExprNode>(parseExpression().release())};
+                            }
+                            return CallArg{"", std::shared_ptr<ExprNode>(parseExpression().release())};
+                        };
                         if (!check(TokenType::RParen)) {
-                            args.push_back(parseExpression());
+                            args.push_back(parseCallArg());
+                            seenKeyword = !args.back().name.empty();
                             while (match(TokenType::Comma)) {
-                                args.push_back(parseExpression());
+                                if (check(TokenType::RParen)) break;
+                                args.push_back(parseCallArg());
+                                if (args.back().name.empty() && seenKeyword) {
+                                    throw ParseError("positional argument after keyword argument in call to '"
+                                                     + ident->name + "." + member + "'", peek().location);
+                                }
+                                seenKeyword = seenKeyword || !args.back().name.empty();
                             }
                         }
                         consume(TokenType::RParen, "')' after arguments");
@@ -766,16 +793,32 @@ private:
                             ident->name, member, std::move(args), loc, /*isCalled=*/true);
                     } else {
                         expr = std::make_unique<MemberAccessNode>(
-                            ident->name, member, std::vector<ExprPtr>{}, loc, /*isCalled=*/false);
+                            ident->name, member, std::vector<CallArg>{}, loc, /*isCalled=*/false);
                     }
                 } else {
                     // Chained access: expr.field or expr.field(args)  (e.g. a.b.c, a.b.c())
                     if (match(TokenType::LParen)) {
-                        std::vector<ExprPtr> args;
+                        std::vector<CallArg> args;
+                        bool seenKeyword = false;
+                        auto parseCallArg = [&]() -> CallArg {
+                            if (check(TokenType::Identifier) && peekNext().type == TokenType::Colon) {
+                                Token nameTok = consume(TokenType::Identifier, "keyword name");
+                                consume(TokenType::Colon, "':' after keyword name");
+                                return CallArg{nameTok.value, std::shared_ptr<ExprNode>(parseExpression().release())};
+                            }
+                            return CallArg{"", std::shared_ptr<ExprNode>(parseExpression().release())};
+                        };
                         if (!check(TokenType::RParen)) {
-                            args.push_back(parseExpression());
+                            args.push_back(parseCallArg());
+                            seenKeyword = !args.back().name.empty();
                             while (match(TokenType::Comma)) {
-                                args.push_back(parseExpression());
+                                if (check(TokenType::RParen)) break;
+                                args.push_back(parseCallArg());
+                                if (args.back().name.empty() && seenKeyword) {
+                                    throw ParseError("positional argument after keyword argument in method call '."
+                                                     + member + "'", peek().location);
+                                }
+                                seenKeyword = seenKeyword || !args.back().name.empty();
                             }
                         }
                         consume(TokenType::RParen, "')' after arguments");
@@ -783,7 +826,7 @@ private:
                             std::move(expr), member, std::move(args), loc, /*isCalled=*/true);
                     } else {
                         expr = std::make_unique<ChainedMemberAccessNode>(
-                            std::move(expr), member, std::vector<ExprPtr>{}, loc, /*isCalled=*/false);
+                            std::move(expr), member, std::vector<CallArg>{}, loc, /*isCalled=*/false);
                     }
                 }
             }
@@ -1027,12 +1070,30 @@ private:
      * @brief Parse function call arguments
      */
     ExprPtr parseFunctionCall(const std::string& name, SourceLocation loc) {
-        std::vector<ExprPtr> args;
+        std::vector<CallArg> args;
+        bool seenKeyword = false;
+
+        auto parseCallArg = [&]() -> CallArg {
+            // Keyword arg: `name: expr` (Identifier followed by Colon)
+            if (check(TokenType::Identifier) && peekNext().type == TokenType::Colon) {
+                Token nameTok = consume(TokenType::Identifier, "keyword name");
+                consume(TokenType::Colon, "':' after keyword name");
+                return CallArg{nameTok.value, std::shared_ptr<ExprNode>(parseExpression().release())};
+            }
+            return CallArg{"", std::shared_ptr<ExprNode>(parseExpression().release())};
+        };
 
         if (!check(TokenType::RParen)) {
-            args.push_back(parseExpression());
+            args.push_back(parseCallArg());
+            seenKeyword = !args.back().name.empty();
             while (match(TokenType::Comma)) {
-                args.push_back(parseExpression());
+                if (check(TokenType::RParen)) break;  // trailing comma
+                args.push_back(parseCallArg());
+                if (args.back().name.empty() && seenKeyword) {
+                    throw ParseError("positional argument after keyword argument in call to '" + name + "'",
+                                     peek().location);
+                }
+                seenKeyword = seenKeyword || !args.back().name.empty();
             }
         }
 
@@ -1137,17 +1198,26 @@ private:
         std::vector<LambdaParam> params;
         if (!check(TokenType::RParen)) {
             do {
-                // Support optional type annotations: lambda(int: x, y) or lambda(x, y)
-                std::optional<RhoType> paramType;
+                LambdaParam param;
 
-                // Check if parameter has type annotation
-                if (isTypeKeyword(peek().type)) {
-                    paramType = parseType();
+                // Variadic marker: *int: rest
+                if (match(TokenType::Star)) {
+                    param.isVariadic = true;
+                }
+
+                // Support optional type annotations: lambda(int: x, y) or lambda(x, y)
+                // Variadic params must have a type.
+                if (param.isVariadic || isTypeKeyword(peek().type)) {
+                    param.type = parseType();
                     consume(TokenType::Colon, "':' after parameter type in lambda");
                 }
 
                 Token paramToken = consume(TokenType::Identifier, "parameter name");
-                params.emplace_back(paramToken.value, paramType);
+                param.name = paramToken.value;
+                if (match(TokenType::Assign)) {
+                    param.defaultValue = std::shared_ptr<ExprNode>(parseExpression().release());
+                }
+                params.push_back(std::move(param));
             } while (match(TokenType::Comma));
         }
 

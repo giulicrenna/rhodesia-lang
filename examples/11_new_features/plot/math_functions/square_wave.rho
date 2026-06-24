@@ -1,0 +1,11 @@
+include plot
+println("=== square_wave ===")
+fun f(float64: x) -> float64 { return math.sin(x) >= 0 ? 1 : -1 }
+figure(800, 510)
+plot(f, 0, 12.566, "f(x)", "blue")
+title("square_wave")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("square_wave.svg")
+println("Wrote ", bytes, " bytes to square_wave.svg")

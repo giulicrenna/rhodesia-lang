@@ -13,7 +13,7 @@ covers basic elementwise operations and a few reductions; this `math`
 library (imported with `include math`) bundles ~150 higher-level helpers
 across four sub-modules.
 
-> ponytail: the naming overlap is intentional but documented to avoid
+> the naming overlap is intentional but documented to avoid
 > confusion. The built-in `math.*` is in C++ (`Builtins.hpp`); this
 > library lives in `libs/math/*.rho`.
 

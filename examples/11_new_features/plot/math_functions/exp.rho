@@ -1,0 +1,11 @@
+include plot
+println("=== exp ===")
+fun f(float64: x) -> float64 { return math.exp(x) }
+figure(800, 510)
+plot(f, -2, 2, "f(x)", "blue")
+title("exp")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("exp.svg")
+println("Wrote ", bytes, " bytes to exp.svg")

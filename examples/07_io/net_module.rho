@@ -43,6 +43,29 @@ println("Status PUT: ", put_resp.status)
 println()
 
 
+// A Ntfy
+
+fun sendNtfy(str: message, str: title, str: tags) -> record {
+    map: headers = mapping.create()
+    mapping.put(headers, "Title", title)
+    mapping.put(headers, "Priority", "high")
+    mapping.put(headers, "Tags", tags)
+
+    str: ntfy_url = "http://ntfy.sh/terralytics-alerts"
+
+    return net.http_request("POST", ntfy_url, message, headers)
+}
+
+record: post_resp_2 = sendNtfy("Esta es una prueba automatizada.", "Rhodesia", "warning")
+
+println("Status POST ntfy: ", post_resp_2.status)
+println()
+
+
+// ntfy permite personalizar la notificación a través de los headers
+
+
+
 // Socket TCP crudo (cliente)
 
 println("--- net.socket / connect / send / recv_all ---")

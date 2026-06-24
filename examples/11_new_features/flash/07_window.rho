@@ -1,0 +1,95 @@
+// examples/11_new_features/flash/07_window.rho
+// Window functions: rolling + expanding + rank + diff + quantile + corr.
+
+include flash
+
+println("=== flash: window + stats ===")
+println()
+
+str: csv = "day,sales\n1,100\n2,120\n3,115\n4,130\n5,150\n6,140\n7,160\n8,175\n9,180\n10,170\n"
+io.write_file("series.csv", csv)
+
+record: df = read_csv("series.csv")
+
+println("Original series:")
+show_df(df)
+println()
+
+// rolling_mean(3)
+vec: rm = rolling_mean(df, "sales", 3)
+println("rolling_mean(3):")
+print("[")
+int: i = 0
+while i < math.size(rm) {
+    print(_float_to_str(rm[i]))
+    if i < math.size(rm) - 1 { print(", ") }
+    i = i + 1
+}
+println("]")
+println()
+
+vec: rs = rolling_std(df, "sales", 3)
+println("rolling_std(3):")
+print("[")
+i = 0
+while i < math.size(rs) {
+    print(_float_to_str(rs[i]))
+    if i < math.size(rs) - 1 { print(", ") }
+    i = i + 1
+}
+println("]")
+println()
+
+vec: em = expanding_mean(df, "sales")
+println("expanding_mean (cumulative average):")
+print("[")
+i = 0
+while i < math.size(em) {
+    print(_float_to_str(em[i]))
+    if i < math.size(em) - 1 { print(", ") }
+    i = i + 1
+}
+println("]")
+println()
+
+// rank
+println("rank_col('sales'):")
+vec: rk = rank_col(df, "sales")
+print("[")
+i = 0
+while i < math.size(rk) {
+    print(_float_to_str(rk[i]))
+    if i < math.size(rk) - 1 { print(", ") }
+    i = i + 1
+}
+println("]")
+println()
+
+// quantile
+float64: q25 = quantile(df, "sales", 0.25)
+float64: q50 = quantile(df, "sales", 0.5)
+float64: q75 = quantile(df, "sales", 0.75)
+println("quantiles [0.25, 0.5, 0.75]: [", _float_to_str(q25), ", ",
+      _float_to_str(q50), ", ", _float_to_str(q75), "]")
+println()
+
+// diff
+vec: dc = diff_col_v(df, "sales", 1)
+println("diff(sales, periods=1):")
+print("[")
+i = 0
+while i < math.size(dc) {
+    print(_float_to_str(dc[i]))
+    if i < math.size(dc) - 1 { print(", ") }
+    i = i + 1
+}
+println("]")
+println()
+
+// correlation (sales vs day)
+float64: c = corr(df, "day", "sales")
+println("corr(day, sales): ", _float_to_str(c))
+println()
+
+io.remove("series.csv")
+println("Done.")

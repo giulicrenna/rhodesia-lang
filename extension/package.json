@@ -2,7 +2,7 @@
   "name": "RhodesiaLanguage",
   "displayName": "Rhodesia Language Support",
   "description": "Comprehensive language support for Rhodesia (.rho files) including syntax highlighting, intelligent autocomplete, linting, hover documentation, code navigation, formatting and semantic highlighting",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "publisher": "GiulianoCrenna",
   "engines": {
     "vscode": "^1.79.0"
@@ -67,75 +67,77 @@
       }
     ],
     "semanticTokenTypes": [
-      {
-        "id": "function",
-        "superType": null,
-        "description": "Function declarations and calls"
-      },
-      {
-        "id": "variable",
-        "superType": null,
-        "description": "Variable references"
-      },
-      {
-        "id": "parameter",
-        "superType": null,
-        "description": "Function parameters"
-      },
-      {
-        "id": "type",
-        "superType": null,
-        "description": "Rhodesia type names"
-      },
-      {
-        "id": "namespace",
-        "superType": null,
-        "description": "Module names in qualified access"
-      },
-      {
-        "id": "constant",
-        "superType": null,
-        "description": "Constant declarations"
-      }
+      { "id": "function", "superType": null, "description": "Function declarations and calls" },
+      { "id": "variable", "superType": null, "description": "Variable references" },
+      { "id": "parameter", "superType": null, "description": "Function parameters" },
+      { "id": "type", "superType": null, "description": "Rhodesia type names" },
+      { "id": "namespace", "superType": null, "description": "Module names in qualified access" },
+      { "id": "constant", "superType": null, "description": "Constant declarations" }
     ],
     "semanticTokenModifiers": [
+      { "id": "declaration", "description": "Symbol is a declaration" },
+      { "id": "readonly", "description": "Symbol cannot be reassigned" }
+    ],
+    "problemMatchers": [
       {
-        "id": "declaration",
-        "description": "Symbol is a declaration"
-      },
+        "name": "rhodesia",
+        "label": "Rhodesia Compiler",
+        "owner": "rhodesia",
+        "fileLocation": "absolute",
+        "severity": "error",
+        "pattern": [
+          {
+            "regexp": "^(.*):(\\d+):(\\d+):\\s*(error|warning):\\s*(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          }
+        ]
+      }
+    ],
+    "debuggers": [
       {
-        "id": "readonly",
-        "description": "Symbol cannot be reassigned"
+        "type": "rhodesia",
+        "label": "Rhodesia Debug",
+        "configurationAttributes": {
+          "launch": {
+            "required": ["program"],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to the .rho program to debug"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          { "type": "rhodesia", "name": "Rhodesia Debug", "request": "launch", "program": "${file}" }
+        ]
       }
     ],
     "configuration": {
       "title": "Rhodesia",
       "properties": {
         "rhodesia.enableLinting": {
-          "type": "boolean",
-          "default": true,
+          "type": "boolean", "default": true,
           "description": "Enable/disable linting for Rhodesia files"
         },
         "rhodesia.enableAutocomplete": {
-          "type": "boolean",
-          "default": true,
+          "type": "boolean", "default": true,
           "description": "Enable/disable autocomplete for Rhodesia files"
         },
         "rhodesia.showTypeHints": {
-          "type": "boolean",
-          "default": true,
+          "type": "boolean", "default": true,
           "description": "Show type hints on hover"
         },
         "rhodesia.maxNumberOfProblems": {
-          "type": "number",
-          "default": 100,
+          "type": "number", "default": 100,
           "description": "Maximum number of problems shown by the linter"
         },
         "rhodesia.formatter.indentSize": {
-          "type": "number",
-          "default": 4,
-          "minimum": 1,
-          "maximum": 16,
+          "type": "number", "default": 4, "minimum": 1, "maximum": 16,
           "description": "Number of spaces per indentation level used by the formatter"
         }
       }

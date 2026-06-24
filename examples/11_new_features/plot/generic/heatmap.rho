@@ -1,0 +1,43 @@
+// heatmap.rho - 2D matrix rendered as a grid of colored rects.
+// Color is interpolated from theme background (low) to first palette color.
+
+include plot
+
+println("=== heatmap ===")
+
+// Build a row-vec for each row, then assemble into a 8x8 matrix using
+// numerical.linspace + column reshape via stack. For simplicity here we
+// build a single vec and reinterpret it as 8 rows of 8 cells when stored.
+vec: data = numerical.linspace(0.0, 63.0, 64)
+vec: row0 = data
+arr: row_labels = array.create(0)
+arr: col_labels = array.create(0)
+int: k = 0
+while k < 8 {
+    str: rl = "R"
+    str: cl = "C"
+    rl = string.concat(rl, _int_to_str(k))
+    cl = string.concat(cl, _int_to_str(k))
+    array.push(row_labels, rl)
+    array.push(col_labels, cl)
+    k = k + 1
+}
+
+figure(600, 600)
+arr: rows_arr = array.create(0)
+int: rr = 0
+while rr < 8 {
+    vec: rrr = math.zeros(8)
+    int: cc = 0
+    while cc < 8 {
+        rrr[cc] = (rr + cc) / 14.0
+        cc = cc + 1
+    }
+    array.push(rows_arr, rrr)
+    rr = rr + 1
+}
+heatmap(rows_arr, row_labels, col_labels, "grid")
+title("8x8 heatmap")
+
+int: bytes = savefig("heatmap.svg")
+println("Wrote ", bytes, " bytes to heatmap.svg")

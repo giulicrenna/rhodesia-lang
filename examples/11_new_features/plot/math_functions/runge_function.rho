@@ -1,0 +1,11 @@
+include plot
+println("=== runge_function ===")
+fun f(float64: x) -> float64 { return 1 / (1 + 25 * x*x) }
+figure(800, 510)
+plot(f, -2, 2, "f(x)", "blue")
+title("runge_function")
+xlabel("x")
+ylabel("f(x)")
+legend(1)
+int: bytes = savefig("runge_function.svg")
+println("Wrote ", bytes, " bytes to runge_function.svg")

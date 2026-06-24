@@ -1,0 +1,97 @@
+// svg/legend.rho - Legend block for a panel. Iterates the panel's series
+// and emits a colored swatch + label. Positioned at the right of the plot.
+
+fun _legend_block(map: panel, int: pw) -> str {
+    arr: series = _panel_series(panel)
+    int: ns = array.size(series)
+    if ns < 1 { return "" }
+    int: x0 = pw + 5
+    int: y0 = 30
+    int: dy = 16
+    str: out = "<g transform=\"translate("
+    out = string.concat(out, _int_to_str(x0))
+    out = string.concat(out, ", ")
+    out = string.concat(out, _int_to_str(y0))
+    out = string.concat(out, ")\">")
+    int: si = 0
+    while si < ns {
+        map: s = series[si]
+        str: k = mapping.get(s, "kind")
+        // For stacked_area, the legend lives in legend_entries (one per layer)
+        if k == "stacked_area" {
+            arr: le = mapping.get(s, "legend_entries")
+            int: li = 0
+            while li < array.size(le) {
+                map: entry = le[li]
+                str: lcol = mapping.get(entry, "color")
+                str: llab = mapping.get(entry, "label")
+                if string.length(llab) == 0 { llab = "layer" }
+                int: ry = (si + li) * dy
+                str: sw = "<rect x=\"0\" y=\""
+                sw = string.concat(sw, _int_to_str(ry - 8))
+                sw = string.concat(sw, "\" width=\"10\" height=\"10\" fill=\"")
+                sw = string.concat(sw, lcol)
+                sw = string.concat(sw, "\"/>")
+                out = string.concat(out, sw)
+                str: tx = "<text x=\"14\" y=\""
+                tx = string.concat(tx, _int_to_str(ry))
+                tx = string.concat(tx, "\" font-size=\"10\" font-family=\"sans-serif\" fill=\"")
+                tx = string.concat(tx, _FG_COLOR)
+                tx = string.concat(tx, "\">")
+                tx = string.concat(tx, llab)
+                tx = string.concat(tx, "</text>")
+                out = string.concat(out, tx)
+                li = li + 1
+            }
+        } else {
+            if k == "stack_bars" {
+                arr: le = mapping.get(s, "legend_entries")
+                int: li = 0
+                while li < array.size(le) {
+                    map: entry = le[li]
+                    str: lcol = mapping.get(entry, "color")
+                    str: llab = mapping.get(entry, "label")
+                    if string.length(llab) == 0 { llab = "layer" }
+                    int: ry = (si + li) * dy
+                    str: sw = "<rect x=\"0\" y=\""
+                    sw = string.concat(sw, _int_to_str(ry - 8))
+                    sw = string.concat(sw, "\" width=\"10\" height=\"10\" fill=\"")
+                    sw = string.concat(sw, lcol)
+                    sw = string.concat(sw, "\"/>")
+                    out = string.concat(out, sw)
+                    str: tx = "<text x=\"14\" y=\""
+                    tx = string.concat(tx, _int_to_str(ry))
+                    tx = string.concat(tx, "\" font-size=\"10\" font-family=\"sans-serif\" fill=\"")
+                    tx = string.concat(tx, _FG_COLOR)
+                    tx = string.concat(tx, "\">")
+                    tx = string.concat(tx, llab)
+                    tx = string.concat(tx, "</text>")
+                    out = string.concat(out, tx)
+                    li = li + 1
+                }
+            } else {
+                str: col = mapping.get(s, "color")
+                str: lab = mapping.get(s, "label")
+                if string.length(lab) == 0 { lab = k }
+                int: ry = si * dy
+                str: sw = "<rect x=\"0\" y=\""
+                sw = string.concat(sw, _int_to_str(ry - 8))
+                sw = string.concat(sw, "\" width=\"10\" height=\"10\" fill=\"")
+                sw = string.concat(sw, col)
+                sw = string.concat(sw, "\"/>")
+                out = string.concat(out, sw)
+                str: tx = "<text x=\"14\" y=\""
+                tx = string.concat(tx, _int_to_str(ry))
+                tx = string.concat(tx, "\" font-size=\"10\" font-family=\"sans-serif\" fill=\"")
+                tx = string.concat(tx, _FG_COLOR)
+                tx = string.concat(tx, "\">")
+                tx = string.concat(tx, lab)
+                tx = string.concat(tx, "</text>")
+                out = string.concat(out, tx)
+            }
+        }
+        si = si + 1
+    }
+    out = string.concat(out, "</g>")
+    return out
+}

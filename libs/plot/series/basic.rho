@@ -1,0 +1,443 @@
+// series/basic.rho - Data series API and data-side helpers.
+// Public: line, scatter, bar, hist, plot, area, fill_between, stacked_area, errorbar.
+// Internal: _vmin, _vmax, _extent, _apply, _cur_series.
+
+// --- Data helpers ---
+
+fun _vmin(vec: v) -> float64 {
+    float64: m = v[0]
+    int: n = math.size(v)
+    int: i = 1
+    while i < n {
+        if v[i] < m { m = v[i] }
+        i = i + 1
+    }
+    return m
+}
+
+fun _vmax(vec: v) -> float64 {
+    float64: m = v[0]
+    int: n = math.size(v)
+    int: i = 1
+    while i < n {
+        if v[i] > m { m = v[i] }
+        i = i + 1
+    }
+    return m
+}
+
+// Elementwise higher-order apply.
+fun _apply(function: f, vec: v) -> vec {
+    int: n = math.size(v)
+    vec: r = math.zeros(n)
+    int: i = 0
+    for x in v {
+        r[i] = f(x)
+        i = i + 1
+    }
+    return r
+}
+
+// Robust [lo, hi] extent for a vec y: when the data has extreme outliers
+// (1/sin(x) near asymptotes, exp blow-ups, etc.), the plain min/max crushes
+// the rest of the curve into a thin band. We compute abs_max, then a "bulk
+// max" of the values whose |y| is < abs_max/3. If at least 10% of points are
+// in the bulk, use ±1.1*bulk_max; else fall back to the actual data extremes.
+// Robust [lo, hi] extent for a vec y: when the data has extreme outliers
+// (1/sin(x) near asymptotes, exp blow-ups, etc.), the plain min/max crushes
+// the rest of the curve into a thin band. We shrink an initial cap
+// (abs_max / 2) by 2 each pass until the bulk max stops dropping by much
+// (factor of 1.5) — that's the "real" lobe interior, separate from the
+// asymptote spikes. Then return ±1.1 * bulk_max.
+fun _robust_extent(vec: y) -> vec {
+    int: n = math.size(y)
+    if n == 0 { return [0.0, 1.0] }
+    float64: abs_max = 0.0
+    int: i = 0
+    while i < n {
+        float64: ay = y[i]
+        if ay < 0.0 { ay = 0.0 - ay }
+        if ay > abs_max { abs_max = ay }
+        i = i + 1
+    }
+    if abs_max < 1.0 {
+        // Data fits comfortably in [0, 1] range — no outliers to worry about.
+        vec: r3 = [_vmin(y), _vmax(y)]
+        return r3
+    }
+    float64: cap = abs_max / 2.0
+    float64: bulk_max = 0.0
+    int: iters = 0
+    int: stabilized = 0
+    while stabilized == 0 {
+        iters = iters + 1
+        if iters > 8 { stabilized = 1 }
+        bulk_max = 0.0
+        i = 0
+        while i < n {
+            float64: ay = y[i]
+            if ay < 0.0 { ay = 0.0 - ay }
+            if ay < cap {
+                float64: v = y[i]
+                if v < 0.0 { v = 0.0 - v }
+                if v > bulk_max { bulk_max = v }
+            }
+            i = i + 1
+        }
+        // If bulk_max is well below cap, we've filtered out the spikes —
+        // stop. Else halve the cap and try again.
+        if bulk_max * 3.0 < cap { stabilized = 1 }
+        if stabilized == 0 { cap = cap / 2.0 }
+    }
+    float64: lim = bulk_max * 1.1
+    if lim < 1.0 { lim = 1.0 }
+    vec: r2 = [-lim, lim]
+    return r2
+}
+
+// Bounding box across current panel's series: [xmin, xmax, ymin, ymax].
+// Skip series whose kind is "stacked_area" (their extent is computed in render).
+// For the rest, use the robust extent on y so asymptote spikes (1/sin(x), exp
+// blow-ups) don't crush the rest of the curve into a thin band.
+fun _extent() -> vec {
+    arr: series = _cur_series()
+    if array.size(series) == 0 {
+        vec: z = [0.0, 1.0, 0.0, 1.0]
+        return z
+    }
+    map: s0 = series[0]
+    str: k0 = mapping.get(s0, "kind")
+    if k0 == "stacked_area" {
+        // y range from cumulative sum
+        return _extent_stacked(series)
+    }
+    vec: x0 = mapping.get(s0, "x")
+    vec: y0 = mapping.get(s0, "y")
+    float64: xmin = _vmin(x0)
+    float64: xmax = _vmax(x0)
+    vec: yre = _robust_extent(y0)
+    float64: ymin = yre[0]
+    float64: ymax = yre[1]
+    int: ns = array.size(series)
+    int: si = 1
+    while si < ns {
+        map: s = series[si]
+        str: k = mapping.get(s, "kind")
+        if k == "stacked_area" {
+            si = si + 1
+        } else {
+            vec: xs = mapping.get(s, "x")
+            vec: ys = mapping.get(s, "y")
+            float64: axmin = _vmin(xs)
+            float64: axmax = _vmax(xs)
+            if axmin < xmin { xmin = axmin }
+            if axmax > xmax { xmax = axmax }
+            vec: yre2 = _robust_extent(ys)
+            float64: aymin = yre2[0]
+            float64: aymax = yre2[1]
+            if aymin < ymin { ymin = aymin }
+            if aymax > ymax { ymax = aymax }
+            si = si + 1
+        }
+    }
+    vec: e = [xmin, xmax, ymin, ymax]
+    return e
+}
+
+// Compute extent for stacked_area series by summing all layers at each x.
+fun _extent_stacked(arr: series) -> vec {
+    vec: xs = mapping.get(series[0], "x")
+    int: nx = math.size(xs)
+    arr: labels = mapping.get(series[0], "labels")
+    int: nl = array.size(labels)
+    vec: total = math.zeros(nx)
+    int: li = 0
+    while li < nl {
+        map: lyr = labels[li]
+        vec: y = mapping.get(lyr, "y")
+        int: i = 0
+        while i < nx {
+            total[i] = total[i] + y[i]
+            i = i + 1
+        }
+        li = li + 1
+    }
+    float64: xmin = _vmin(xs)
+    float64: xmax = _vmax(xs)
+    float64: ymin = _vmin(total)
+    float64: ymax = _vmax(total)
+    int: si = 1
+    int: ns = array.size(series)
+    while si < ns {
+        map: s = series[si]
+        vec: xss = mapping.get(s, "x")
+        arr: labels2 = mapping.get(s, "labels")
+        int: nl2 = array.size(labels2)
+        vec: total2 = math.zeros(nx)
+        int: li2 = 0
+        while li2 < nl2 {
+            map: lyr2 = labels2[li2]
+            vec: y2 = mapping.get(lyr2, "y")
+            int: i = 0
+            while i < nx {
+                total2[i] = total2[i] + y2[i]
+                i = i + 1
+            }
+            li2 = li2 + 1
+        }
+        float64: axmin = _vmin(xss)
+        float64: axmax = _vmax(xss)
+        float64: aymax2 = _vmax(total2)
+        if axmin < xmin { xmin = axmin }
+        if axmax > xmax { xmax = axmax }
+        if aymax2 > ymax { ymax = aymax2 }
+        si = si + 1
+    }
+    if ymin > 0.0 { ymin = 0.0 }
+    vec: e = [xmin, xmax, ymin, ymax]
+    return e
+}
+
+
+// --- Public series API ---
+
+fun line(vec: x, vec: y, str: label, str: color) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "line")
+    mapping.put(s, "x", x)
+    mapping.put(s, "y", y)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+fun scatter(vec: x, vec: y, str: label, str: color) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "scatter")
+    mapping.put(s, "x", x)
+    mapping.put(s, "y", y)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+fun bar(arr: labels, vec: values, str: label, str: color) -> int {
+    int: n = math.size(values)
+    vec: idx = math.zeros(n)
+    int: i = 0
+    while i < n {
+        idx[i] = i
+        i = i + 1
+    }
+    map: s = mapping.create()
+    mapping.put(s, "kind", "bar")
+    mapping.put(s, "x", idx)
+    mapping.put(s, "y", values)
+    mapping.put(s, "labels", labels)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+fun hist(vec: values, int: bins, str: label, str: color) -> int {
+    float64: vmin = _vmin(values)
+    float64: vmax = _vmax(values)
+    if vmax == vmin { vmax = vmin + 1.0 }
+    vec: counts = math.zeros(bins)
+    int: n = math.size(values)
+    float64: width = (vmax - vmin) / bins
+    int: vi = 0
+    while vi < n {
+        int: b = _intify((values[vi] - vmin) / width)
+        if b < 0     { b = 0 }
+        if b >= bins { b = bins - 1 }
+        counts[b] = counts[b] + 1.0
+        vi = vi + 1
+    }
+    vec: cx = math.zeros(bins)
+    int: bi = 0
+    while bi < bins {
+        cx[bi] = vmin + (bi + 0.5) * width
+        bi = bi + 1
+    }
+    map: s = mapping.create()
+    mapping.put(s, "kind", "hist")
+    mapping.put(s, "x", cx)
+    mapping.put(s, "y", counts)
+    mapping.put(s, "n", bins)
+    // Store raw data range so the panel extent can use the bar edges
+    // (not just the bin centers) when computing x range.
+    mapping.put(s, "vmin", vmin)
+    mapping.put(s, "vmax", vmax)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+// Default ymin/ymax = 0.0 means "auto range" (sentinel: ymin >= ymax).
+fun plot(function: f, float64: a, float64: b, str: label, str: color,
+         float64: ymin = 0.0, float64: ymax = 0.0) -> int {
+    if ymin < ymax {
+        ylim(ymin, ymax)
+    }
+    vec: x = numerical.linspace(a, b, 200)
+    vec: y = _apply(f, x)
+    return line(x, y, label, color)
+}
+
+fun area(vec: x, vec: y, str: label, str: color) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "area")
+    mapping.put(s, "x", x)
+    mapping.put(s, "y", y)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+fun fill_between(vec: x, vec: y1, vec: y2, str: label, str: color) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "fill_between")
+    mapping.put(s, "x", x)
+    mapping.put(s, "y1", y1)
+    mapping.put(s, "y2", y2)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+// stacked_area(x, arr_of_vecs, arr_of_labels, arr_of_colors)
+// Each vec in layers is a separate series; they're stacked vertically.
+fun stacked_area(vec: x, arr: layers, arr: labels_in, arr: colors_in) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "stacked_area")
+    mapping.put(s, "x", x)
+    mapping.put(s, "labels", layers)
+    arr: legend_entries = array.create(0)
+    int: i = 0
+    int: n = array.size(layers)
+    while i < n {
+        map: e = mapping.create()
+        str: lab = ""
+        if i < array.size(labels_in) { lab = labels_in[i] }
+        mapping.put(e, "label", lab)
+        str: col = ""
+        if i < array.size(colors_in) { col = colors_in[i] }
+        if string.length(col) == 0 { col = _next_color() }
+        mapping.put(e, "color", col)
+        array.push(legend_entries, e)
+        i = i + 1
+    }
+    mapping.put(s, "legend_entries", legend_entries)
+    array.push(_cur_series(), s)
+    return 0
+}
+
+fun errorbar(vec: x, vec: y, vec: err, str: label, str: color) -> int {
+    map: s = mapping.create()
+    mapping.put(s, "kind", "errorbar")
+    mapping.put(s, "x", x)
+    mapping.put(s, "y", y)
+    mapping.put(s, "err", err)
+    mapping.put(s, "label", label)
+    if string.length(color) == 0 {
+        mapping.put(s, "color", _next_color())
+    } else {
+        mapping.put(s, "color", color)
+    }
+    array.push(_cur_series(), s)
+    return 0
+}
+
+// stack_bars(labels, layers, layer_labels, colors)
+//   labels:        arr of str, one per category (x-axis category)
+//   layers:        arr of vec, one vec per layer; each vec has one value per category
+//   layer_labels:  arr of str, one per layer (used in the legend)
+//   colors:        arr of str, one per layer ("" cycles the palette per layer)
+//
+// Each category is rendered as a vertical bar split into segments (one per
+// layer), stacked from y=0 upward. The renderer uses ymin <= 0 so the bar
+// base sits on the x-axis line inside the plot area.
+fun stack_bars(arr: labels, arr: layers, arr: layer_labels_in, arr: colors_in) -> int {
+    int: nc = array.size(labels)
+    if nc < 1 { return 0 }
+    int: nl = array.size(layers)
+    if nl < 1 { return 0 }
+    // x is category index 0..nc-1
+    vec: idx = math.zeros(nc)
+    int: i = 0
+    while i < nc {
+        idx[i] = i
+        i = i + 1
+    }
+    // layers_arr: arr of map records; each has a "y" vec and a "color"
+    arr: layers_arr = array.create(0)
+    int: li = 0
+    while li < nl {
+        map: lyr = mapping.create()
+        vec: yv = layers[li]
+        mapping.put(lyr, "y", yv)
+        str: col = ""
+        if li < array.size(colors_in) { col = colors_in[li] }
+        if string.length(col) == 0 { col = _next_color() }
+        mapping.put(lyr, "color", col)
+        array.push(layers_arr, lyr)
+        li = li + 1
+    }
+    // legend entries
+    arr: legend_entries = array.create(0)
+    int: lj = 0
+    while lj < nl {
+        map: e = mapping.create()
+        str: lab = ""
+        if lj < array.size(layer_labels_in) { lab = layer_labels_in[lj] }
+        mapping.put(e, "label", lab)
+        vec: yv = layers[lj]
+        // pick the first non-zero layer color for the swatch
+        str: col = ""
+        if lj < array.size(colors_in) { col = colors_in[lj] }
+        if string.length(col) == 0 { col = _next_color() }
+        mapping.put(e, "color", col)
+        array.push(legend_entries, e)
+        lj = lj + 1
+    }
+    map: s = mapping.create()
+    mapping.put(s, "kind", "stack_bars")
+    mapping.put(s, "x", idx)
+    mapping.put(s, "layers", layers_arr)
+    mapping.put(s, "labels", labels)
+    mapping.put(s, "label", "")
+    mapping.put(s, "legend_entries", legend_entries)
+    array.push(_cur_series(), s)
+    return 0
+}
